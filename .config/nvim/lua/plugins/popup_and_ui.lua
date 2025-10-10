@@ -2,6 +2,21 @@ return {
 	-- Popup UI/Floating Window
 	"MunifTanjim/nui.nvim",
 
+	-- nvim-notify for notifications
+	{
+		"rcarriga/nvim-notify",
+		config = function()
+			require("notify").setup({
+				stages = "fade_in_slide_out",
+				timeout = 2000,
+				background_colour = "#000000",
+				position = "bottom_right",
+				max_width = 50,
+			})
+			vim.notify = require("notify")
+		end,
+	},
+
 	-- Noice for enhanced UI
 	{
 		"folke/noice.nvim",
@@ -14,7 +29,13 @@ return {
 				},
 				messages = {
 					enabled = true,
-					view = "mini", -- Use mini view for messages (bottom right corner)
+					view = "notify", -- Use notify for nice notification popups
+					view_error = "notify",
+					view_warn = "notify",
+				},
+				notify = {
+					enabled = true,
+					view = "notify",
 				},
 				-- Views for cmdline popup and popup menu
 				views = {
