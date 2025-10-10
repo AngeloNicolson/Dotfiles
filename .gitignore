@@ -15,6 +15,11 @@
 # Hyprland logs
 .config/hypr/*.log
 
+# Python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+
 # Claude Code
 .claude/
 **/.claude/
