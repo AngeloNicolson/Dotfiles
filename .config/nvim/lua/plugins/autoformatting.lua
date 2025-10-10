@@ -1,164 +1,89 @@
 return {
-	-- LSP Zero setup
-	{
-		"VonHeikemen/lsp-zero.nvim",
-		branch = "v2.x",
-		dependencies = {
-			"neovim/nvim-lspconfig",
-			"williamboman/mason.nvim",
-			"williamboman/mason-lspconfig.nvim",
-			"hrsh7th/nvim-cmp",
-			"hrsh7th/cmp-nvim-lsp",
-			"L3MON4D3/LuaSnip",
-			"nvimtools/none-ls.nvim", -- for none-ls (null-ls fork) integration
-			"nvim-lua/plenary.nvim", -- required by none-ls
-		},
-		config = function()
-			local lsp = require("lsp-zero").preset({})
-
-			-- Set custom sign icons for LSP diagnostics
-			lsp.set_sign_icons({
-				error = "✘",
-				warn = "▲",
-				hint = "⚑",
-				info = "»",
-			})
-			--
-			-- This function runs when the LSP attaches to a buffer
-			lsp.on_attach(function(client, bufnr)
-				lsp.default_keymaps({ buffer = bufnr })
-
-				-- Go to Definition (using the default LSP mapping)
-				vim.api.nvim_buf_set_keymap(
-					bufnr,
-					"n",
-					"gd",
-					"<Cmd>lua vim.lsp.buf.definition()<CR>",
-					{ noremap = true, silent = true }
-				)
-
-				-- Go to Type Definition (optional)
-				vim.api.nvim_buf_set_keymap(
-					bufnr,
-					"n",
-					"gt",
-					"<Cmd>lua vim.lsp.buf.type_definition()<CR>",
-					{ noremap = true, silent = true }
-				)
-
-				-- Go to Declaration (optional)
-				vim.api.nvim_buf_set_keymap(
-					bufnr,
-					"n",
-					"gD",
-					"<Cmd>lua vim.lsp.buf.declaration()<CR>",
-					{ noremap = true, silent = true }
-				)
-			end)
-
-			-- Format on save configuration
-			-- Using none-ls (null-ls fork) as rules for formatting code
-			lsp.format_on_save({
-				format_opts = {
-					async = true,
-					timeout_ms = 10000,
-				},
-				servers = {
-					["null-ls"] = {
-						"css",
-						"javascript",
-						"typescript",
-						"javascriptreact",
-						"typescriptreact",
-						"json",
-						"html",
-						"scss",
-						"less",
-						"py",
-						"python",
-						"c",
-						"cpp",
-						"hpp",
-						"lua",
-						"php",
-					},
-				},
-			})
-
-			-- Setup LSP
-			lsp.setup()
-
-			-- Setup none-ls with sources (uses "null-ls" require for backwards compatibility)
-			local null_ls = require("null-ls")
-
-			null_ls.setup({
-				sources = {
-					---------------------------------- PRETTIER ------------------------------------
-					null_ls.builtins.formatting.prettierd.with({
-						extra_args = {
-							"--double-quote",
-							"--jsx",
-							"--jsx=react",
-							"--jsx-single-quote",
-							"--jsx-bracket-same-line",
-							"--jsx-closing-tag-with-newline",
-						},
-						filetypes = {
-							"css",
-							"javascript",
-							"typescript",
-							"javascriptreact",
-							"typescriptreact",
-							"json",
-							"html",
-							"scss",
-							"less",
-						},
-					}),
-
-					------------------------------------ BLACK -------------------------------------
-					null_ls.builtins.formatting.black.with({
-						extra_args = { "--line-length=80" },
-						filetypes = { "py", "python" },
-					}),
-
-					------------------------------- CLANG-FORMATTER --------------------------------
-					null_ls.builtins.formatting.clang_format.with({
-						extra_args = { "--style=Microsoft" },
-						filetypes = { "c", "cpp", "h", "hpp" },
-					}),
-
-					----------------------------------- LUA ----------------------------------------
-					null_ls.builtins.formatting.stylua.with({
-						extra_args = {},
-						filetypes = { "lua" },
-					}),
-
-					---------------------------------- PHP-CS-FIXER --------------------------------
-					null_ls.builtins.formatting.phpcsfixer.with({
-						extra_args = {},
-						filetypes = { "php" },
-					}),
-
-					---------------------------------- ESLINT_D -------------------------------------
-					-- Uncomment and configure if needed
-					-- null_ls.builtins.diagnostics.eslint_d.with({
-					--     diagnostics_format = "[eslint] #{m}\n(#{c})",
-					-- }),
-				},
-			})
-
-			-- Setup Lua Language Server (lua_ls) to recognize vim global
-			local nvim_lsp = require("lspconfig")
-			nvim_lsp.lua_ls.setup({
-				settings = {
-					Lua = {
-						diagnostics = {
-							globals = { "vim" }, -- Add 'vim' to diagnostics globals
-						},
-					},
-				},
-			})
-		end,
+	"nvimtools/none-ls.nvim",
+	dependencies = {
+		"nvimtools/none-ls-extras.nvim",
+		"jayp0521/mason-null-ls.nvim",
 	},
+	config = function()
+		local null_ls = require("null-ls")
+		local formatting = null_ls.builtins.formatting
+
+		require("mason-null-ls").setup({
+			ensure_installed = {
+				"stylua",
+				"black",
+				"prettierd",
+				"clangd",
+				"clang-format",
+				"codelldb",
+				"cmake-language-server",
+			},
+			automatic_installation = true,
+		})
+
+		local sources = {
+			formatting.stylua,
+			formatting.black.with({
+				extra_args = { "--line-length=80" },
+				filetypes = { "python" },
+			}),
+			formatting.clang_format.with({
+				extra_args = {
+					"--style=file:/home/Angel/.config/nvim/format_configs/.clang-format",
+					"--verbose",
+				},
+				filetypes = { "c", "cpp", "h", "hpp" },
+			}),
+			-- Java formatting with astyle (Global formatter)
+			formatting.astyle.with({
+				extra_args = {
+					"--style=allman",
+					"--mode=java",
+					"--indent=spaces=4",
+					"--pad-oper",
+					"--suffix=none",
+				},
+				filetypes = { "java" },
+			}),
+			formatting.mdformat.with({
+				extra_args = { "--wrap", "77" },
+				filetypes = { "markdown" },
+			}),
+			formatting.prettierd.with({
+				extra_args = {
+					"--semi",
+					"--double-quote",
+					"--jsx-single-quote",
+					"--bracket-same-line",
+				},
+				filetypes = {
+					"css",
+					"javascript",
+					"typescript",
+					"javascriptreact",
+					"typescriptreact",
+					"json",
+					"html",
+					"scss",
+					"less",
+					"js",
+					"jsx",
+				},
+			}),
+		}
+
+		null_ls.setup({
+			sources = sources,
+			on_attach = function(client, bufnr)
+				if client.supports_method("textDocument/formatting") then
+					vim.api.nvim_buf_create_user_command(bufnr, "Wf", function()
+						vim.lsp.buf.format({ async = false })
+						vim.api.nvim_buf_call(bufnr, function()
+							vim.cmd("write")
+						end)
+					end, { desc = "Format and save buffer" })
+				end
+			end,
+		})
+	end,
 }
