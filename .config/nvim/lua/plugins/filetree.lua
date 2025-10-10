@@ -1,6 +1,4 @@
-	-- Neo-tree
 return {
-	-- Neo-tree
 	{
 		"nvim-neo-tree/neo-tree.nvim",
 		branch = "v3.x",
@@ -10,8 +8,15 @@ return {
 			"MunifTanjim/nui.nvim",
 		},
 		config = function()
-			-- Neo-tree setup
-
+			require("neo-tree").setup({
+				filesystem = {
+					filtered_items = {
+						visible = true, -- Show hidden files
+						hide_dotfiles = false,
+						hide_gitignored = false,
+					},
+				},
+			})
 		end,
 	},
 }
