@@ -85,7 +85,9 @@ return {
 
 						-- Default: open in neovim and close tree
 						require("neo-tree.sources.filesystem.commands").open(state)
-						require("neo-tree.command").execute({ action = "close" })
+						vim.defer_fn(function()
+							require("neo-tree.command").execute({ action = "close" })
+						end, 10)
 					end,
 				},
 			})
