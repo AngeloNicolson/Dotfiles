@@ -10,7 +10,7 @@ return {
 				stages = "fade_in_slide_out",
 				timeout = 2000,
 				background_colour = "#000000",
-				position = "bottom_right",
+				top_down = false, -- Show from bottom up
 				max_width = 50,
 			})
 			vim.notify = require("notify")
