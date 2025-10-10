@@ -1,0 +1,26 @@
+# System-specific configuration template
+# Copy this file to system-local.fish and customize for your machine
+
+# Java setup (uncomment if needed)
+# set -gx JAVA_HOME (readlink -f /usr/lib/jvm/default)
+# set -gx PATH $JAVA_HOME/bin $PATH
+
+# Android SDK setup (uncomment if needed)
+# set -gx ANDROID_HOME $HOME/Android/Sdk
+# set -gx ANDROID_NDK $ANDROID_HOME/ndk/28.0.12916984
+# set -gx PATH $ANDROID_HOME/tools \
+#               $ANDROID_HOME/platform-tools \
+#               $ANDROID_HOME/emulator \
+#               $ANDROID_HOME/build-tools \
+#               $PATH
+
+# GHCup (Haskell) setup (uncomment if needed)
+# set -gx PATH $HOME/.ghcup/bin $PATH
+
+# EAS / Yarn setup (uncomment if needed)
+# set -U fish_user_paths $HOME/.yarn/bin $fish_user_paths
+
+# QT Wayland support
+set -x QT_QPA_PLATFORM xcb
+
+# Add any other machine-specific environment variables or paths here

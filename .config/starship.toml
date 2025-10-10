@@ -1,0 +1,93 @@
+# Don't print a new line at the start of the prompt
+add_newline = false
+# Pipes ╰─ ╭─
+# Powerline symbols                                     
+# Wedges 🭧🭒 🭣🭧🭓
+# Random noise 🬖🬥🬔🬗
+
+format = """
+\n\n$cmd_duration$directory $git_branch
+$character
+"""
+
+[character]
+success_symbol = "[• ](bold fg:#707372)"        # green
+error_symbol = "[• 󰅙](bold fg:#cc241d)"          # red
+
+[package]
+disabled = true
+
+[git_branch]
+style = "bg:#7a824e"
+symbol = "󰘬"
+truncation_length = 4
+truncation_symbol = ""
+format = "• [](bold fg:#7a824e)[$symbol $branch(:$remote_branch)](fg:#1d2021 bg:#7a824e)[ ](bold fg:#7a824e)"
+
+[git_commit]
+commit_hash_length = 4
+tag_symbol = " "
+
+[git_state]
+format = '[\($state( $progress_current of $progress_total)\)](fg:#c870a0) '
+cherry_pick = "[🍒 PICKING](bold fg:#cc241d)"
+
+[git_status]
+conflicted = " 🏳 "
+ahead = " 🏎💨 "
+behind = " 😰 "
+diverged = " 😵 "
+untracked = " 🤷 "
+stashed = " 📦 "
+modified = " 📝 "
+staged = '[++\($count\)](fg:#7a824e)'
+renamed = " ✍️ "
+deleted = " 🗑 "
+
+[hostname]
+ssh_only = false
+format =  "[•$hostname](bg:#5f8f87 bold fg:#1d2021)[](bold fg:#5f8f87)"
+trim_at = ".companyname.com"
+disabled = false
+
+[line_break]
+disabled = false
+
+[memory_usage]
+disabled = true
+threshold = -1
+symbol = " "
+style = "bold dimmed #7a824e"
+
+[time]
+disabled = true
+format = '[](fg:#c870a0)[🕙 $time](bg:#c870a0 fg:#1d2021)[](fg:#c870a0) '
+time_format = "%T"
+
+[username]
+style_user = "bold bg:#5f8f87 fg:#1d2021"
+style_root = "bold bg:#cc241d fg:#ebdbb2"
+format = "[](bold fg:#5f8f87)[$user]($style)"
+disabled = false
+show_always = true
+
+[directory]
+home_symbol = "  "
+read_only = "  "
+style = "bg:#FAF5E7  fg:#1d2021"
+truncation_length = 6
+truncation_symbol = "••/"
+format = '[](bold fg:#FAF5E7 )[$path ]($style)[](bold fg:#FAF5E7 )'
+
+[directory.substitutions]
+"Desktop" = "  "
+"Documents" = "  "
+"Downloads" = "  "
+"Music" = " 󰎈 "
+"Pictures" = "  "
+"Videos" = "  "
+
+[cmd_duration]
+min_time = 0
+format = '[](bold fg:#cc241d)[ $duration](bold bg:#cc241d fg:#1d2021)[](bold fg:#cc241d) •• '
+

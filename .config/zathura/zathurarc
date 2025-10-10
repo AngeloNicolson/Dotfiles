@@ -1,0 +1,21 @@
+# Zathura configuration with toggleable dark mode
+set default-bg "#1d2021"          # UI background (Neovim background)
+set default-fg "#FAF5E7"          # UI foreground (Neovim foreground)
+set recolor true                  # Enable color inversion by default
+set recolor-darkcolor "#FAF5E7"   # Text color (Neovim foreground)
+set recolor-lightcolor "#1d2021"  # PDF background (Neovim background)
+set statusbar-bg "#282828"        # Status bar (regular0, black)
+set statusbar-fg "#ebdbb2"        # Status bar text (bright7, bright white)
+set inputbar-bg "#282828"         # Input bar (regular0, black)
+set inputbar-fg "#FAF5E7"         # Input bar text (foreground)
+set highlight-color "#fabd2f"      # Highlight (bright3, bright yellow)
+set highlight-active-color "#b8bb26" # Active highlight (bright2, bright green)
+set font "monospace 12"           # Font matching Neovim
+set scroll-step 50                # Smooth scrolling for vertical DP-2
+set continuous true               # Continuous page scrolling
+set zoom-center true              # Center zoom for 1080x1920 vertical display
+set page-padding 10               # Padding between pages
+set selection-clipboard clipboard  # Copy to system clipboard
+set zoom 150                      # Default zoom for readability
+set adjust-open width             # Fit to width for vertical monitor
+map <C-t> toggle_recolor          # Toggle recolor (Ctrl+t)

@@ -1,0 +1,26 @@
+# Fish shell
+.config/fish/fish_variables
+.config/fish/system-local.fish
+
+# Neovim
+.config/nvim/lazy-lock.json
+.config/nvim/node_modules/
+.config/nvim/.luarc.json
+.config/nvim/virtual-environments/
+.config/nvim/startup.log
+
+# AGS cache and state
+.config/ags/.states.json
+
+# Hyprland logs
+.config/hypr/*.log
+
+# Claude Code
+.claude/
+**/.claude/
+
+# General
+*.swp
+*.swo
+*~
+.DS_Store

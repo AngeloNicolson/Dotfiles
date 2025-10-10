@@ -1,0 +1,56 @@
+# Core Window Manager
+hyprland
+xdg-desktop-portal-hyprland
+
+# Desktop UI
+ags
+
+# Terminal
+foot
+fish
+starship
+
+# Editor
+neovim
+
+# Document Viewer
+zathura
+zathura-pdf-poppler
+
+# Terminal Multiplexer
+tmux
+
+# Fonts
+ttf-jetbrains-mono-nerd
+ttf-font-awesome
+nerd-fonts-complete
+
+# Shell Utilities
+polkit-kde-agent
+
+# Audio/Media
+pipewire
+wireplumber
+pavucontrol
+
+# System
+python
+python-gobject
+gtk3
+gtk4
+
+# Additional utilities (from your AGS/Hyprland setup)
+swaylock
+swww
+brightnessctl
+pamixer
+wl-clipboard
+cliphist
+grim
+slurp
+swappy
+jq
+
+# Optional but recommended
+firefox
+kitty
