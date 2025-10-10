@@ -1,0 +1,15 @@
+{
+  "name": "Famicom",
+  "description": "Retro gaming palette inspired by the Nintendo Famicom",
+  "palette": {
+    "tofu": "#F5F5DC",
+    "burgundy": "#8B1F41",
+    "charcoal": "#2B2B2B",
+    "cream": "#FAF0E6",
+    "deep_red": "#A42049",
+    "dark_gray": "#404040",
+    "light_gray": "#D3D3D3",
+    "accent_red": "#C92A52",
+    "shadow": "#1A1A1A"
+  }
+}
