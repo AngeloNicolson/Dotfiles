@@ -10,7 +10,8 @@ return {
 			"hrsh7th/nvim-cmp",
 			"hrsh7th/cmp-nvim-lsp",
 			"L3MON4D3/LuaSnip",
-			"jose-elias-alvarez/null-ls.nvim", -- for null-ls integration
+			"nvimtools/none-ls.nvim", -- for none-ls (null-ls fork) integration
+			"nvim-lua/plenary.nvim", -- required by none-ls
 		},
 		config = function()
 			local lsp = require("lsp-zero").preset({})
@@ -56,7 +57,7 @@ return {
 			end)
 
 			-- Format on save configuration
-			-- Using null_ls as rules for formatting code
+			-- Using none-ls (null-ls fork) as rules for formatting code
 			lsp.format_on_save({
 				format_opts = {
 					async = true,
@@ -87,7 +88,7 @@ return {
 			-- Setup LSP
 			lsp.setup()
 
-			-- Setup null-ls with sources
+			-- Setup none-ls with sources (uses "null-ls" require for backwards compatibility)
 			local null_ls = require("null-ls")
 
 			null_ls.setup({
