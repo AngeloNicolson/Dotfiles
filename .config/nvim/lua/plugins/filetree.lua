@@ -16,6 +16,15 @@ return {
 						hide_gitignored = false,
 					},
 				},
+				event_handlers = {
+					{
+						event = "file_opened",
+						handler = function()
+							-- Close neo-tree when a file is opened
+							require("neo-tree.command").execute({ action = "close" })
+						end,
+					},
+				},
 			})
 		end,
 	},
