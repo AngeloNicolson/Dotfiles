@@ -50,6 +50,7 @@ grim
 slurp
 swappy
 jq
+wl-color-picker
 
 # Optional but recommended
 firefox

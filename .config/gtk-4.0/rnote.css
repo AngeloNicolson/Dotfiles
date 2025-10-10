@@ -1,0 +1,5 @@
+/* Rnote-specific styling */
+window.rnote headerbar {
+    background-color: #1e1e1e;
+    background-image: none;
+}

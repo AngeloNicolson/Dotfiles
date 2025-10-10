@@ -1,0 +1,21 @@
+@import 'colors.css';
+
+/* Match Firefox header color system-wide */
+headerbar {
+    background-color: #333439;
+    background-image: none;
+}
+
+/* Change button colors to lighter grey */
+button {
+    color: #b0b0b0;
+}
+
+button:hover {
+    color: #d0d0d0;
+}
+
+/* Hide window controls start icon */
+.titlebar image {
+    opacity: 0;
+}
