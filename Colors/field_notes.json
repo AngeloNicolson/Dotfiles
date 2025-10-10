@@ -1,0 +1,11 @@
+{
+  "name": "Indiana Jones - Field Notes",
+  "palette": {
+    "background": "#F3DEAF",
+    "grid": "#BDAE95",
+    "ink": "#4B3F31",
+    "highlight_two": "#D4A24C",
+    "correct_answer": "#6E8B3D",
+    "wrong_answer": "#e14a49"
+  }
+}
