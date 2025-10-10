@@ -8,10 +8,47 @@ return {
 			"MunifTanjim/nui.nvim",
 		},
 		config = function()
+			-- File type handlers (extension -> app)
+			local external_handlers = {
+				-- Documents
+				pdf = "zathura",
+
+				-- Videos
+				mp4 = "mpv",
+				mkv = "mpv",
+				avi = "mpv",
+				mov = "mpv",
+				webm = "mpv",
+				flv = "mpv",
+				wmv = "mpv",
+
+				-- Audio
+				mp3 = "mpv",
+				wav = "mpv",
+				flac = "mpv",
+				ogg = "mpv",
+				m4a = "mpv",
+				aac = "mpv",
+
+				-- Images
+				jpg = "mpv",
+				jpeg = "mpv",
+				png = "mpv",
+				gif = "mpv",
+				bmp = "mpv",
+				webp = "mpv",
+				svg = "mpv",
+			}
+
+			-- Helper: launch external app
+			local function open_external(app, path)
+				vim.fn.jobstart({ app, path }, { detach = true })
+			end
+
 			require("neo-tree").setup({
 				filesystem = {
 					filtered_items = {
-						visible = true, -- Show hidden files
+						visible = true,
 						hide_dotfiles = false,
 						hide_gitignored = false,
 					},
@@ -24,35 +61,25 @@ return {
 				commands = {
 					custom_open = function(state)
 						local node = state.tree:get_node()
-						local path = node:get_id()
 
-						-- Check file extension
-						local ext = path:match("^.+%.(.+)$")
-						if not ext then
-							-- No extension, use default open
+						-- Directories: toggle open/close
+						if node.type == "directory" then
 							require("neo-tree.sources.filesystem.commands").open(state)
-							require("neo-tree.command").execute({ action = "close" })
 							return
 						end
 
-						ext = ext:lower()
+						local path = node:get_id()
+						local ext = path:match("^.+%.(.+)$")
+						local filename = path:match("^.+/(.+)$") or path
 
-						-- PDF files - open with zathura
-						if ext == "pdf" then
-							vim.fn.jobstart({ "zathura", path }, { detach = true })
-							return -- Keep tree open
-						end
-
-						-- Media files - open with mpv
-						local media_exts = {
-							"mp4", "mkv", "avi", "mov", "webm", "flv", "wmv",
-							"mp3", "wav", "flac", "ogg", "m4a", "aac",
-							"jpg", "jpeg", "png", "gif", "bmp", "webp", "svg",
-						}
-						for _, media_ext in ipairs(media_exts) do
-							if ext == media_ext then
-								vim.fn.jobstart({ "mpv", path }, { detach = true })
-								return -- Keep tree open
+						-- Check if extension has external handler
+						if ext then
+							ext = ext:lower()
+							local handler = external_handlers[ext]
+							if handler then
+								print("Opened " .. filename .. " with " .. handler)
+								open_external(handler, path)
+								return -- Don't open in neovim
 							end
 						end
 
