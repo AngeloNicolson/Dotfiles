@@ -14,6 +14,7 @@ import sys
 import subprocess
 from pathlib import Path
 import cairo
+import time
 
 
 class BSPNode:
@@ -330,8 +331,8 @@ class BSPDesigner(Gtk.Box):
             clicked_node.split()
             self.canvas.queue_draw()
         elif clicked_node:
-            # Check if clicking near an edge (8px threshold)
-            edge = self.get_edge_at(clicked_node, x, y, width, height, threshold=8)
+            # Check if clicking near an edge (12px threshold)
+            edge = self.get_edge_at(clicked_node, x, y, width, height, threshold=12)
 
             if edge:
                 # Start resize
@@ -399,7 +400,7 @@ class BSPDesigner(Gtk.Box):
             if clicked_node:
                 self.show_app_dialog(clicked_node)
 
-    def get_edge_at(self, node, x, y, canvas_w, canvas_h, threshold=8):
+    def get_edge_at(self, node, x, y, canvas_w, canvas_h, threshold=12):
         """Check if point is near an edge of the node"""
         if not node or not node.parent:
             return None
@@ -675,7 +676,7 @@ class BSPDesigner(Gtk.Box):
 
         # Update cursor based on what's under the mouse
         if self.hovered_node:
-            edge = self.get_edge_at(self.hovered_node, x, y, width, height, threshold=8)
+            edge = self.get_edge_at(self.hovered_node, x, y, width, height, threshold=12)
             if edge in ['left', 'right']:
                 self.canvas.set_cursor(Gdk.Cursor.new_from_name("ew-resize", None))
             elif edge in ['top', 'bottom']:
@@ -1354,47 +1355,88 @@ class LayoutManagerUnified(Gtk.Window):
         return page
 
     def create_workspace_page(self):
-        """Create the workspace management page with drag and drop"""
-        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        page.set_margin_start(20)
-        page.set_margin_end(20)
-        page.set_margin_top(20)
-        page.set_margin_bottom(20)
+        """Create the workspace management page with sub-tabs"""
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
-        # Title and refresh button
-        header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        header_box.set_halign(Gtk.Align.CENTER)
+        # Sub-tabs for Live and Saved
+        workspace_tabs = Gtk.Notebook()
+        workspace_tabs.set_margin_start(20)
+        workspace_tabs.set_margin_end(20)
+        workspace_tabs.set_margin_top(20)
+        workspace_tabs.set_margin_bottom(20)
 
-        title = Gtk.Label()
-        title.set_markup("<big><b>Workspace Management</b></big>")
-        header_box.append(title)
+        # Auto-refresh when switching tabs
+        def on_tab_switch(notebook, page, page_num):
+            if page_num == 0:  # Live tab
+                self.refresh_live_workspaces()
+            elif page_num == 1:  # Saved tab
+                self.refresh_saved_workspaces()
+        workspace_tabs.connect('switch-page', on_tab_switch)
 
-        refresh_btn = Gtk.Button(label="⟳ Refresh")
-        refresh_btn.connect('clicked', self.on_refresh_workspaces)
-        refresh_btn.set_margin_start(15)
-        header_box.append(refresh_btn)
+        # Live workspaces tab
+        live_page = self.create_live_workspace_tab()
+        workspace_tabs.append_page(live_page, Gtk.Label(label="Live Workspaces"))
 
-        page.append(header_box)
+        # Saved workspaces tab
+        saved_page = self.create_saved_workspace_tab()
+        workspace_tabs.append_page(saved_page, Gtk.Label(label="Saved Workspaces"))
 
-        # Scrollable area for monitors
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_vexpand(True)
-        scrolled.set_hexpand(True)
+        page.append(workspace_tabs)
+        return page
 
-        # Container for monitor boxes
-        self.monitors_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=30)
-        self.monitors_container.set_halign(Gtk.Align.CENTER)
-        self.monitors_container.set_valign(Gtk.Align.START)
-        self.monitors_container.set_margin_top(20)
-        scrolled.set_child(self.monitors_container)
+    def create_live_workspace_tab(self):
+        """Create the live workspaces tab"""
+        tab = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
 
-        page.append(scrolled)
+        # Container for monitor boxes - no scrolling, expand to fill
+        self.live_monitors_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=30)
+        self.live_monitors_container.set_halign(Gtk.Align.FILL)
+        self.live_monitors_container.set_valign(Gtk.Align.FILL)
+        self.live_monitors_container.set_hexpand(True)
+        self.live_monitors_container.set_vexpand(True)
+        self.live_monitors_container.set_margin_top(20)
+        self.live_monitors_container.set_margin_start(20)
+        self.live_monitors_container.set_margin_end(20)
+        self.live_monitors_container.set_margin_bottom(20)
+
+        tab.append(self.live_monitors_container)
 
         # Load initial data
-        self.refresh_workspace_data()
+        self.refresh_live_workspaces()
 
-        return page
+        return tab
+
+    def create_saved_workspace_tab(self):
+        """Create the saved workspaces tab"""
+        tab = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+
+        # Header with load button
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        header.set_halign(Gtk.Align.CENTER)
+
+        load_btn = Gtk.Button(label="Load Workspace Config")
+        load_btn.connect('clicked', self.on_load_workspace_config)
+        header.append(load_btn)
+
+        tab.append(header)
+
+        # Container for monitor boxes - no scrolling, expand to fill
+        self.saved_monitors_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=30)
+        self.saved_monitors_container.set_halign(Gtk.Align.FILL)
+        self.saved_monitors_container.set_valign(Gtk.Align.FILL)
+        self.saved_monitors_container.set_hexpand(True)
+        self.saved_monitors_container.set_vexpand(True)
+        self.saved_monitors_container.set_margin_top(20)
+        self.saved_monitors_container.set_margin_start(20)
+        self.saved_monitors_container.set_margin_end(20)
+        self.saved_monitors_container.set_margin_bottom(20)
+
+        tab.append(self.saved_monitors_container)
+
+        # Load initial data
+        self.refresh_saved_workspaces()
+
+        return tab
 
     def get_monitors(self):
         """Get list of monitors from hyprctl"""
@@ -1424,18 +1466,91 @@ class LayoutManagerUnified(Gtk.Window):
             print(f"Error getting workspaces: {e}")
         return []
 
-    def refresh_workspace_data(self):
-        """Refresh workspace and monitor data with visual layout"""
+    def get_saved_workspaces(self):
+        """Get saved workspace configuration from config file"""
+        config_path = Path.home() / '.config' / 'hypr' / 'custom' / 'rules.conf'
+        workspaces = []
+
+        try:
+            with open(config_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    # Parse workspace rules like: workspace = name:1, monitor:eDP-1, default:true
+                    if line.startswith('workspace =') and 'name:' in line:
+                        parts = line.replace('workspace =', '').strip().split(',')
+                        ws_data = {'id': 0, 'monitor': 'Unknown', 'windows': 0}
+
+                        for part in parts:
+                            part = part.strip()
+                            if part.startswith('name:'):
+                                ws_data['id'] = int(part.replace('name:', ''))
+                            elif part.startswith('monitor:'):
+                                ws_data['monitor'] = part.replace('monitor:', '')
+
+                        workspaces.append(ws_data)
+        except Exception as e:
+            print(f"Error reading saved workspaces: {e}")
+
+        return workspaces
+
+    def refresh_live_workspaces(self):
+        """Refresh live workspace data"""
         # Clear existing monitor boxes
-        child = self.monitors_container.get_first_child()
+        child = self.live_monitors_container.get_first_child()
         while child:
             next_child = child.get_next_sibling()
-            self.monitors_container.remove(child)
+            self.live_monitors_container.remove(child)
             child = next_child
 
         # Get data
         monitors = self.get_monitors()
-        workspaces = self.get_workspaces()
+        live_workspaces = self.get_workspaces()
+        saved_workspaces = self.get_saved_workspaces()
+
+        # Create a dict of live workspaces by ID for lookup
+        live_ws_dict = {ws.get('id'): ws for ws in live_workspaces}
+
+        # Merge: use live data if workspace exists, otherwise create placeholder from saved config
+        all_workspaces = []
+        for saved_ws in saved_workspaces:
+            ws_id = saved_ws.get('id')
+            if ws_id in live_ws_dict:
+                # Use live workspace data
+                all_workspaces.append(live_ws_dict[ws_id])
+            else:
+                # Create placeholder from saved config
+                all_workspaces.append({
+                    'id': ws_id,
+                    'monitor': saved_ws.get('monitor', 'Unknown'),
+                    'windows': 0
+                })
+
+        # Group workspaces by monitor
+        ws_by_monitor = {}
+        for ws in all_workspaces:
+            monitor_name = ws.get('monitor', 'Unknown')
+            if monitor_name not in ws_by_monitor:
+                ws_by_monitor[monitor_name] = []
+            ws_by_monitor[monitor_name].append(ws)
+
+        # Create a visual box for each monitor
+        for monitor in monitors:
+            monitor_name = monitor['name']
+            monitor_box = self.create_monitor_box(monitor_name, ws_by_monitor.get(monitor_name, []))
+            self.live_monitors_container.append(monitor_box)
+
+    def refresh_saved_workspaces(self):
+        """Refresh saved workspace data"""
+        # Clear existing monitor boxes
+        child = self.saved_monitors_container.get_first_child()
+        while child:
+            next_child = child.get_next_sibling()
+            self.saved_monitors_container.remove(child)
+            child = next_child
+
+        # Get data
+        monitors = self.get_monitors()
+        workspaces = self.get_saved_workspaces()
 
         # Group workspaces by monitor
         ws_by_monitor = {}
@@ -1449,13 +1564,14 @@ class LayoutManagerUnified(Gtk.Window):
         for monitor in monitors:
             monitor_name = monitor['name']
             monitor_box = self.create_monitor_box(monitor_name, ws_by_monitor.get(monitor_name, []))
-            self.monitors_container.append(monitor_box)
+            self.saved_monitors_container.append(monitor_box)
 
     def create_monitor_box(self, monitor_name, workspaces):
         """Create a visual box representing a monitor with its workspaces"""
-        # Main container
+        # Main container - expand to fill available space
         container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         container.add_css_class('monitor-box')
+        container.set_hexpand(True)
 
         # Monitor label
         label = Gtk.Label()
@@ -1463,30 +1579,42 @@ class LayoutManagerUnified(Gtk.Window):
         label.set_margin_bottom(5)
         container.append(label)
 
-        # Box to hold workspaces
-        ws_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        ws_box.set_size_request(220, -1)
-        ws_box.set_margin_start(15)
-        ws_box.set_margin_end(15)
-        ws_box.set_margin_top(15)
-        ws_box.set_margin_bottom(15)
+        # List box to hold workspaces vertically
+        ws_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        ws_list.set_margin_start(15)
+        ws_list.set_margin_end(15)
+        ws_list.set_margin_top(15)
+        ws_list.set_margin_bottom(15)
+        ws_list.set_vexpand(True)
+        ws_list.add_css_class('workspace-list')
 
         # Add workspaces as draggable buttons
         if workspaces:
             for ws in sorted(workspaces, key=lambda x: x.get('id', 0)):
                 ws_button = self.create_workspace_button(ws)
-                ws_box.append(ws_button)
+                ws_list.append(ws_button)
         else:
             empty_label = Gtk.Label(label="No workspaces")
             empty_label.add_css_class('dim-label')
-            ws_box.append(empty_label)
+            ws_list.append(empty_label)
 
-        # Set up as drop destination (GTK4)
+        # Set up as drop destination (GTK4) - entire list area
         drop_target = Gtk.DropTarget.new(type=str, actions=Gdk.DragAction.MOVE)
         drop_target.connect('drop', self.on_workspace_dropped, monitor_name)
-        ws_box.add_controller(drop_target)
 
-        container.append(ws_box)
+        # Add visual feedback for the container
+        def on_container_enter(target, x, y):
+            container.add_css_class('drag-target')
+            return Gdk.DragAction.MOVE
+
+        def on_container_leave(target):
+            container.remove_css_class('drag-target')
+
+        drop_target.connect('enter', on_container_enter)
+        drop_target.connect('leave', on_container_leave)
+        ws_list.add_controller(drop_target)
+
+        container.append(ws_list)
         return container
 
     def create_workspace_button(self, workspace):
@@ -1494,6 +1622,7 @@ class LayoutManagerUnified(Gtk.Window):
         ws_id = workspace.get('id', 0)
         ws_name = workspace.get('name', f"Workspace {ws_id}")
         windows = workspace.get('windows', 0)
+        monitor = workspace.get('monitor', 'Unknown')
 
         # Create button with workspace info
         button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -1509,7 +1638,7 @@ class LayoutManagerUnified(Gtk.Window):
 
         button = Gtk.Button()
         button.set_child(button_box)
-        button.set_size_request(180, 60)
+        button.set_hexpand(True)
         button.add_css_class('workspace-button')
 
         # Set up as drag source (GTK4)
@@ -1521,36 +1650,282 @@ class LayoutManagerUnified(Gtk.Window):
             value = str(ws_id)
             return Gdk.ContentProvider.new_for_value(value)
 
+        # Create drag icon showing workspace being dragged
+        def on_drag_begin(source, drag):
+            # Use the button widget itself as the drag icon
+            paintable = Gtk.WidgetPaintable.new(button)
+            source.set_icon(paintable, button.get_width() // 2, button.get_height() // 2)
+
         drag_source.connect('prepare', on_prepare)
+        drag_source.connect('drag-begin', on_drag_begin)
         button.add_controller(drag_source)
+
+        # Set up as drop target (GTK4) - can drop other workspaces onto this one
+        drop_target = Gtk.DropTarget.new(type=str, actions=Gdk.DragAction.MOVE)
+        drop_target.connect('drop', self.on_workspace_dropped_on_workspace, monitor)
+
+        # Add visual feedback on drag enter/leave
+        def on_drag_enter(target, x, y):
+            button.add_css_class('drag-hover')
+            return Gdk.DragAction.MOVE
+
+        def on_drag_leave(target):
+            button.remove_css_class('drag-hover')
+
+        drop_target.connect('enter', on_drag_enter)
+        drop_target.connect('leave', on_drag_leave)
+        button.add_controller(drop_target)
 
         return button
 
-    def on_workspace_dropped(self, drop_target, value, x, y, target_monitor):
-        """Handle workspace drop on a monitor (GTK4)"""
+    def on_workspace_dropped_on_workspace(self, drop_target, value, x, y, target_monitor):
+        """Handle workspace dropped onto another workspace"""
         workspace_id = value
         if workspace_id:
             try:
-                # Move workspace to target monitor
-                subprocess.run([
-                    'hyprctl',
-                    'dispatch',
-                    'moveworkspacetomonitor',
-                    workspace_id,
-                    target_monitor
-                ], check=True)
+                # Check if workspace exists (has windows)
+                live_workspaces = self.get_workspaces()
+                workspace_exists = any(ws.get('id') == int(workspace_id) for ws in live_workspaces)
 
-                # Refresh the display
-                self.refresh_workspace_data()
+                if workspace_exists:
+                    # Get current active workspace and monitor before moving
+                    active_ws_output = subprocess.run(
+                        ['hyprctl', 'activeworkspace', '-j'],
+                        capture_output=True,
+                        text=True
+                    )
+                    current_workspace = None
+                    current_monitor = None
+                    source_monitor = None
+                    if active_ws_output.returncode == 0:
+                        active_ws = json.loads(active_ws_output.stdout)
+                        current_workspace = str(active_ws['id'])
+                        current_monitor = active_ws['monitor']
+
+                    # Find source monitor of the workspace being moved
+                    for ws in live_workspaces:
+                        if ws.get('id') == int(workspace_id):
+                            source_monitor = ws.get('monitor')
+                            break
+
+                    # Move workspace to target monitor
+                    subprocess.run([
+                        'hyprctl',
+                        'dispatch',
+                        'moveworkspacetomonitor',
+                        workspace_id,
+                        target_monitor
+                    ])
+
+                    # Small delay to let Hyprland settle (see GitHub issue #2154)
+                    time.sleep(0.1)
+
+                    # Handle focus based on whether we moved the active workspace
+                    if current_workspace == workspace_id:
+                        # We moved the active workspace - follow it to target monitor
+                        subprocess.run([
+                            'hyprctl',
+                            'dispatch',
+                            'workspace',
+                            workspace_id
+                        ])
+
+                        # Switch source monitor to another workspace if available
+                        if source_monitor and source_monitor != current_monitor:
+                            other_workspace = None
+                            for ws in live_workspaces:
+                                ws_id = str(ws.get('id'))
+                                if ws.get('monitor') == source_monitor and ws_id != workspace_id:
+                                    other_workspace = ws_id
+                                    break
+
+                            if other_workspace:
+                                subprocess.run([
+                                    'hyprctl',
+                                    'dispatch',
+                                    'workspace',
+                                    other_workspace
+                                ])
+                    else:
+                        # We moved a non-active workspace - stay on current workspace
+                        if current_workspace and current_monitor:
+                            subprocess.run([
+                                'hyprctl',
+                                'dispatch',
+                                'workspace',
+                                current_workspace
+                            ])
+                else:
+                    # Update saved config for empty workspace
+                    self.update_workspace_monitor_in_config(workspace_id, target_monitor)
+
+                # Refresh live workspaces
+                self.refresh_live_workspaces()
                 return True
-            except subprocess.CalledProcessError as e:
-                self.show_error_dialog("Move Failed", f"Failed to move workspace: {e}")
+            except Exception as e:
+                print(f"Move failed: {e}")
                 return False
         return False
 
-    def on_refresh_workspaces(self, widget):
-        """Refresh button clicked"""
-        self.refresh_workspace_data()
+    def on_workspace_dropped(self, drop_target, value, x, y, target_monitor):
+        """Handle workspace drop on a monitor container (GTK4)"""
+        workspace_id = value
+        if workspace_id:
+            try:
+                # Check if workspace exists (has windows)
+                live_workspaces = self.get_workspaces()
+                workspace_exists = any(ws.get('id') == int(workspace_id) for ws in live_workspaces)
+
+                if workspace_exists:
+                    # Get current active workspace and monitor before moving
+                    active_ws_output = subprocess.run(
+                        ['hyprctl', 'activeworkspace', '-j'],
+                        capture_output=True,
+                        text=True
+                    )
+                    current_workspace = None
+                    current_monitor = None
+                    source_monitor = None
+                    if active_ws_output.returncode == 0:
+                        active_ws = json.loads(active_ws_output.stdout)
+                        current_workspace = str(active_ws['id'])
+                        current_monitor = active_ws['monitor']
+
+                    # Find source monitor of the workspace being moved
+                    for ws in live_workspaces:
+                        if ws.get('id') == int(workspace_id):
+                            source_monitor = ws.get('monitor')
+                            break
+
+                    # Move workspace to target monitor
+                    subprocess.run([
+                        'hyprctl',
+                        'dispatch',
+                        'moveworkspacetomonitor',
+                        workspace_id,
+                        target_monitor
+                    ])
+
+                    # Small delay to let Hyprland settle (see GitHub issue #2154)
+                    time.sleep(0.1)
+
+                    # Handle focus based on whether we moved the active workspace
+                    if current_workspace == workspace_id:
+                        # We moved the active workspace - follow it to target monitor
+                        subprocess.run([
+                            'hyprctl',
+                            'dispatch',
+                            'workspace',
+                            workspace_id
+                        ])
+
+                        # Switch source monitor to another workspace if available
+                        if source_monitor and source_monitor != current_monitor:
+                            other_workspace = None
+                            for ws in live_workspaces:
+                                ws_id = str(ws.get('id'))
+                                if ws.get('monitor') == source_monitor and ws_id != workspace_id:
+                                    other_workspace = ws_id
+                                    break
+
+                            if other_workspace:
+                                subprocess.run([
+                                    'hyprctl',
+                                    'dispatch',
+                                    'workspace',
+                                    other_workspace
+                                ])
+                    else:
+                        # We moved a non-active workspace - stay on current workspace
+                        if current_workspace and current_monitor:
+                            subprocess.run([
+                                'hyprctl',
+                                'dispatch',
+                                'workspace',
+                                current_workspace
+                            ])
+                else:
+                    # Update saved config for empty workspace
+                    self.update_workspace_monitor_in_config(workspace_id, target_monitor)
+
+                # Refresh live workspaces
+                self.refresh_live_workspaces()
+                return True
+            except Exception as e:
+                print(f"Move failed: {e}")
+                return False
+        return False
+
+    def update_workspace_monitor_in_config(self, workspace_id, new_monitor):
+        """Update workspace monitor assignment in config file"""
+        config_path = Path.home() / '.config' / 'hypr' / 'custom' / 'rules.conf'
+
+        try:
+            with open(config_path, 'r') as f:
+                lines = f.readlines()
+
+            # Update the line with the workspace assignment
+            updated = False
+            for i, line in enumerate(lines):
+                if line.strip().startswith('workspace =') and f'name:{workspace_id}' in line:
+                    # Parse and update the monitor assignment
+                    parts = line.split(',')
+                    new_parts = []
+                    for part in parts:
+                        part = part.strip()
+                        if part.startswith('monitor:'):
+                            new_parts.append(f'monitor:{new_monitor}')
+                        else:
+                            new_parts.append(part)
+                    lines[i] = ', '.join(new_parts) + '\n'
+                    updated = True
+                    break
+
+            if updated:
+                # Write back to config
+                with open(config_path, 'w') as f:
+                    f.writelines(lines)
+
+                # Reload Hyprland config
+                subprocess.run(['hyprctl', 'reload'])
+
+        except Exception as e:
+            print(f"Failed to update config: {e}")
+
+    def on_load_workspace_config(self, widget):
+        """Load workspace configuration from config file"""
+        config_path = Path.home() / '.config' / 'hypr' / 'custom' / 'rules.conf'
+
+        try:
+            # Reload Hyprland config to apply workspace rules
+            subprocess.run(['hyprctl', 'reload'], check=True)
+
+            # Show confirmation
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                modal=True,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text="Workspace Configuration Loaded"
+            )
+            dialog.set_secondary_text(f"Workspace rules from {config_path} have been applied.")
+            dialog.connect('response', lambda d, r: d.close())
+            dialog.present()
+
+            # Refresh live view
+            self.refresh_live_workspaces()
+
+        except Exception as e:
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                modal=True,
+                message_type=Gtk.MessageType.ERROR,
+                buttons=Gtk.ButtonsType.OK,
+                text="Error Loading Config"
+            )
+            dialog.set_secondary_text(str(e))
+            dialog.connect('response', lambda d, r: d.close())
+            dialog.present()
 
     def create_settings_page(self):
         """Create the settings page"""
