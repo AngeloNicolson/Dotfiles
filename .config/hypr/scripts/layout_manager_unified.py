@@ -1225,16 +1225,7 @@ class LayoutManagerUnified(Gtk.Window):
         manage_page = self.create_manage_layouts_page()
         self.notebook.append_page(manage_page, Gtk.Label(label="Manage Layouts"))
 
-        # Tab 3: Designer (grouped with Manage Layouts)
-        self.designer_widget = BSPDesigner(
-            on_back=self.on_designer_back,
-            on_save=self.on_designer_save
-        )
-        self.designer_tab_index = self.notebook.append_page(self.designer_widget, Gtk.Label(label="Designer"))
-        # Hide designer tab by default
-        self.notebook.get_page(self.designer_widget).set_property("tab-expand", False)
-
-        # Tab 4: Workspace Layout (combines editor and layout management)
+        # Tab 3: Workspace Layout (combines editor and layout management)
         workspace_layout_page = self.create_workspace_layout_page()
         self.notebook.append_page(workspace_layout_page, Gtk.Label(label="Workspace Layout"))
 
@@ -1321,33 +1312,97 @@ class LayoutManagerUnified(Gtk.Window):
         return button
 
     def create_manage_layouts_page(self):
-        """Create the manage layouts page with card view"""
-        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        page.set_margin_start(20)
-        page.set_margin_end(20)
-        page.set_margin_top(20)
-        page.set_margin_bottom(20)
+        """Create the manage layouts page with list + preview structure"""
+        page = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
 
-        # Title
+        # Left panel - List of saved layouts
+        left_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        left_panel.set_size_request(220, -1)
+        left_panel.add_css_class('sidebar')
+
+        # Header
+        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        header.set_margin_start(15)
+        header.set_margin_end(15)
+        header.set_margin_top(15)
+        header.set_margin_bottom(10)
+
         title = Gtk.Label()
         title.set_markup("<b>Saved Layouts</b>")
-        page.append(title)
+        title.set_halign(Gtk.Align.START)
+        header.append(title)
 
-        # Scrollable cards area
+        new_layout_btn = Gtk.Button(label="New Layout")
+        new_layout_btn.connect('clicked', self.on_new_layout_embedded)
+        new_layout_btn.set_margin_top(5)
+        header.append(new_layout_btn)
+
+        left_panel.append(header)
+
+        # List of layouts
         scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
 
-        # FlowBox for card layout
-        self.layouts_flowbox = Gtk.FlowBox()
-        self.layouts_flowbox.set_valign(Gtk.Align.START)
-        self.layouts_flowbox.set_max_children_per_line(3)
-        self.layouts_flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.layouts_flowbox.set_row_spacing(15)
-        self.layouts_flowbox.set_column_spacing(15)
+        self.layouts_list = Gtk.ListBox()
+        self.layouts_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.layouts_list.connect('row-selected', self.on_layout_selected)
+        scrolled.set_child(self.layouts_list)
 
-        scrolled.set_child(self.layouts_flowbox)
-        page.append(scrolled)
+        left_panel.append(scrolled)
+
+        page.append(left_panel)
+
+        # Right panel - Layout preview/details
+        right_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        right_panel.set_hexpand(True)
+        right_panel.set_margin_start(20)
+        right_panel.set_margin_end(20)
+        right_panel.set_margin_top(20)
+        right_panel.set_margin_bottom(20)
+
+        # Preview header with buttons
+        preview_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+
+        self.layout_preview_title = Gtk.Label()
+        self.layout_preview_title.set_markup("<big><b>Select a layout</b></big>")
+        self.layout_preview_title.set_hexpand(True)
+        self.layout_preview_title.set_halign(Gtk.Align.START)
+        preview_header.append(self.layout_preview_title)
+
+        # Buttons
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+
+        self.layout_apply_btn = Gtk.Button(label="Apply Layout")
+        self.layout_apply_btn.connect('clicked', self.on_apply_layout)
+        self.layout_apply_btn.set_sensitive(False)
+        button_box.append(self.layout_apply_btn)
+
+        self.layout_delete_btn = Gtk.Button(label="Delete")
+        self.layout_delete_btn.add_css_class('destructive-action')
+        self.layout_delete_btn.connect('clicked', self.on_delete_layout)
+        self.layout_delete_btn.set_sensitive(False)
+        button_box.append(self.layout_delete_btn)
+
+        preview_header.append(button_box)
+        right_panel.append(preview_header)
+
+        # Designer container (embedded in right panel)
+        self.layout_designer_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.layout_designer_container.set_vexpand(True)
+
+        # Create embedded designer
+        self.embedded_designer = BSPDesigner(
+            on_back=None,  # No back button needed
+            on_save=self.on_save_designer_layout
+        )
+        self.layout_designer_container.append(self.embedded_designer)
+
+        right_panel.append(self.layout_designer_container)
+
+        page.append(right_panel)
+
+        # Track currently selected layout
+        self.current_selected_layout = None
 
         # Load layouts
         self.load_saved_layouts()
@@ -3310,12 +3365,12 @@ class LayoutManagerUnified(Gtk.Window):
         return page
 
     def load_saved_layouts(self):
-        """Load saved layouts as cards"""
-        # Clear existing cards
-        child = self.layouts_flowbox.get_first_child()
+        """Load saved layouts into list"""
+        # Clear existing items
+        child = self.layouts_list.get_first_child()
         while child:
             next_child = child.get_next_sibling()
-            self.layouts_flowbox.remove(child)
+            self.layouts_list.remove(child)
             child = next_child
 
         if not os.path.exists(self.layouts_dir):
@@ -3328,22 +3383,45 @@ class LayoutManagerUnified(Gtk.Window):
                     path = os.path.join(root, file)
                     name = os.path.splitext(file)[0].replace('_', ' ').title()
 
-                    card = LayoutCard(
-                        name,
-                        path,
-                        self.on_apply_layout,
-                        self.on_edit_layout,
-                        self.on_delete_layout
-                    )
-                    self.layouts_flowbox.append(card)
+                    row = Gtk.ListBoxRow()
+                    label = Gtk.Label(label=name)
+                    label.set_halign(Gtk.Align.START)
+                    label.set_margin_start(15)
+                    label.set_margin_end(15)
+                    label.set_margin_top(10)
+                    label.set_margin_bottom(10)
+                    row.set_child(label)
+                    row.layout_path = path
+                    row.layout_name = name
+                    self.layouts_list.append(row)
+
+    def on_layout_selected(self, list_box, row):
+        """Handle layout selection - load into designer"""
+        if not row:
+            return
+
+        self.current_selected_layout = row.layout_path
+        layout_name = row.layout_name
+
+        # Update title
+        self.layout_preview_title.set_markup(f"<big><b>{layout_name}</b></big>")
+
+        # Enable buttons
+        self.layout_apply_btn.set_sensitive(True)
+        self.layout_delete_btn.set_sensitive(True)
+
+        # Load layout into embedded designer
+        try:
+            self.embedded_designer.load_layout_from_file(row.layout_path)
+            self.embedded_designer.editing_path = row.layout_path
+        except Exception as e:
+            print(f"Error loading layout into designer: {e}")
 
     def on_new_layout(self, widget):
         """Create a new layout"""
-        # Reset designer and switch to it
-        self.designer_widget.on_clear(None)
-        self.current_layout_path = None
-        self.designer_widget.editing_path = None  # Clear editing path for new layout
-        self.notebook.set_current_page(self.designer_tab_index)
+        # Switch to Manage Layouts tab and create new layout
+        self.notebook.set_current_page(1)  # Manage Layouts tab
+        self.on_new_layout_embedded(None)
 
     def on_browse_layouts(self, widget):
         """Switch to the Manage Layouts tab"""
@@ -3359,29 +3437,75 @@ class LayoutManagerUnified(Gtk.Window):
         # TODO: Track and apply last used layout
         self.show_info_dialog("Not Implemented", "This feature will apply your most recently used layout.")
 
-    def on_apply_layout(self, path, name):
-        """Apply a layout"""
+    def on_apply_layout(self, widget):
+        """Apply the selected layout"""
+        if not self.current_selected_layout:
+            return
+
         apply_script = os.path.join(self.scripts_dir, 'apply_layout.py')
-        subprocess.Popen([apply_script, path])
-        print(f"[Layout Manager] Applying: {name}")
+        subprocess.Popen([apply_script, self.current_selected_layout])
+        print(f"[Layout Manager] Applying layout")
 
-    def on_edit_layout(self, path):
-        """Edit a layout"""
-        self.current_layout_path = path
-        # Load the layout into the designer
-        self.designer_widget.load_layout_from_file(path)
-        # Pass the path to designer so it knows what file to save to
-        self.designer_widget.editing_path = path
-        self.notebook.set_current_page(self.designer_tab_index)
+    def on_delete_layout(self, widget):
+        """Delete the selected layout"""
+        if not self.current_selected_layout:
+            return
 
-    def on_delete_layout(self, path, name):
-        """Delete a layout - skip confirmation, just delete"""
-        try:
-            if os.path.exists(path):
-                os.remove(path)
-                self.load_saved_layouts()
-        except Exception as e:
-            self.show_error_dialog("Delete Failed", str(e))
+        dialog = Gtk.Dialog(
+            title="Delete Layout?",
+            transient_for=self,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Delete", Gtk.ResponseType.YES)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
+
+        label = Gtk.Label(label="Are you sure you want to delete this layout?")
+        label.set_wrap(True)
+        content.append(label)
+
+        def on_response(dlg, response):
+            if response == Gtk.ResponseType.YES:
+                try:
+                    if os.path.exists(self.current_selected_layout):
+                        os.remove(self.current_selected_layout)
+                        self.current_selected_layout = None
+
+                        # Reset UI
+                        self.layout_preview_title.set_markup("<big><b>Select a layout</b></big>")
+                        self.layout_apply_btn.set_sensitive(False)
+                        self.layout_delete_btn.set_sensitive(False)
+
+                        # Clear embedded designer
+                        self.embedded_designer.on_clear(None)
+
+                        # Refresh list
+                        self.load_saved_layouts()
+                except Exception as e:
+                    error_dialog = Gtk.Dialog(
+                        title="Error",
+                        transient_for=self,
+                        modal=True
+                    )
+                    error_dialog.add_button("OK", Gtk.ResponseType.OK)
+                    error_content = error_dialog.get_content_area()
+                    error_content.set_margin_start(20)
+                    error_content.set_margin_end(20)
+                    error_content.set_margin_top(20)
+                    error_content.set_margin_bottom(20)
+                    error_label = Gtk.Label(label=f"Error deleting: {str(e)}")
+                    error_content.append(error_label)
+                    error_dialog.connect('response', lambda d, r: d.close())
+                    error_dialog.present()
+            dlg.close()
+
+        dialog.connect('response', on_response)
+        dialog.present()
 
     def show_info_dialog(self, title, message):
         """Show an info dialog"""
@@ -3399,21 +3523,26 @@ class LayoutManagerUnified(Gtk.Window):
         dialog.set_default_button(0)
         dialog.show(self)
 
-    def on_designer_back(self):
-        """Go back from designer to manage layouts"""
-        self.notebook.set_current_page(1)  # Manage Layouts tab
+    def on_new_layout_embedded(self, widget):
+        """Create a new layout in embedded designer"""
+        self.embedded_designer.on_clear(None)
+        self.current_selected_layout = None
+        self.embedded_designer.editing_path = None
+        self.layout_preview_title.set_markup("<big><b>New Layout</b></big>")
+        self.layout_apply_btn.set_sensitive(False)
+        self.layout_delete_btn.set_sensitive(False)
+        self.layouts_list.unselect_all()
 
-    def on_designer_save(self, root_node):
-        """Save the layout from the designer"""
+    def on_save_designer_layout(self, root_node):
+        """Save the layout from the embedded designer"""
         # If editing existing layout, save directly
-        if self.designer_widget.editing_path:
+        if self.embedded_designer.editing_path:
             try:
                 layout_data = root_node.to_dict()
-                with open(self.designer_widget.editing_path, 'w') as f:
+                with open(self.embedded_designer.editing_path, 'w') as f:
                     json.dump(layout_data, f, indent=2)
 
                 self.load_saved_layouts()
-                self.notebook.set_current_page(1)  # Go back to Manage Layouts
                 return
             except Exception as e:
                 self.show_error_dialog("Save Failed", str(e))
@@ -3461,8 +3590,16 @@ class LayoutManagerUnified(Gtk.Window):
                         json.dump(layout_data, f, indent=2)
 
                     dialog.close()
+                    self.embedded_designer.editing_path = filepath
                     self.load_saved_layouts()
-                    self.notebook.set_current_page(1)  # Go back to Manage Layouts
+
+                    # Find and select the newly created layout
+                    row = self.layouts_list.get_first_child()
+                    while row:
+                        if hasattr(row, 'layout_path') and row.layout_path == filepath:
+                            self.layouts_list.select_row(row)
+                            break
+                        row = row.get_next_sibling()
                 except Exception as e:
                     self.show_error_dialog("Save Failed", str(e))
         save_btn.connect('clicked', on_save)
