@@ -561,19 +561,23 @@ class BSPDesigner(Gtk.Box):
 
     def show_app_dialog(self, node):
         """Show dialog to set app name for a node"""
-        dialog = Gtk.Window()
-        if self.parent_window:
-            dialog.set_transient_for(self.parent_window)
-        dialog.set_modal(True)
-        dialog.set_title("Set Application")
-        dialog.set_default_size(450, 250)
+        dialog = Gtk.Dialog(
+            title="Set Application",
+            transient_for=self.parent_window,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("OK", Gtk.ResponseType.OK)
+        dialog.set_default_size(450, 300)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        box.set_margin_start(20)
-        box.set_margin_end(20)
-        box.set_margin_top(20)
-        box.set_margin_bottom(20)
-        dialog.set_child(box)
+        content.append(box)
 
         # Common apps dropdown
         dropdown_label = Gtk.Label(label="Select common app:", xalign=0)
@@ -606,29 +610,19 @@ class BSPDesigner(Gtk.Box):
         entry.set_placeholder_text("e.g., firefox, kitty, code")
         box.append(entry)
 
-        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        button_box.set_halign(Gtk.Align.END)
+        def on_response(dlg, response):
+            if response == Gtk.ResponseType.OK:
+                # Use custom entry if filled, otherwise use dropdown selection
+                custom_text = entry.get_text().strip()
+                if custom_text:
+                    node.app = custom_text
+                else:
+                    selected_index = dropdown.get_selected()
+                    node.app = common_apps[selected_index]
+                self.canvas.queue_draw()
+            dlg.close()
 
-        cancel_btn = Gtk.Button(label="Cancel")
-        cancel_btn.connect('clicked', lambda w: dialog.close())
-        button_box.append(cancel_btn)
-
-        ok_btn = Gtk.Button(label="OK")
-        def on_ok(w):
-            # Use custom entry if filled, otherwise use dropdown selection
-            custom_text = entry.get_text().strip()
-            if custom_text:
-                node.app = custom_text
-            else:
-                selected_index = dropdown.get_selected()
-                node.app = common_apps[selected_index]
-            dialog.close()
-            self.canvas.queue_draw()
-        ok_btn.connect('clicked', on_ok)
-        button_box.append(ok_btn)
-
-        box.append(button_box)
-
+        dialog.connect('response', on_response)
         dialog.present()
 
     def on_mouse_motion(self, controller, x, y):
