@@ -1225,19 +1225,7 @@ class LayoutManagerUnified(Gtk.Window):
         manage_page = self.create_manage_layouts_page()
         self.notebook.append_page(manage_page, Gtk.Label(label="Manage Layouts"))
 
-        # Tab 3: Workspace Editor
-        workspace_editor_page = self.create_workspace_editor_page()
-        self.notebook.append_page(workspace_editor_page, Gtk.Label(label="Workspaces"))
-
-        # Tab 4: Workspace Layout
-        workspace_layout_page = self.create_workspace_layout_page()
-        self.notebook.append_page(workspace_layout_page, Gtk.Label(label="Workspace Layout"))
-
-        # Tab 5: Settings
-        settings_page = self.create_settings_page()
-        self.notebook.append_page(settings_page, Gtk.Label(label="Settings"))
-
-        # Tab 6: Designer
+        # Tab 3: Designer (grouped with Manage Layouts)
         self.designer_widget = BSPDesigner(
             on_back=self.on_designer_back,
             on_save=self.on_designer_save
@@ -1245,6 +1233,14 @@ class LayoutManagerUnified(Gtk.Window):
         self.designer_tab_index = self.notebook.append_page(self.designer_widget, Gtk.Label(label="Designer"))
         # Hide designer tab by default
         self.notebook.get_page(self.designer_widget).set_property("tab-expand", False)
+
+        # Tab 4: Workspace Layout (combines editor and layout management)
+        workspace_layout_page = self.create_workspace_layout_page()
+        self.notebook.append_page(workspace_layout_page, Gtk.Label(label="Workspace Layout"))
+
+        # Tab 5: Settings
+        settings_page = self.create_settings_page()
+        self.notebook.append_page(settings_page, Gtk.Label(label="Settings"))
 
     def create_quick_actions_page(self):
         """Create the quick actions page"""
@@ -1359,7 +1355,7 @@ class LayoutManagerUnified(Gtk.Window):
         return page
 
     def create_workspace_editor_page(self):
-        """Create the workspace editor page"""
+        """Create the workspace editor page (for when it was a standalone tab)"""
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
         page.set_margin_start(20)
         page.set_margin_end(20)
@@ -1371,6 +1367,16 @@ class LayoutManagerUnified(Gtk.Window):
         title.set_markup("<big><b>Workspace Editor</b></big>")
         title.set_halign(Gtk.Align.START)
         page.append(title)
+
+        return self.create_workspace_editor_page_content_in(page)
+
+    def create_workspace_editor_page_content(self):
+        """Create the workspace editor page content without margins (for sub-tab use)"""
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        return self.create_workspace_editor_page_content_in(page)
+
+    def create_workspace_editor_page_content_in(self, page):
+        """Create the workspace editor page content in the provided container"""
 
         # Scrolled window for workspace list
         scrolled = Gtk.ScrolledWindow()
@@ -1691,20 +1697,587 @@ class LayoutManagerUnified(Gtk.Window):
         def on_tab_switch(notebook, page, page_num):
             if page_num == 0:  # Live tab
                 self.refresh_live_workspaces()
-            elif page_num == 1:  # Saved tab
-                self.refresh_saved_workspaces()
+            elif page_num == 1:  # Workspaces tab
+                self.refresh_workspaces_tab()
         self.workspace_tabs.connect('switch-page', on_tab_switch)
 
         # Live workspaces tab
         live_page = self.create_live_workspace_tab()
-        self.workspace_tabs.append_page(live_page, Gtk.Label(label="Live Workspaces"))
+        self.workspace_tabs.append_page(live_page, Gtk.Label(label="Live"))
 
-        # Saved workspaces tab
-        saved_page = self.create_saved_workspace_tab()
-        self.workspace_tabs.append_page(saved_page, Gtk.Label(label="Saved Workspaces"))
+        # Workspaces editor tab (config list + editor)
+        workspaces_page = self.create_workspaces_tab()
+        self.workspace_tabs.append_page(workspaces_page, Gtk.Label(label="Workspaces"))
 
         page.append(self.workspace_tabs)
         return page
+
+    def create_workspaces_tab(self):
+        """Create the workspaces tab with config list and editor"""
+        tab = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+
+        # Left panel - List of saved configs
+        left_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        left_panel.set_size_request(300, -1)
+        left_panel.add_css_class('sidebar')
+
+        # Header
+        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        header.set_margin_start(15)
+        header.set_margin_end(15)
+        header.set_margin_top(15)
+        header.set_margin_bottom(10)
+
+        title = Gtk.Label()
+        title.set_markup("<b>Saved Configurations</b>")
+        title.set_halign(Gtk.Align.START)
+        header.append(title)
+
+        new_btn = Gtk.Button(label="New Configuration")
+        new_btn.connect('clicked', self.on_new_workspace_config_editor)
+        new_btn.set_margin_top(5)
+        header.append(new_btn)
+
+        left_panel.append(header)
+
+        # List of configs
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_vexpand(True)
+
+        self.workspaces_config_list = Gtk.ListBox()
+        self.workspaces_config_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.workspaces_config_list.connect('row-selected', self.on_workspace_config_selected)
+        scrolled.set_child(self.workspaces_config_list)
+
+        left_panel.append(scrolled)
+
+        tab.append(left_panel)
+
+        # Right panel - Editor
+        right_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        right_panel.set_hexpand(True)
+        right_panel.set_margin_start(20)
+        right_panel.set_margin_end(20)
+        right_panel.set_margin_top(20)
+        right_panel.set_margin_bottom(20)
+
+        # Editor header with buttons
+        editor_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+
+        self.workspace_editor_title = Gtk.Label()
+        self.workspace_editor_title.set_markup("<big><b>Select a configuration</b></big>")
+        self.workspace_editor_title.set_hexpand(True)
+        self.workspace_editor_title.set_halign(Gtk.Align.START)
+        editor_header.append(self.workspace_editor_title)
+
+        # Buttons
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+
+        self.workspace_save_btn = Gtk.Button(label="Save")
+        self.workspace_save_btn.connect('clicked', self.on_save_workspace_editor)
+        self.workspace_save_btn.set_sensitive(False)
+        button_box.append(self.workspace_save_btn)
+
+        self.workspace_apply_btn = Gtk.Button(label="Apply to Live")
+        self.workspace_apply_btn.connect('clicked', self.on_apply_workspace_editor)
+        self.workspace_apply_btn.set_sensitive(False)
+        button_box.append(self.workspace_apply_btn)
+
+        self.workspace_delete_btn = Gtk.Button(label="Delete")
+        self.workspace_delete_btn.add_css_class('destructive-action')
+        self.workspace_delete_btn.connect('clicked', self.on_delete_workspace_editor)
+        self.workspace_delete_btn.set_sensitive(False)
+        button_box.append(self.workspace_delete_btn)
+
+        editor_header.append(button_box)
+        right_panel.append(editor_header)
+
+        # Editor content (drag-and-drop monitors like Live)
+        self.workspaces_editor_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=30)
+        self.workspaces_editor_container.set_halign(Gtk.Align.FILL)
+        self.workspaces_editor_container.set_valign(Gtk.Align.FILL)
+        self.workspaces_editor_container.set_hexpand(True)
+        self.workspaces_editor_container.set_vexpand(True)
+
+        right_panel.append(self.workspaces_editor_container)
+
+        tab.append(right_panel)
+
+        # Track currently edited config
+        self.current_editing_config = None
+
+        # Track editor state (which workspaces are on which monitors)
+        self.editor_state = {}  # {monitor_name: [ws_id, ws_id, ...]}
+
+        # Load config list
+        self.refresh_workspaces_tab()
+
+        return tab
+
+    def refresh_workspaces_tab(self):
+        """Refresh the workspaces config list"""
+        # Clear list
+        child = self.workspaces_config_list.get_first_child()
+        while child:
+            next_child = child.get_next_sibling()
+            self.workspaces_config_list.remove(child)
+            child = next_child
+
+        # Get saved configs
+        saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+        if not saved_dir.exists():
+            return
+
+        config_files = list(saved_dir.glob('*.json'))
+        for config_file in sorted(config_files):
+            row = Gtk.ListBoxRow()
+            label = Gtk.Label(label=config_file.stem)
+            label.set_halign(Gtk.Align.START)
+            label.set_margin_start(15)
+            label.set_margin_end(15)
+            label.set_margin_top(10)
+            label.set_margin_bottom(10)
+            row.set_child(label)
+            row.config_file = config_file
+            self.workspaces_config_list.append(row)
+
+    def on_workspace_config_selected(self, list_box, row):
+        """Load selected config into editor"""
+        if not row:
+            return
+
+        config_file = row.config_file
+        self.current_editing_config = config_file
+
+        # Update title
+        self.workspace_editor_title.set_markup(f"<big><b>{config_file.stem}</b></big>")
+
+        # Enable buttons
+        self.workspace_save_btn.set_sensitive(True)
+        self.workspace_apply_btn.set_sensitive(True)
+        self.workspace_delete_btn.set_sensitive(True)
+
+        # Load config and populate editor
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+
+            workspaces = config.get('workspaces', [])
+
+            # Initialize editor state
+            monitors = self.get_monitors()
+            self.editor_state = {m['name']: [] for m in monitors}
+
+            for ws in workspaces:
+                monitor = ws.get('monitor')
+                ws_id = ws.get('id')
+                if monitor in self.editor_state:
+                    self.editor_state[monitor].append(ws_id)
+
+            # Clear editor
+            child = self.workspaces_editor_container.get_first_child()
+            while child:
+                next_child = child.get_next_sibling()
+                self.workspaces_editor_container.remove(child)
+                child = next_child
+
+            # Create monitor boxes (editable)
+            for monitor in monitors:
+                monitor_name = monitor['name']
+                monitor_box = self.create_editable_monitor_box(monitor_name)
+                self.workspaces_editor_container.append(monitor_box)
+
+        except Exception as e:
+            print(f"Error loading config: {e}")
+
+    def create_editable_monitor_box(self, monitor_name):
+        """Create an editable monitor box with add/remove functionality"""
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        container.add_css_class('monitor-box')
+        container.set_hexpand(True)
+
+        # Monitor label
+        label = Gtk.Label()
+        label.set_markup(f"<span size='large'><b>{monitor_name}</b></span>")
+        label.set_margin_bottom(5)
+        container.append(label)
+
+        # Workspace list container (like Live view)
+        ws_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        ws_list.set_margin_start(15)
+        ws_list.set_margin_end(15)
+        ws_list.set_margin_top(15)
+        ws_list.set_margin_bottom(15)
+        ws_list.set_vexpand(True)
+        ws_list.add_css_class('workspace-list')
+
+        # Add workspaces from editor state
+        if monitor_name in self.editor_state and self.editor_state[monitor_name]:
+            for ws_id in sorted(self.editor_state[monitor_name]):
+                ws_card = self.create_editable_workspace_card(ws_id, monitor_name)
+                ws_list.append(ws_card)
+        else:
+            empty_label = Gtk.Label(label="Right-click to add workspace")
+            empty_label.add_css_class('dim-label')
+            ws_list.append(empty_label)
+
+        # Make droppable (attach to ws_list like Live view)
+        drop_target = Gtk.DropTarget.new(type=str, actions=Gdk.DragAction.MOVE)
+
+        def on_drop(target, value, x, y):
+            ws_id = int(value)
+            # Remove from old monitor
+            for mon, ws_ids in self.editor_state.items():
+                if ws_id in ws_ids:
+                    ws_ids.remove(ws_id)
+                    self.refresh_editor_monitor_box(mon)
+                    break
+
+            # Add to new monitor
+            if monitor_name not in self.editor_state:
+                self.editor_state[monitor_name] = []
+            if ws_id not in self.editor_state[monitor_name]:
+                self.editor_state[monitor_name].append(ws_id)
+                self.editor_state[monitor_name].sort()
+                self.refresh_editor_monitor_box(monitor_name)
+
+            return True
+
+        def on_enter(target, x, y):
+            container.add_css_class('drag-target')
+            return Gdk.DragAction.MOVE
+
+        def on_leave(target):
+            container.remove_css_class('drag-target')
+
+        drop_target.connect('drop', on_drop)
+        drop_target.connect('enter', on_enter)
+        drop_target.connect('leave', on_leave)
+        ws_list.add_controller(drop_target)
+
+        # Add right-click menu to container
+        gesture = Gtk.GestureClick(button=3)
+        gesture.connect('released', lambda g, n, x, y: self.show_monitor_context_menu(monitor_name))
+        container.add_controller(gesture)
+
+        container.append(ws_list)
+
+        # Store reference for later updates
+        container.workspace_container = ws_list
+        container.monitor_name = monitor_name
+
+        return container
+
+    def create_editable_workspace_card(self, ws_id, monitor_name):
+        """Create a draggable workspace card that can be removed"""
+        # Main container
+        container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+
+        # Button with workspace info
+        button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+
+        ws_label = Gtk.Label()
+        ws_label.set_markup(f"<b>Workspace {ws_id}</b>")
+        button_box.append(ws_label)
+
+        button = Gtk.Button()
+        button.set_child(button_box)
+        button.set_hexpand(True)
+        button.add_css_class('workspace-button')
+
+        # Set up as drag source
+        drag_source = Gtk.DragSource.new()
+        drag_source.set_actions(Gdk.DragAction.MOVE)
+
+        def on_prepare(source, x, y):
+            value = str(ws_id)
+            return Gdk.ContentProvider.new_for_value(value)
+
+        def on_drag_begin(source, drag):
+            paintable = Gtk.WidgetPaintable.new(button)
+            source.set_icon(paintable, button.get_width() // 2, button.get_height() // 2)
+
+        drag_source.connect('prepare', on_prepare)
+        drag_source.connect('drag-begin', on_drag_begin)
+        button.add_controller(drag_source)
+
+        container.append(button)
+
+        # Remove button
+        remove_btn = Gtk.Button(label="×")
+        remove_btn.add_css_class('circular')
+        remove_btn.connect('clicked', lambda w: self.remove_workspace_from_editor(ws_id, monitor_name))
+        container.append(remove_btn)
+
+        return container
+
+    def show_monitor_context_menu(self, monitor_name):
+        """Show context menu to add workspace"""
+        dialog = Gtk.Dialog(
+            title="Add Workspace",
+            transient_for=self,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Add", Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
+
+        label = Gtk.Label(label="Workspace Number:")
+        content.append(label)
+
+        entry = Gtk.Entry()
+        entry.set_placeholder_text("e.g., 5")
+        entry.set_margin_top(10)
+        content.append(entry)
+
+        def on_response(dlg, response):
+            dlg.close()
+            if response == Gtk.ResponseType.OK:
+                ws_num = entry.get_text().strip()
+                if ws_num and ws_num.isdigit():
+                    ws_id = int(ws_num)
+                    # Add to editor state
+                    if monitor_name not in self.editor_state:
+                        self.editor_state[monitor_name] = []
+                    if ws_id not in self.editor_state[monitor_name]:
+                        self.editor_state[monitor_name].append(ws_id)
+                        self.editor_state[monitor_name].sort()
+
+                        # Refresh the monitor box
+                        self.refresh_editor_monitor_box(monitor_name)
+
+        dialog.connect('response', on_response)
+        dialog.present()
+
+    def remove_workspace_from_editor(self, ws_id, monitor_name):
+        """Remove a workspace from the editor"""
+        if monitor_name in self.editor_state and ws_id in self.editor_state[monitor_name]:
+            self.editor_state[monitor_name].remove(ws_id)
+            self.refresh_editor_monitor_box(monitor_name)
+
+    def refresh_editor_monitor_box(self, monitor_name):
+        """Refresh a specific monitor box in the editor"""
+        # Find the monitor box
+        child = self.workspaces_editor_container.get_first_child()
+        while child:
+            if hasattr(child, 'monitor_name') and child.monitor_name == monitor_name:
+                # Clear workspace container
+                ws_container = child.workspace_container
+                ws_child = ws_container.get_first_child()
+                while ws_child:
+                    next_child = ws_child.get_next_sibling()
+                    ws_container.remove(ws_child)
+                    ws_child = next_child
+
+                # Re-add workspaces
+                if monitor_name in self.editor_state and self.editor_state[monitor_name]:
+                    for ws_id in sorted(self.editor_state[monitor_name]):
+                        ws_card = self.create_editable_workspace_card(ws_id, monitor_name)
+                        ws_container.append(ws_card)
+                else:
+                    # Show empty state
+                    empty_label = Gtk.Label(label="Right-click to add workspace")
+                    empty_label.add_css_class('dim-label')
+                    ws_container.append(empty_label)
+                break
+            child = child.get_next_sibling()
+
+    def on_new_workspace_config_editor(self, widget):
+        """Create a new workspace configuration"""
+        dialog = Gtk.Dialog(
+            title="New Configuration",
+            transient_for=self,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Create", Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
+
+        label = Gtk.Label(label="Configuration Name:")
+        content.append(label)
+
+        entry = Gtk.Entry()
+        entry.set_placeholder_text("e.g., work, gaming, default")
+        entry.set_margin_top(10)
+        content.append(entry)
+
+        def on_response(dlg, response):
+            dlg.close()
+            if response == Gtk.ResponseType.OK:
+                name = entry.get_text().strip()
+                if name:
+                    # Create empty config
+                    self.save_workspace_config_to_file(name, [])
+                    self.refresh_workspaces_tab()
+
+                    # Auto-select the newly created config
+                    saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+                    config_file = saved_dir / f"{name}.json"
+
+                    # Find and select the row
+                    row = self.workspaces_config_list.get_first_child()
+                    while row:
+                        if hasattr(row, 'config_file') and row.config_file == config_file:
+                            self.workspaces_config_list.select_row(row)
+                            break
+                        row = row.get_next_sibling()
+
+        dialog.connect('response', on_response)
+        dialog.present()
+
+    def on_save_workspace_editor(self, widget):
+        """Save changes to the current config from editor state"""
+        if not self.current_editing_config:
+            return
+
+        try:
+            # Build workspaces list from editor state
+            workspaces = []
+            for monitor_name, ws_ids in self.editor_state.items():
+                for ws_id in ws_ids:
+                    workspaces.append({
+                        'id': ws_id,
+                        'monitor': monitor_name
+                    })
+
+            # Sort by workspace ID
+            workspaces.sort(key=lambda x: x['id'])
+
+            # Read config name
+            with open(self.current_editing_config, 'r') as f:
+                config = json.load(f)
+
+            name = config.get('name', self.current_editing_config.stem)
+
+            # Update config
+            config['workspaces'] = workspaces
+
+            # Save back to file
+            with open(self.current_editing_config, 'w') as f:
+                json.dump(config, f, indent=2)
+
+            dialog = Gtk.Dialog(
+                title="Success",
+                transient_for=self,
+                modal=True
+            )
+            dialog.add_button("OK", Gtk.ResponseType.OK)
+
+            content = dialog.get_content_area()
+            content.set_margin_start(20)
+            content.set_margin_end(20)
+            content.set_margin_top(20)
+            content.set_margin_bottom(20)
+
+            label = Gtk.Label(label=f"Saved changes to '{name}'")
+            content.append(label)
+
+            dialog.connect('response', lambda d, r: d.close())
+            dialog.present()
+
+        except Exception as e:
+            dialog = Gtk.Dialog(
+                title="Error",
+                transient_for=self,
+                modal=True
+            )
+            dialog.add_button("OK", Gtk.ResponseType.OK)
+
+            content = dialog.get_content_area()
+            content.set_margin_start(20)
+            content.set_margin_end(20)
+            content.set_margin_top(20)
+            content.set_margin_bottom(20)
+
+            label = Gtk.Label(label=f"Error saving: {str(e)}")
+            content.append(label)
+
+            dialog.connect('response', lambda d, r: d.close())
+            dialog.present()
+
+    def on_apply_workspace_editor(self, widget):
+        """Apply the edited config to live workspaces"""
+        if not self.current_editing_config:
+            return
+
+        self.load_workspace_config_from_file(self.current_editing_config)
+
+    def on_delete_workspace_editor(self, widget):
+        """Delete the current config"""
+        if not self.current_editing_config:
+            return
+
+        config_to_delete = self.current_editing_config
+
+        dialog = Gtk.Dialog(
+            title="Delete Configuration?",
+            transient_for=self,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Delete", Gtk.ResponseType.YES)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
+
+        label = Gtk.Label(label=f"Are you sure you want to delete '{config_to_delete.stem}'?")
+        label.set_wrap(True)
+        content.append(label)
+
+        def on_response(dlg, response):
+            if response == Gtk.ResponseType.YES:
+                try:
+                    config_to_delete.unlink()
+                    self.current_editing_config = None
+
+                    # Clear editor
+                    child = self.workspaces_editor_container.get_first_child()
+                    while child:
+                        next_child = child.get_next_sibling()
+                        self.workspaces_editor_container.remove(child)
+                        child = next_child
+
+                    # Reset UI
+                    self.workspace_editor_title.set_markup("<big><b>Select a configuration</b></big>")
+                    self.workspace_save_btn.set_sensitive(False)
+                    self.workspace_apply_btn.set_sensitive(False)
+                    self.workspace_delete_btn.set_sensitive(False)
+
+                    # Refresh list
+                    self.refresh_workspaces_tab()
+                except Exception as e:
+                    error_dialog = Gtk.Dialog(
+                        title="Error",
+                        transient_for=self,
+                        modal=True
+                    )
+                    error_dialog.add_button("OK", Gtk.ResponseType.OK)
+                    error_content = error_dialog.get_content_area()
+                    error_content.set_margin_start(20)
+                    error_content.set_margin_end(20)
+                    error_content.set_margin_top(20)
+                    error_content.set_margin_bottom(20)
+                    error_label = Gtk.Label(label=f"Error deleting: {str(e)}")
+                    error_content.append(error_label)
+                    error_dialog.connect('response', lambda d, r: d.close())
+                    error_dialog.present()
+            dlg.close()
+
+        dialog.connect('response', on_response)
+        dialog.present()
 
     def create_live_workspace_tab(self):
         """Create the live workspaces tab"""
@@ -2489,24 +3062,11 @@ class LayoutManagerUnified(Gtk.Window):
             with open(config_file, 'w') as f:
                 json.dump(config, f, indent=2)
 
-            # Update current config tracking
-            self.current_config_name = name
-            self.save_btn.set_label(f"Save '{name}'")
-
-            # Show confirmation
-            dialog = Gtk.MessageDialog(
-                transient_for=self,
-                modal=True,
-                message_type=Gtk.MessageType.INFO,
-                buttons=Gtk.ButtonsType.OK,
-                text="Configuration Saved"
-            )
-            dialog.set_secondary_text(f"Saved '{name}' with {len(workspaces)} workspace assignments")
-            dialog.connect('response', lambda d, r: d.close())
-            dialog.present()
-
-            # Refresh saved view
-            self.refresh_saved_workspaces()
+            # Update current config tracking (for Live tab compatibility)
+            if hasattr(self, 'current_config_name'):
+                self.current_config_name = name
+            if hasattr(self, 'save_btn'):
+                self.save_btn.set_label(f"Save '{name}'")
 
         except Exception as e:
             dialog = Gtk.MessageDialog(
