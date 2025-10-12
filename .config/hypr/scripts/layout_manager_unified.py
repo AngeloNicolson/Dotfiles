@@ -436,8 +436,15 @@ class BSPDesigner(Gtk.Box):
 
     def on_right_click(self, gesture, n_press):
         """Handle right-click to assign app"""
-        x = gesture.get_current_event().get_position()[1]
-        y = gesture.get_current_event().get_position()[2]
+        print(f"Right-click detected, n_press={n_press}")
+        event = gesture.get_current_event()
+        success, x, y = event.get_position()
+
+        if not success:
+            print("Failed to get position")
+            return
+
+        print(f"Right-click at {x}, {y}")
 
         width = self.canvas.get_width()
         height = self.canvas.get_height()
@@ -445,6 +452,7 @@ class BSPDesigner(Gtk.Box):
         ny = y / height
 
         clicked_node = self.find_leaf_at(self.root, nx, ny)
+        print(f"Clicked node: {clicked_node}")
         if clicked_node:
             self.show_app_dialog(clicked_node)
 
