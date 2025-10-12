@@ -27,6 +27,7 @@ class BSPNode:
         self.split_type = None  # 'horizontal' or 'vertical'
         self.ratio = 0.5
         self.children = []  # [left/top, right/bottom]
+        self.parent = None  # Reference to parent node
 
     def is_leaf(self):
         return len(self.children) == 0
@@ -40,31 +41,28 @@ class BSPNode:
         if not self.is_leaf():
             return False
 
-        # Minimum size check (in normalized coords)
-        MIN_SIZE = 0.1  # 10% of canvas
+        # Minimum size check (15% of canvas minimum per window)
+        MIN_SIZE = 0.15
         if self.w < MIN_SIZE * 2 or self.h < MIN_SIZE * 2:
-            print(f"Cannot split: block too small (w={self.w}, h={self.h})")
             return False
-
-        print(f"Splitting node: w={self.w}, h={self.h}, w>h={self.w > self.h}")
 
         # Split along the longest edge:
         # If height > width (vertical edges are longest), split vertically (top/bottom)
         # If width > height (horizontal edges are longest), split horizontally (left/right)
         if self.h > self.w:
-            print("  -> Creating VERTICAL split (top/bottom) - tall block")
             self.split_type = 'vertical'
             # Split top/bottom
             left = BSPNode(self.x, self.y, self.w, self.h * 0.5, self.app)
             right = BSPNode(self.x, self.y + self.h * 0.5, self.w, self.h * 0.5)
         else:
-            print("  -> Creating HORIZONTAL split (left/right) - wide block")
             self.split_type = 'horizontal'
             # Split left/right
             left = BSPNode(self.x, self.y, self.w * 0.5, self.h, self.app)
             right = BSPNode(self.x + self.w * 0.5, self.y, self.w * 0.5, self.h)
 
         self.children = [left, right]
+        left.parent = self
+        right.parent = self
         self.app = None  # Container nodes don't have apps
         return True
 
@@ -94,6 +92,26 @@ class BSPDesigner(Gtk.Box):
         self.on_save_callback = on_save
         self.root = None  # Will be initialized when canvas is realized
         self.selected_node = None
+        self.hovered_node = None  # Node under mouse cursor
+        self.mouse_x = 0
+        self.mouse_y = 0
+        self.editing_path = None  # Path of layout being edited (if any)
+
+        # Drag state
+        self.drag_node = None
+        self.drag_visual_x = 0
+        self.drag_visual_y = 0
+        self.drag_original_pos = None  # (x, y) of dragged node's original position
+        self.drop_target_node = None
+        self.drop_position = None  # 'top', 'bottom', 'left', 'right'
+        self.visual_tree_root = None  # Tree without dragged node for visual display
+
+        # Resize state
+        self.resize_node = None
+        self.resize_edge = None  # 'left', 'right', 'top', 'bottom'
+        self.resize_start_x = 0
+        self.resize_start_y = 0
+        self.resize_node_start = {}
 
         self.setup_ui()
 
@@ -130,7 +148,7 @@ class BSPDesigner(Gtk.Box):
 
         # Instructions
         instructions = Gtk.Label()
-        instructions.set_markup("<i>Shift+Click on a block to split it</i>")
+        instructions.set_markup("<i>Drag windows to swap/insert | Drag edges to resize | Double-click to set app | Shift+Click to split | Shift+D to delete</i>")
         instructions.set_margin_bottom(10)
         self.append(instructions)
 
@@ -139,11 +157,30 @@ class BSPDesigner(Gtk.Box):
         self.canvas.set_vexpand(True)
         self.canvas.set_hexpand(True)
         self.canvas.set_draw_func(self.on_draw)
+        self.canvas.set_focusable(True)  # Make canvas accept keyboard input
+        self.canvas.set_can_focus(True)
 
-        # Add click handler
+        # Add mouse button handlers for drag
         click_gesture = Gtk.GestureClick.new()
-        click_gesture.connect('pressed', self.on_canvas_click)
+        click_gesture.connect('pressed', self.on_mouse_press)
+        click_gesture.connect('released', self.on_mouse_release)
         self.canvas.add_controller(click_gesture)
+
+        # Add double-click handler for app assignment
+        double_click = Gtk.GestureClick.new()
+        double_click.set_button(1)
+        double_click.connect('pressed', self.on_double_click)
+        self.canvas.add_controller(double_click)
+
+        # Add keyboard handler
+        key_controller = Gtk.EventControllerKey.new()
+        key_controller.connect('key-pressed', self.on_key_pressed)
+        self.canvas.add_controller(key_controller)
+
+        # Add motion handler to track mouse position
+        motion_controller = Gtk.EventControllerMotion.new()
+        motion_controller.connect('motion', self.on_mouse_motion)
+        self.canvas.add_controller(motion_controller)
 
         self.append(self.canvas)
 
@@ -165,8 +202,16 @@ class BSPDesigner(Gtk.Box):
         cr.rectangle(0, 0, width, height)
         cr.fill()
 
-        # Draw all nodes
-        self.draw_node(cr, self.root, width, height)
+        # Draw tree (use visual tree if dragging, otherwise real tree)
+        tree_to_draw = self.visual_tree_root if self.drag_node else self.root
+        if tree_to_draw:
+            self.draw_node(cr, tree_to_draw, width, height)
+
+        # Draw dragged window on top
+        if self.drag_node:
+            self.draw_window(cr, self.drag_visual_x, self.drag_visual_y,
+                           self.drag_node.w * width, self.drag_node.h * height,
+                           self.drag_node, is_dragging=True)
 
     def draw_node(self, cr, node, canvas_w, canvas_h):
         """Recursively draw a BSP node"""
@@ -177,68 +222,214 @@ class BSPDesigner(Gtk.Box):
         h = node.h * canvas_h
 
         if node.is_leaf():
-            # Draw leaf node (window)
-            cr.set_source_rgb(0.2, 0.2, 0.2)
-            cr.rectangle(x + 2, y + 2, w - 4, h - 4)
-            cr.fill()
+            # Check if this is the node that expanded into dragged node's space
+            is_expanded_sibling = False
+            if self.drag_original_pos:
+                # Check if this node overlaps with the original dragged position
+                orig_x, orig_y = self.drag_original_pos
+                if (node.x <= orig_x < node.x + node.w and
+                    node.y <= orig_y < node.y + node.h):
+                    is_expanded_sibling = True
 
-            # Border
-            if node == self.selected_node:
-                cr.set_source_rgb(0.8, 0.6, 0.2)
-                cr.set_line_width(3)
-            else:
-                cr.set_source_rgb(0.5, 0.5, 0.5)
-                cr.set_line_width(2)
-            cr.rectangle(x + 2, y + 2, w - 4, h - 4)
-            cr.stroke()
+            # Draw leaf node (window) with rounded corners
+            self.draw_window(cr, x, y, w, h, node, is_expanded_sibling=is_expanded_sibling)
 
-            # App label
-            app_name = node.app or "window"
-            cr.set_source_rgb(0.8, 0.8, 0.8)
-            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-            cr.set_font_size(12)
-            extents = cr.text_extents(app_name)
-            cr.move_to(x + (w - extents.width) / 2, y + (h + extents.height) / 2)
-            cr.show_text(app_name)
+            # Draw drop indicator if this is the drop target (compare by position and app)
+            if (self.drop_target_node and self.drop_position and
+                abs(node.x - self.drop_target_node.x) < 0.01 and
+                abs(node.y - self.drop_target_node.y) < 0.01 and
+                node.app == self.drop_target_node.app):
+                self.draw_drop_indicator(cr, x, y, w, h, self.drop_position)
         else:
             # Draw children
             for child in node.children:
                 self.draw_node(cr, child, canvas_w, canvas_h)
 
-    def on_canvas_click(self, gesture, n_press, x, y):
-        """Handle canvas clicks"""
-        # Check for Shift modifier
+    def draw_window(self, cr, x, y, w, h, node, is_dragging=False, is_expanded_sibling=False):
+        """Draw a window rectangle with rounded corners"""
+        radius = 8
+        x_inner = x + 4
+        y_inner = y + 4
+        w_inner = w - 8
+        h_inner = h - 8
+
+        # Rounded rectangle background
+        cr.new_sub_path()
+        cr.arc(x_inner + w_inner - radius, y_inner + radius, radius, -0.5 * 3.14159, 0)
+        cr.arc(x_inner + w_inner - radius, y_inner + h_inner - radius, radius, 0, 0.5 * 3.14159)
+        cr.arc(x_inner + radius, y_inner + h_inner - radius, radius, 0.5 * 3.14159, 3.14159)
+        cr.arc(x_inner + radius, y_inner + radius, radius, 3.14159, 1.5 * 3.14159)
+        cr.close_path()
+
+        if is_dragging:
+            cr.set_source_rgba(0.3, 0.3, 0.3, 0.8)  # Semi-transparent when dragging
+        elif is_expanded_sibling:
+            cr.set_source_rgba(0.25, 0.25, 0.35, 1.0)  # Slightly different color for expanded sibling
+        else:
+            cr.set_source_rgb(0.2, 0.2, 0.2)
+        cr.fill_preserve()
+
+        # Border - with different colors for selected, hovered, or normal
+        if is_dragging:
+            cr.set_source_rgba(0.8, 0.6, 0.2, 0.8)  # Orange when dragging
+            cr.set_line_width(3)
+        elif is_expanded_sibling:
+            cr.set_source_rgba(0.6, 0.6, 0.8, 0.8)  # Blue-ish for expanded sibling
+            cr.set_line_width(2)
+        elif node == self.selected_node:
+            cr.set_source_rgb(0.8, 0.6, 0.2)  # Orange for selected
+            cr.set_line_width(3)
+        elif node == self.hovered_node:
+            cr.set_source_rgba(0.6, 0.8, 1.0, 0.6)  # Light blue for hovered
+            cr.set_line_width(2)
+        else:
+            cr.set_source_rgb(0.5, 0.5, 0.5)  # Gray for normal
+            cr.set_line_width(2)
+        cr.stroke()
+
+        # App label
+        app_name = node.app or "window"
+        cr.set_source_rgb(0.8, 0.8, 0.8)
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(12)
+        extents = cr.text_extents(app_name)
+        cr.move_to(x + (w - extents.width) / 2, y + (h + extents.height) / 2)
+        cr.show_text(app_name)
+
+    def draw_drop_indicator(self, cr, x, y, w, h, position):
+        """Draw indicator showing where the dragged window will be inserted"""
+        cr.set_source_rgba(0.5, 0.5, 0.5, 0.4)  # Grey semi-transparent
+
+        if position == 'top':
+            cr.rectangle(x + 2, y + 2, w - 4, h / 2 - 2)
+            cr.fill()
+        elif position == 'bottom':
+            cr.rectangle(x + 2, y + h / 2, w - 4, h / 2 - 2)
+            cr.fill()
+        elif position == 'left':
+            cr.rectangle(x + 2, y + 2, w / 2 - 2, h - 4)
+            cr.fill()
+        elif position == 'right':
+            cr.rectangle(x + w / 2, y + 2, w / 2 - 2, h - 4)
+            cr.fill()
+
+    def on_mouse_press(self, gesture, n_press, x, y):
+        """Handle mouse button press"""
         modifiers = gesture.get_current_event_state()
         is_shift = modifiers & Gdk.ModifierType.SHIFT_MASK
 
-        if is_shift:
-            # Find which node was clicked
+        width = self.canvas.get_width()
+        height = self.canvas.get_height()
+        nx = x / width
+        ny = y / height
+
+        clicked_node = self.find_leaf_at(self.root, nx, ny)
+
+        if is_shift and clicked_node:
+            # Shift+Click to split
+            clicked_node.split()
+            self.canvas.queue_draw()
+        elif clicked_node:
+            # Check if clicking near an edge (8px threshold)
+            edge = self.get_edge_at(clicked_node, x, y, width, height, threshold=8)
+
+            if edge:
+                # Start resize
+                self.resize_node = clicked_node
+                self.resize_edge = edge
+                self.resize_start_x = nx
+                self.resize_start_y = ny
+                self.resize_node_start = {
+                    'x': clicked_node.x,
+                    'y': clicked_node.y,
+                    'w': clicked_node.w,
+                    'h': clicked_node.h
+                }
+            else:
+                # Don't allow dragging the only window
+                if clicked_node == self.root and clicked_node.is_leaf():
+                    return
+
+                # Start drag - keep node in tree, create visual tree without it
+                self.drag_node = clicked_node
+                self.drag_visual_x = clicked_node.x * width
+                self.drag_visual_y = clicked_node.y * height
+                self.drag_original_pos = (clicked_node.x, clicked_node.y)
+
+                # Create a deep copy of the tree without the dragged node for visual display
+                self.visual_tree_root = self.create_visual_tree_without_node(self.root, clicked_node)
+
+                self.canvas.queue_draw()
+
+    def on_mouse_release(self, gesture, n_press, x, y):
+        """Handle mouse button release"""
+        if self.drag_node and self.drop_target_real and self.drop_position:
+            # Only allow edge drops (top, bottom, left, right)
+            if self.drop_position in ['top', 'bottom', 'left', 'right']:
+                # Remove from old location
+                self.remove_node_from_tree(self.drag_node)
+                # Insert at new location (use real target from actual tree)
+                self.insert_node(self.drag_node, self.drop_target_real, self.drop_position)
+
+        # Clear drag state (whether successful or cancelled)
+        if self.drag_node:
+            self.drag_node = None
+            self.drag_original_pos = None
+            self.drop_target_node = None
+            self.drop_position = None
+            self.visual_tree_root = None
+            self.canvas.queue_draw()
+
+        if self.resize_node:
+            self.resize_node = None
+            self.resize_edge = None
+
+    def on_double_click(self, gesture, n_press):
+        """Handle double-click to assign app"""
+        if n_press == 2:  # Double-click
+            x = gesture.get_current_event().get_position()[1]
+            y = gesture.get_current_event().get_position()[2]
+
             width = self.canvas.get_width()
             height = self.canvas.get_height()
-
-            # Normalize coordinates
             nx = x / width
             ny = y / height
 
             clicked_node = self.find_leaf_at(self.root, nx, ny)
             if clicked_node:
-                clicked_node.split()
-                self.canvas.queue_draw()
-        else:
-            # Select node for editing app name
-            width = self.canvas.get_width()
-            height = self.canvas.get_height()
-            nx = x / width
-            ny = y / height
+                self.show_app_dialog(clicked_node)
 
-            self.selected_node = self.find_leaf_at(self.root, nx, ny)
-            if self.selected_node:
-                self.show_app_dialog(self.selected_node)
-            self.canvas.queue_draw()
+    def get_edge_at(self, node, x, y, canvas_w, canvas_h, threshold=8):
+        """Check if point is near an edge of the node"""
+        if not node or not node.parent:
+            return None
+
+        node_x = node.x * canvas_w
+        node_y = node.y * canvas_h
+        node_w = node.w * canvas_w
+        node_h = node.h * canvas_h
+
+        parent = node.parent
+
+        # Only allow resizing edges that correspond to the parent's split type
+        if parent.split_type == 'horizontal':
+            # Can resize left/right edges (vertical lines)
+            if abs(x - node_x) < threshold and node_y - threshold <= y <= node_y + node_h + threshold:
+                return 'left'
+            if abs(x - (node_x + node_w)) < threshold and node_y - threshold <= y <= node_y + node_h + threshold:
+                return 'right'
+        elif parent.split_type == 'vertical':
+            # Can resize top/bottom edges (horizontal lines)
+            if abs(y - node_y) < threshold and node_x - threshold <= x <= node_x + node_w + threshold:
+                return 'top'
+            if abs(y - (node_y + node_h)) < threshold and node_x - threshold <= x <= node_x + node_w + threshold:
+                return 'bottom'
+
+        return None
 
     def find_leaf_at(self, node, x, y):
         """Find the leaf node at normalized coordinates"""
-        if not node.contains_point(x, y):
+        if not node or not node.contains_point(x, y):
             return None
 
         if node.is_leaf():
@@ -251,23 +442,79 @@ class BSPDesigner(Gtk.Box):
 
         return None
 
+    def find_node_by_app(self, node, app_name):
+        """Find a leaf node in the tree by app name"""
+        if not node:
+            return None
+
+        if node.is_leaf():
+            return node if node.app == app_name else None
+
+        for child in node.children:
+            result = self.find_node_by_app(child, app_name)
+            if result:
+                return result
+
+        return None
+
+    def find_node_by_position(self, node, x, y):
+        """Find a leaf node in the tree by position (with small tolerance)"""
+        if not node:
+            return None
+
+        if node.is_leaf():
+            # Check if position matches (within 0.01 tolerance)
+            if abs(node.x - x) < 0.01 and abs(node.y - y) < 0.01:
+                return node
+            return None
+
+        for child in node.children:
+            result = self.find_node_by_position(child, x, y)
+            if result:
+                return result
+
+        return None
+
     def show_app_dialog(self, node):
         """Show dialog to set app name for a node"""
         dialog = Gtk.Window()
         dialog.set_transient_for(self.get_root())
         dialog.set_modal(True)
         dialog.set_title("Set Application")
-        dialog.set_default_size(400, 150)
+        dialog.set_default_size(450, 250)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
         box.set_margin_start(20)
         box.set_margin_end(20)
         box.set_margin_top(20)
         box.set_margin_bottom(20)
         dialog.set_child(box)
 
-        label = Gtk.Label(label="Application command:")
-        box.append(label)
+        # Common apps dropdown
+        dropdown_label = Gtk.Label(label="Select common app:", xalign=0)
+        box.append(dropdown_label)
+
+        common_apps = [
+            "firefox", "chromium", "google-chrome",
+            "kitty", "alacritty", "foot", "wezterm",
+            "code", "nvim", "emacs",
+            "thunar", "nautilus", "dolphin",
+            "spotify", "discord", "slack",
+            "obsidian", "gimp", "inkscape"
+        ]
+
+        # Create dropdown
+        dropdown = Gtk.DropDown.new_from_strings(common_apps)
+        box.append(dropdown)
+
+        # OR separator
+        or_label = Gtk.Label()
+        or_label.set_markup("<i>— or —</i>")
+        box.append(or_label)
+
+        # Custom command entry
+        custom_label = Gtk.Label(label="Type custom command:", xalign=0)
+        box.append(custom_label)
 
         entry = Gtk.Entry()
         entry.set_text(node.app or "")
@@ -283,7 +530,13 @@ class BSPDesigner(Gtk.Box):
 
         ok_btn = Gtk.Button(label="OK")
         def on_ok(w):
-            node.app = entry.get_text()
+            # Use custom entry if filled, otherwise use dropdown selection
+            custom_text = entry.get_text().strip()
+            if custom_text:
+                node.app = custom_text
+            else:
+                selected_index = dropdown.get_selected()
+                node.app = common_apps[selected_index]
             dialog.close()
             self.canvas.queue_draw()
         ok_btn.connect('clicked', on_ok)
@@ -293,11 +546,425 @@ class BSPDesigner(Gtk.Box):
 
         dialog.present()
 
+    def on_mouse_motion(self, controller, x, y):
+        """Track mouse position and update hover, handle drag and resize"""
+        self.mouse_x = x
+        self.mouse_y = y
+
+        # Grab focus when mouse enters canvas
+        if not self.canvas.has_focus():
+            self.canvas.grab_focus()
+
+        width = self.canvas.get_width()
+        height = self.canvas.get_height()
+        if width <= 0 or height <= 0:
+            return
+
+        nx = x / width
+        ny = y / height
+
+        # Handle dragging
+        if self.drag_node:
+            # Update visual position to follow mouse
+            self.drag_visual_x = x - (self.drag_node.w * width / 2)
+            self.drag_visual_y = y - (self.drag_node.h * height / 2)
+
+            # Find drop target and position (search in visual tree)
+            target_node = self.find_leaf_at(self.visual_tree_root, nx, ny) if self.visual_tree_root else None
+            if target_node and target_node.is_leaf():
+                # Always map back to real tree node by position (more reliable)
+                real_target = self.find_node_by_position(self.root, target_node.x, target_node.y)
+
+                if real_target and real_target != self.drag_node:
+                    # Store both visual (for drawing) and real (for actual operation)
+                    self.drop_target_node = target_node
+                    self.drop_target_real = real_target
+
+                    # Determine drop position based on mouse location within target
+                    target_x = target_node.x * width
+                    target_y = target_node.y * height
+                    target_w = target_node.w * width
+                    target_h = target_node.h * height
+
+                    # Calculate relative position
+                    rel_x = (x - target_x) / target_w
+                    rel_y = (y - target_y) / target_h
+
+                    # Determine which zone the mouse is in (40% edge zones - more forgiving)
+                    # Only allow edge drops (no center/swap)
+                    edge_threshold = 0.4
+                    if rel_y < edge_threshold:
+                        self.drop_position = 'top'
+                    elif rel_y > (1 - edge_threshold):
+                        self.drop_position = 'bottom'
+                    elif rel_x < edge_threshold:
+                        self.drop_position = 'left'
+                    elif rel_x > (1 - edge_threshold):
+                        self.drop_position = 'right'
+                    else:
+                        # Center zone - not allowed (only 20% center area now)
+                        self.drop_position = None
+                        self.drop_target_node = None
+                        self.drop_target_real = None
+                else:
+                    self.drop_target_node = None
+                    self.drop_position = None
+                    self.drop_target_real = None
+            else:
+                self.drop_target_node = None
+                self.drop_position = None
+
+            self.canvas.queue_draw()
+            return
+
+        # Handle resizing - adjust parent container ratio based on mouse position
+        if self.resize_node:
+            parent = self.resize_node.parent
+            if not parent:
+                return  # Can't resize root
+
+            # Find which child this is (0 or 1)
+            child_index = 0 if parent.children[0] == self.resize_node else 1
+
+            if self.resize_edge in ['left', 'right']:
+                # Resizing horizontal edge
+                if parent.split_type == 'horizontal':
+                    # Calculate new ratio based on absolute mouse position within parent
+                    parent_left = parent.x
+                    parent_right = parent.x + parent.w
+
+                    if self.resize_edge == 'left' and child_index == 1:
+                        # Resizing left edge of right child
+                        # Mouse position determines where the split should be
+                        new_ratio = (nx - parent_left) / parent.w
+                        new_ratio = max(0.15, min(0.85, new_ratio))
+                        parent.ratio = new_ratio
+                        self.update_node_coords(parent)
+                    elif self.resize_edge == 'right' and child_index == 0:
+                        # Resizing right edge of left child
+                        new_ratio = (nx - parent_left) / parent.w
+                        new_ratio = max(0.15, min(0.85, new_ratio))
+                        parent.ratio = new_ratio
+                        self.update_node_coords(parent)
+
+            elif self.resize_edge in ['top', 'bottom']:
+                # Resizing vertical edge
+                if parent.split_type == 'vertical':
+                    # Calculate new ratio based on absolute mouse position within parent
+                    parent_top = parent.y
+                    parent_bottom = parent.y + parent.h
+
+                    if self.resize_edge == 'top' and child_index == 1:
+                        # Resizing top edge of bottom child
+                        new_ratio = (ny - parent_top) / parent.h
+                        new_ratio = max(0.15, min(0.85, new_ratio))
+                        parent.ratio = new_ratio
+                        self.update_node_coords(parent)
+                    elif self.resize_edge == 'bottom' and child_index == 0:
+                        # Resizing bottom edge of top child
+                        new_ratio = (ny - parent_top) / parent.h
+                        new_ratio = max(0.15, min(0.85, new_ratio))
+                        parent.ratio = new_ratio
+                        self.update_node_coords(parent)
+
+            self.canvas.queue_draw()
+            return
+
+        # Update hovered node and cursor
+        self.hovered_node = self.find_leaf_at(self.root, nx, ny)
+
+        # Update cursor based on what's under the mouse
+        if self.hovered_node:
+            edge = self.get_edge_at(self.hovered_node, x, y, width, height, threshold=8)
+            if edge in ['left', 'right']:
+                self.canvas.set_cursor(Gdk.Cursor.new_from_name("ew-resize", None))
+            elif edge in ['top', 'bottom']:
+                self.canvas.set_cursor(Gdk.Cursor.new_from_name("ns-resize", None))
+            else:
+                self.canvas.set_cursor(Gdk.Cursor.new_from_name("default", None))
+        else:
+            self.canvas.set_cursor(Gdk.Cursor.new_from_name("default", None))
+
+        self.canvas.queue_draw()
+
+    def on_key_pressed(self, controller, keyval, keycode, state):
+        """Handle keyboard input"""
+        # Check if Shift+D was pressed
+        is_shift = state & Gdk.ModifierType.SHIFT_MASK
+
+        if (keyval == Gdk.KEY_d or keyval == Gdk.KEY_D) and is_shift:
+            # Convert to normalized coordinates
+            width = self.canvas.get_width()
+            height = self.canvas.get_height()
+            nx = self.mouse_x / width
+            ny = self.mouse_y / height
+
+            # Find node under cursor
+            node_under_cursor = self.find_leaf_at(self.root, nx, ny)
+            if node_under_cursor:
+                self.delete_node(node_under_cursor)
+                self.canvas.queue_draw()
+                return True
+        return False
+
+    def create_visual_tree_without_node(self, node, exclude_node):
+        """Create a copy of the tree with exclude_node removed (for visual display only)"""
+        if node == exclude_node:
+            return None
+
+        if node.is_leaf():
+            # Copy leaf node
+            copy = BSPNode(node.x, node.y, node.w, node.h, node.app)
+            return copy
+
+        # Container node - recursively copy children
+        left_copy = self.create_visual_tree_without_node(node.children[0], exclude_node)
+        right_copy = self.create_visual_tree_without_node(node.children[1], exclude_node)
+
+        # If one child is excluded, promote the other
+        if left_copy is None and right_copy is None:
+            return None
+        elif left_copy is None:
+            # Expand right child to fill parent's space
+            right_copy.x = node.x
+            right_copy.y = node.y
+            right_copy.w = node.w
+            right_copy.h = node.h
+            self.update_node_coords(right_copy)
+            return right_copy
+        elif right_copy is None:
+            # Expand left child to fill parent's space
+            left_copy.x = node.x
+            left_copy.y = node.y
+            left_copy.w = node.w
+            left_copy.h = node.h
+            self.update_node_coords(left_copy)
+            return left_copy
+        else:
+            # Both children exist, copy container
+            copy = BSPNode(node.x, node.y, node.w, node.h)
+            copy.split_type = node.split_type
+            copy.ratio = node.ratio
+            copy.children = [left_copy, right_copy]
+            left_copy.parent = copy
+            right_copy.parent = copy
+            return copy
+
+    def swap_nodes(self, node1, node2):
+        """Swap two nodes in the tree"""
+        # Swap apps
+        node1.app, node2.app = node2.app, node1.app
+
+    def insert_node(self, drag_node, target_node, position):
+        """Insert drag_node into target_node's position, creating a split"""
+        if not target_node.is_leaf():
+            # Target is already a container, can't split it
+            return
+
+        # Save target's current properties
+        target_x = target_node.x
+        target_y = target_node.y
+        target_w = target_node.w
+        target_h = target_node.h
+        target_app = target_node.app
+
+        # Convert target into a container (it was a leaf)
+        target_node.app = None
+        target_node.ratio = 0.5
+
+        # Create split based on position
+        if position in ['top', 'bottom']:
+            target_node.split_type = 'vertical'
+            if position == 'top':
+                # Drag node on top, target on bottom
+                top = BSPNode(target_x, target_y, target_w, target_h * 0.5, drag_node.app)
+                bottom = BSPNode(target_x, target_y + target_h * 0.5, target_w, target_h * 0.5, target_app)
+                target_node.children = [top, bottom]
+            else:  # bottom
+                top = BSPNode(target_x, target_y, target_w, target_h * 0.5, target_app)
+                bottom = BSPNode(target_x, target_y + target_h * 0.5, target_w, target_h * 0.5, drag_node.app)
+                target_node.children = [top, bottom]
+        else:  # left or right
+            target_node.split_type = 'horizontal'
+            if position == 'left':
+                # Drag node on left, target on right
+                left = BSPNode(target_x, target_y, target_w * 0.5, target_h, drag_node.app)
+                right = BSPNode(target_x + target_w * 0.5, target_y, target_w * 0.5, target_h, target_app)
+                target_node.children = [left, right]
+            else:  # right
+                left = BSPNode(target_x, target_y, target_w * 0.5, target_h, target_app)
+                right = BSPNode(target_x + target_w * 0.5, target_y, target_w * 0.5, target_h, drag_node.app)
+                target_node.children = [left, right]
+
+        # Set parent references
+        target_node.children[0].parent = target_node
+        target_node.children[1].parent = target_node
+
+    def remove_node_from_tree(self, node):
+        """Remove a node from the tree, having its sibling take its place"""
+        if node == self.root:
+            return
+
+        parent = node.parent
+        if not parent:
+            return
+
+        # Get sibling
+        sibling = parent.children[1] if parent.children[0] == node else parent.children[0]
+
+        # Sibling takes parent's position
+        sibling.x = parent.x
+        sibling.y = parent.y
+        sibling.w = parent.w
+        sibling.h = parent.h
+        self.update_node_coords(sibling)
+
+        # Replace parent with sibling in grandparent
+        if parent == self.root:
+            self.root = sibling
+            self.root.parent = None
+        else:
+            grandparent = parent.parent
+            if grandparent.children[0] == parent:
+                grandparent.children[0] = sibling
+            else:
+                grandparent.children[1] = sibling
+            sibling.parent = grandparent
+
+    def delete_node(self, node):
+        """Delete a node and restructure the tree"""
+        # Can't delete root if it's the only node
+        if node == self.root and node.is_leaf():
+            print("Cannot delete the only node")
+            return False
+
+        # Can't delete root if it has children - this shouldn't happen as root should be leaf
+        if node == self.root:
+            print("Cannot delete root container node")
+            return False
+
+        parent = node.parent
+        if not parent:
+            return False
+
+        # Get sibling
+        sibling = None
+        if parent.children[0] == node:
+            sibling = parent.children[1]
+        else:
+            sibling = parent.children[0]
+
+        # Sibling takes parent's full space
+        sibling.x = parent.x
+        sibling.y = parent.y
+        sibling.w = parent.w
+        sibling.h = parent.h
+
+        # Update all children coordinates recursively
+        self.update_node_coords(sibling)
+
+        # If parent is root, promote sibling to root
+        if parent == self.root:
+            self.root = sibling
+            self.root.parent = None
+            self.selected_node = None
+        else:
+            # Replace parent with sibling in grandparent
+            grandparent = parent.parent
+            if grandparent.children[0] == parent:
+                grandparent.children[0] = sibling
+            else:
+                grandparent.children[1] = sibling
+
+            sibling.parent = grandparent
+            self.selected_node = None
+
+        return True
+
+    def update_node_coords(self, node):
+        """Recursively update child node coordinates based on parent"""
+        if node.is_leaf():
+            return
+
+        # Recalculate children positions based on split
+        if node.split_type == 'vertical':
+            # Top/bottom split
+            split_pos = node.h * node.ratio
+            node.children[0].x = node.x
+            node.children[0].y = node.y
+            node.children[0].w = node.w
+            node.children[0].h = split_pos
+
+            node.children[1].x = node.x
+            node.children[1].y = node.y + split_pos
+            node.children[1].w = node.w
+            node.children[1].h = node.h - split_pos
+        else:
+            # Horizontal split (left/right)
+            split_pos = node.w * node.ratio
+            node.children[0].x = node.x
+            node.children[0].y = node.y
+            node.children[0].w = split_pos
+            node.children[0].h = node.h
+
+            node.children[1].x = node.x + split_pos
+            node.children[1].y = node.y
+            node.children[1].w = node.w - split_pos
+            node.children[1].h = node.h
+
+        # Recursively update grandchildren
+        for child in node.children:
+            self.update_node_coords(child)
+
     def on_clear(self, widget):
         """Clear the layout and start fresh"""
         self.root = BSPNode(0, 0, 1, 1)
         self.selected_node = None
+        self.editing_path = None
         self.canvas.queue_draw()
+
+    def load_layout_from_file(self, filepath):
+        """Load a layout from JSON file"""
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+
+            # Convert JSON to BSP tree
+            self.root = self.json_to_bsp(data, 0, 0, 1, 1)
+            self.selected_node = None
+            self.canvas.queue_draw()
+        except Exception as e:
+            print(f"Error loading layout: {e}")
+
+    def json_to_bsp(self, data, x, y, w, h):
+        """Recursively convert JSON layout to BSP tree"""
+        if data['type'] == 'window':
+            node = BSPNode(x, y, w, h, app=data.get('app'))
+            return node
+        else:
+            # Container node
+            node = BSPNode(x, y, w, h)
+            node.split_type = data['split']
+            node.ratio = data.get('ratio', 0.5)
+
+            children_data = data.get('children', [])
+            if len(children_data) == 2:
+                if node.split_type == 'vertical':
+                    # Top/bottom split
+                    split_pos = h * node.ratio
+                    left = self.json_to_bsp(children_data[0], x, y, w, split_pos)
+                    right = self.json_to_bsp(children_data[1], x, y + split_pos, w, h - split_pos)
+                else:
+                    # Horizontal split (left/right)
+                    split_pos = w * node.ratio
+                    left = self.json_to_bsp(children_data[0], x, y, split_pos, h)
+                    right = self.json_to_bsp(children_data[1], x + split_pos, y, w - split_pos, h)
+
+                node.children = [left, right]
+                left.parent = node
+                right.parent = node
+
+            return node
 
 
 class LayoutCard(Gtk.Box):
@@ -336,7 +1003,31 @@ class LayoutCard(Gtk.Box):
         button_box.append(edit_btn)
 
         delete_btn = Gtk.Button(label="Delete")
-        delete_btn.connect('clicked', lambda w: on_delete(path, name))
+        delete_btn.add_css_class('delete-button')
+
+        # Add hover controller
+        hover_controller = Gtk.EventControllerMotion.new()
+        def on_hover_enter(controller, x, y):
+            delete_btn.add_css_class('delete-button-hover')
+        def on_hover_leave(controller):
+            delete_btn.remove_css_class('delete-button-hover')
+        hover_controller.connect('enter', on_hover_enter)
+        hover_controller.connect('leave', on_hover_leave)
+        delete_btn.add_controller(hover_controller)
+
+        def on_delete_click(widget):
+            # Flash red background when clicked
+            delete_btn.add_css_class('delete-button-clicked')
+
+            # Call the actual delete
+            on_delete(path, name)
+
+            # Reset after delay
+            def reset():
+                delete_btn.remove_css_class('delete-button-clicked')
+                return False
+            GLib.timeout_add(300, reset)
+        delete_btn.connect('clicked', on_delete_click)
         button_box.append(delete_btn)
 
         self.append(button_box)
@@ -456,6 +1147,48 @@ class LayoutManagerUnified(Gtk.Window):
         .layout-card:hover {
             background: rgba(50, 50, 50, 0.95);
             border: 1px solid rgba(100, 100, 100, 0.7);
+        }
+
+        .delete-button {
+            background: rgba(60, 20, 20, 0.8);
+            color: #ff6b6b;
+        }
+
+        .delete-button-hover {
+            background: rgba(80, 30, 30, 0.9);
+            color: #ff4444;
+            border: 1px solid #ff6b6b;
+        }
+
+        .delete-button-clicked {
+            background: rgba(150, 20, 20, 1.0);
+            color: #ffffff;
+            border: 2px solid #ff0000;
+        }
+
+        .monitor-box {
+            background: rgba(30, 30, 30, 0.6);
+            border-radius: 10px;
+            border: 2px solid rgba(60, 60, 60, 0.8);
+            padding: 15px;
+            min-width: 250px;
+        }
+
+        .workspace-button {
+            background: rgba(50, 50, 50, 0.9);
+            border: 1px solid rgba(80, 80, 80, 0.6);
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .workspace-button:hover {
+            background: rgba(70, 70, 70, 0.9);
+            border: 1px solid rgba(100, 100, 100, 0.8);
+        }
+
+        .dim-label {
+            opacity: 0.6;
+            font-size: 0.9em;
         }
         """
         css_provider.load_from_data(css.encode())
@@ -622,7 +1355,7 @@ class LayoutManagerUnified(Gtk.Window):
 
     def create_workspace_page(self):
         """Create the workspace management page with drag and drop"""
-        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
         page.set_margin_start(20)
         page.set_margin_end(20)
         page.set_margin_top(20)
@@ -630,28 +1363,30 @@ class LayoutManagerUnified(Gtk.Window):
 
         # Title and refresh button
         header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        header_box.set_halign(Gtk.Align.CENTER)
+
         title = Gtk.Label()
-        title.set_markup("<b>Workspace Management</b>")
+        title.set_markup("<big><b>Workspace Management</b></big>")
         header_box.append(title)
 
-        refresh_btn = Gtk.Button(label="Refresh")
+        refresh_btn = Gtk.Button(label="⟳ Refresh")
         refresh_btn.connect('clicked', self.on_refresh_workspaces)
-        header_box.prepend(refresh_btn)
+        refresh_btn.set_margin_start(15)
+        header_box.append(refresh_btn)
 
         page.append(header_box)
-
-        # Instructions
-        instructions = Gtk.Label()
-        instructions.set_markup("<i>Drag workspaces between monitors to move them</i>")
-        page.append(instructions)
 
         # Scrollable area for monitors
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_vexpand(True)
+        scrolled.set_hexpand(True)
 
         # Container for monitor boxes
-        self.monitors_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
+        self.monitors_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=30)
         self.monitors_container.set_halign(Gtk.Align.CENTER)
+        self.monitors_container.set_valign(Gtk.Align.START)
+        self.monitors_container.set_margin_top(20)
         scrolled.set_child(self.monitors_container)
 
         page.append(scrolled)
@@ -718,43 +1453,64 @@ class LayoutManagerUnified(Gtk.Window):
 
     def create_monitor_box(self, monitor_name, workspaces):
         """Create a visual box representing a monitor with its workspaces"""
-        # Main frame for the monitor
-        frame = Gtk.Frame()
-        frame.set_label(monitor_name)
-
-        # Box to hold workspaces
-        ws_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        ws_box.set_margin_start(10)
-        ws_box.set_margin_end(10)
-        ws_box.set_margin_top(10)
-        ws_box.set_margin_bottom(10)
-        ws_box.set_size_request(200, 300)
+        # Main container
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        container.add_css_class('monitor-box')
 
         # Monitor label
         label = Gtk.Label()
-        label.set_markup(f"<b>{monitor_name}</b>")
-        ws_box.append(label)
+        label.set_markup(f"<span size='large'><b>{monitor_name}</b></span>")
+        label.set_margin_bottom(5)
+        container.append(label)
+
+        # Box to hold workspaces
+        ws_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        ws_box.set_size_request(220, -1)
+        ws_box.set_margin_start(15)
+        ws_box.set_margin_end(15)
+        ws_box.set_margin_top(15)
+        ws_box.set_margin_bottom(15)
 
         # Add workspaces as draggable buttons
-        for ws in workspaces:
-            ws_button = self.create_workspace_button(ws)
-            ws_box.append(ws_button)
+        if workspaces:
+            for ws in sorted(workspaces, key=lambda x: x.get('id', 0)):
+                ws_button = self.create_workspace_button(ws)
+                ws_box.append(ws_button)
+        else:
+            empty_label = Gtk.Label(label="No workspaces")
+            empty_label.add_css_class('dim-label')
+            ws_box.append(empty_label)
 
         # Set up as drop destination (GTK4)
         drop_target = Gtk.DropTarget.new(type=str, actions=Gdk.DragAction.MOVE)
         drop_target.connect('drop', self.on_workspace_dropped, monitor_name)
         ws_box.add_controller(drop_target)
 
-        frame.set_child(ws_box)
-        return frame
+        container.append(ws_box)
+        return container
 
     def create_workspace_button(self, workspace):
         """Create a draggable button for a workspace"""
         ws_id = workspace.get('id', 0)
         ws_name = workspace.get('name', f"Workspace {ws_id}")
+        windows = workspace.get('windows', 0)
 
-        button = Gtk.Button(label=f"WS {ws_id}")
-        button.set_size_request(150, 40)
+        # Create button with workspace info
+        button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+
+        ws_label = Gtk.Label()
+        ws_label.set_markup(f"<b>Workspace {ws_id}</b>")
+        button_box.append(ws_label)
+
+        if windows > 0:
+            win_label = Gtk.Label(label=f"{windows} window{'s' if windows != 1 else ''}")
+            win_label.add_css_class('dim-label')
+            button_box.append(win_label)
+
+        button = Gtk.Button()
+        button.set_child(button_box)
+        button.set_size_request(180, 60)
+        button.add_css_class('workspace-button')
 
         # Set up as drag source (GTK4)
         drag_source = Gtk.DragSource.new()
@@ -875,6 +1631,7 @@ class LayoutManagerUnified(Gtk.Window):
         # Reset designer and switch to it
         self.designer_widget.on_clear(None)
         self.current_layout_path = None
+        self.designer_widget.editing_path = None  # Clear editing path for new layout
         self.notebook.set_current_page(self.designer_tab_index)
 
     def on_browse_layouts(self, widget):
@@ -899,32 +1656,21 @@ class LayoutManagerUnified(Gtk.Window):
 
     def on_edit_layout(self, path):
         """Edit a layout"""
-        # TODO: Load the layout into the designer
         self.current_layout_path = path
-        self.designer_widget.on_clear(None)  # For now, just clear
+        # Load the layout into the designer
+        self.designer_widget.load_layout_from_file(path)
+        # Pass the path to designer so it knows what file to save to
+        self.designer_widget.editing_path = path
         self.notebook.set_current_page(self.designer_tab_index)
 
     def on_delete_layout(self, path, name):
-        """Delete a layout"""
-        dialog = Gtk.AlertDialog.new(f"Delete {name}?")
-        dialog.set_detail("This action cannot be undone.")
-        dialog.set_buttons(["Cancel", "Delete"])
-        dialog.set_cancel_button(0)
-        dialog.set_default_button(0)
-
-        def on_response(dialog, result):
-            try:
-                response = dialog.choose_finish(result)
-                if response == 1:  # Delete button
-                    try:
-                        os.remove(path)
-                        self.load_saved_layouts()
-                    except Exception as e:
-                        self.show_error_dialog("Delete Failed", str(e))
-            except:
-                pass
-
-        dialog.choose(self, None, on_response)
+        """Delete a layout - skip confirmation, just delete"""
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                self.load_saved_layouts()
+        except Exception as e:
+            self.show_error_dialog("Delete Failed", str(e))
 
     def show_info_dialog(self, title, message):
         """Show an info dialog"""
@@ -948,7 +1694,21 @@ class LayoutManagerUnified(Gtk.Window):
 
     def on_designer_save(self, root_node):
         """Save the layout from the designer"""
-        # Show save dialog
+        # If editing existing layout, save directly
+        if self.designer_widget.editing_path:
+            try:
+                layout_data = root_node.to_dict()
+                with open(self.designer_widget.editing_path, 'w') as f:
+                    json.dump(layout_data, f, indent=2)
+
+                self.load_saved_layouts()
+                self.notebook.set_current_page(1)  # Go back to Manage Layouts
+                return
+            except Exception as e:
+                self.show_error_dialog("Save Failed", str(e))
+                return
+
+        # Otherwise, show save dialog for new layout
         dialog = Gtk.Window()
         dialog.set_transient_for(self)
         dialog.set_modal(True)
@@ -967,10 +1727,6 @@ class LayoutManagerUnified(Gtk.Window):
 
         entry = Gtk.Entry()
         entry.set_placeholder_text("my_layout")
-        if self.current_layout_path:
-            # Pre-fill with current name
-            name = os.path.splitext(os.path.basename(self.current_layout_path))[0]
-            entry.set_text(name)
         box.append(entry)
 
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
