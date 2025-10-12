@@ -86,11 +86,12 @@ class BSPNode:
 class BSPDesigner(Gtk.Box):
     """Simple BSP layout designer widget"""
 
-    def __init__(self, on_back, on_save):
+    def __init__(self, on_back, on_save, parent_window=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
         self.on_back_callback = on_back
         self.on_save_callback = on_save
+        self.parent_window = parent_window
         self.root = None  # Will be initialized when canvas is realized
         self.selected_node = None
         self.hovered_node = None  # Node under mouse cursor
@@ -422,8 +423,7 @@ class BSPDesigner(Gtk.Box):
     def on_double_click(self, gesture, n_press):
         """Handle double-click to assign app"""
         if n_press == 2:  # Double-click
-            x = gesture.get_current_event().get_position()[1]
-            y = gesture.get_current_event().get_position()[2]
+            x, y = gesture.get_current_event().get_position()
 
             width = self.canvas.get_width()
             height = self.canvas.get_height()
@@ -436,15 +436,7 @@ class BSPDesigner(Gtk.Box):
 
     def on_right_click(self, gesture, n_press):
         """Handle right-click to assign app"""
-        print(f"Right-click detected, n_press={n_press}")
-        event = gesture.get_current_event()
-        success, x, y = event.get_position()
-
-        if not success:
-            print("Failed to get position")
-            return
-
-        print(f"Right-click at {x}, {y}")
+        x, y = gesture.get_current_event().get_position()
 
         width = self.canvas.get_width()
         height = self.canvas.get_height()
@@ -452,7 +444,6 @@ class BSPDesigner(Gtk.Box):
         ny = y / height
 
         clicked_node = self.find_leaf_at(self.root, nx, ny)
-        print(f"Clicked node: {clicked_node}")
         if clicked_node:
             self.show_app_dialog(clicked_node)
 
@@ -571,7 +562,8 @@ class BSPDesigner(Gtk.Box):
     def show_app_dialog(self, node):
         """Show dialog to set app name for a node"""
         dialog = Gtk.Window()
-        dialog.set_transient_for(self.get_root())
+        if self.parent_window:
+            dialog.set_transient_for(self.parent_window)
         dialog.set_modal(True)
         dialog.set_title("Set Application")
         dialog.set_default_size(450, 250)
@@ -1487,7 +1479,8 @@ class LayoutManagerUnified(Gtk.Window):
         # Create embedded designer
         self.embedded_designer = BSPDesigner(
             on_back=None,  # No back button needed
-            on_save=self.on_save_designer_layout
+            on_save=self.on_save_designer_layout,
+            parent_window=self
         )
         self.layout_designer_container.append(self.embedded_designer)
 
