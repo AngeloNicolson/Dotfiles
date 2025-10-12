@@ -350,6 +350,23 @@ class BSPDesigner(Gtk.Box):
         nx = x / width
         ny = y / height
 
+        # Check if clicking on a split line first
+        split_info = self.find_split_at(self.root, x, y, width, height, threshold=8)
+        if split_info:
+            # Start resize of the split
+            container, edge = split_info
+            self.resize_node = container.children[0]  # Use first child as reference
+            self.resize_edge = edge
+            self.resize_start_x = nx
+            self.resize_start_y = ny
+            self.resize_node_start = {
+                'x': self.resize_node.x,
+                'y': self.resize_node.y,
+                'w': self.resize_node.w,
+                'h': self.resize_node.h
+            }
+            return
+
         clicked_node = self.find_leaf_at(self.root, nx, ny)
 
         if is_shift and clicked_node:
@@ -357,36 +374,20 @@ class BSPDesigner(Gtk.Box):
             clicked_node.split()
             self.canvas.queue_draw()
         elif clicked_node:
-            # Check if clicking near an edge (12px threshold)
-            edge = self.get_edge_at(clicked_node, x, y, width, height, threshold=12)
+            # Don't allow dragging the only window
+            if clicked_node == self.root and clicked_node.is_leaf():
+                return
 
-            if edge:
-                # Start resize
-                self.resize_node = clicked_node
-                self.resize_edge = edge
-                self.resize_start_x = nx
-                self.resize_start_y = ny
-                self.resize_node_start = {
-                    'x': clicked_node.x,
-                    'y': clicked_node.y,
-                    'w': clicked_node.w,
-                    'h': clicked_node.h
-                }
-            else:
-                # Don't allow dragging the only window
-                if clicked_node == self.root and clicked_node.is_leaf():
-                    return
+            # Start drag - keep node in tree, create visual tree without it
+            self.drag_node = clicked_node
+            self.drag_visual_x = clicked_node.x * width
+            self.drag_visual_y = clicked_node.y * height
+            self.drag_original_pos = (clicked_node.x, clicked_node.y)
 
-                # Start drag - keep node in tree, create visual tree without it
-                self.drag_node = clicked_node
-                self.drag_visual_x = clicked_node.x * width
-                self.drag_visual_y = clicked_node.y * height
-                self.drag_original_pos = (clicked_node.x, clicked_node.y)
+            # Create a deep copy of the tree without the dragged node for visual display
+            self.visual_tree_root = self.create_visual_tree_without_node(self.root, clicked_node)
 
-                # Create a deep copy of the tree without the dragged node for visual display
-                self.visual_tree_root = self.create_visual_tree_without_node(self.root, clicked_node)
-
-                self.canvas.queue_draw()
+            self.canvas.queue_draw()
 
     def on_mouse_release(self, gesture, n_press, x, y):
         """Handle mouse button release"""
@@ -425,6 +426,40 @@ class BSPDesigner(Gtk.Box):
             clicked_node = self.find_leaf_at(self.root, nx, ny)
             if clicked_node:
                 self.show_app_dialog(clicked_node)
+
+    def find_split_at(self, node, x, y, canvas_w, canvas_h, threshold=8):
+        """Find any split line near the cursor position"""
+        if not node or node.is_leaf():
+            return None
+
+        # Account for the 2px visual offset
+        gap = 2
+        node_x = node.x * canvas_w + gap
+        node_y = node.y * canvas_h + gap
+        node_w = node.w * canvas_w - gap * 2
+        node_h = node.h * canvas_h - gap * 2
+
+        # Check if we're near this node's split line
+        if node.split_type == 'horizontal':
+            # Vertical split line at ratio position
+            split_x = node_x + node_w * node.ratio
+            if abs(x - split_x) < threshold and node_y <= y <= node_y + node_h:
+                # Return the container and which edge we're resizing
+                return (node, 'right')  # We'll resize the right edge of left child
+        elif node.split_type == 'vertical':
+            # Horizontal split line at ratio position
+            split_y = node_y + node_h * node.ratio
+            if abs(y - split_y) < threshold and node_x <= x <= node_x + node_w:
+                # Return the container and which edge we're resizing
+                return (node, 'bottom')  # We'll resize the bottom edge of top child
+
+        # Recursively check children
+        for child in node.children:
+            result = self.find_split_at(child, x, y, canvas_w, canvas_h, threshold)
+            if result:
+                return result
+
+        return None
 
     def get_edge_at(self, node, x, y, canvas_w, canvas_h, threshold=8):
         """Check if point is near an edge of the node"""
@@ -700,18 +735,18 @@ class BSPDesigner(Gtk.Box):
             return
 
         # Update hovered node and cursor
-        self.hovered_node = self.find_leaf_at(self.root, nx, ny)
-
-        # Update cursor based on what's under the mouse
-        if self.hovered_node:
-            edge = self.get_edge_at(self.hovered_node, x, y, width, height, threshold=12)
+        # Check for any split line near the cursor, not just leaf edges
+        split_info = self.find_split_at(self.root, x, y, width, height, threshold=8)
+        if split_info:
+            container, edge = split_info
+            self.hovered_node = container.children[0] if edge in ['right', 'bottom'] else container.children[1]
             if edge in ['left', 'right']:
                 self.canvas.set_cursor(Gdk.Cursor.new_from_name("ew-resize", None))
-            elif edge in ['top', 'bottom']:
-                self.canvas.set_cursor(Gdk.Cursor.new_from_name("ns-resize", None))
             else:
-                self.canvas.set_cursor(Gdk.Cursor.new_from_name("default", None))
+                self.canvas.set_cursor(Gdk.Cursor.new_from_name("ns-resize", None))
         else:
+            # No split line, find leaf for other interactions
+            self.hovered_node = self.find_leaf_at(self.root, nx, ny)
             self.canvas.set_cursor(Gdk.Cursor.new_from_name("default", None))
 
         self.canvas.queue_draw()
@@ -1142,7 +1177,7 @@ class LayoutManagerUnified(Gtk.Window):
 
     def __init__(self):
         super().__init__(title="Hyprland Layout Manager")
-        self.set_default_size(900, 600)
+        self.set_default_size(1400, 700)
         self.set_decorated(False)  # Remove title bar and window decorations
 
         # Paths
