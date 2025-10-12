@@ -436,16 +436,23 @@ class BSPDesigner(Gtk.Box):
 
     def on_right_click(self, gesture, n_press):
         """Handle right-click to assign app"""
+        print(f"[DEBUG] Right-click handler called, n_press={n_press}")
         x, y = gesture.get_current_event().get_position()
+        print(f"[DEBUG] Position: {x}, {y}")
 
         width = self.canvas.get_width()
         height = self.canvas.get_height()
         nx = x / width
         ny = y / height
+        print(f"[DEBUG] Normalized: {nx}, {ny}")
 
         clicked_node = self.find_leaf_at(self.root, nx, ny)
+        print(f"[DEBUG] Clicked node: {clicked_node}")
         if clicked_node:
+            print(f"[DEBUG] Calling show_app_dialog")
             self.show_app_dialog(clicked_node)
+        else:
+            print(f"[DEBUG] No node found at position")
 
     def find_split_at(self, node, x, y, canvas_w, canvas_h, threshold=8):
         """Find any split line near the cursor position"""
@@ -561,14 +568,18 @@ class BSPDesigner(Gtk.Box):
 
     def show_app_dialog(self, node):
         """Show dialog to set app name for a node"""
+        print(f"[DEBUG] show_app_dialog called for node: {node}")
+        print(f"[DEBUG] parent_window: {self.parent_window}")
         dialog = Gtk.Dialog(
             title="Set Application",
             transient_for=self.parent_window,
             modal=True
         )
+        print(f"[DEBUG] Dialog created: {dialog}")
         dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
         dialog.add_button("OK", Gtk.ResponseType.OK)
         dialog.set_default_size(450, 300)
+        print(f"[DEBUG] Dialog configured, about to present")
 
         content = dialog.get_content_area()
         content.set_margin_start(20)
@@ -623,7 +634,9 @@ class BSPDesigner(Gtk.Box):
             dlg.close()
 
         dialog.connect('response', on_response)
+        print(f"[DEBUG] About to call dialog.present()")
         dialog.present()
+        print(f"[DEBUG] dialog.present() called")
 
     def on_mouse_motion(self, controller, x, y):
         """Track mouse position and update hover, handle drag and resize"""
