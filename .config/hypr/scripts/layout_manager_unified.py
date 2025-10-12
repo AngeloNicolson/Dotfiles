@@ -172,10 +172,10 @@ class BSPDesigner(Gtk.Box):
         # Instructions (compact in embedded mode)
         instructions = Gtk.Label()
         if self.on_back_callback:
-            instructions.set_markup("<i>Drag windows to swap/insert | Drag edges to resize | Double-click to set app | Shift+Click to split | Shift+D to delete</i>")
+            instructions.set_markup("<i>Drag windows to swap/insert | Drag edges to resize | Right-click to set app | Shift+Click to split | Shift+D to delete</i>")
             instructions.set_margin_bottom(10)
         else:
-            instructions.set_markup("<small><i>Drag windows • Resize edges • Double-click app • Shift+Click split • Shift+D delete</i></small>")
+            instructions.set_markup("<small><i>Drag windows • Resize edges • Right-click app • Shift+Click split • Shift+D delete</i></small>")
             instructions.set_margin_bottom(5)
         self.append(instructions)
 
@@ -187,8 +187,9 @@ class BSPDesigner(Gtk.Box):
         self.canvas.set_focusable(True)  # Make canvas accept keyboard input
         self.canvas.set_can_focus(True)
 
-        # Add mouse button handlers for drag
+        # Add mouse button handlers for drag (left-click only)
         click_gesture = Gtk.GestureClick.new()
+        click_gesture.set_button(1)  # Only handle left-click
         click_gesture.connect('pressed', self.on_mouse_press)
         click_gesture.connect('released', self.on_mouse_release)
         self.canvas.add_controller(click_gesture)
@@ -198,6 +199,12 @@ class BSPDesigner(Gtk.Box):
         double_click.set_button(1)
         double_click.connect('pressed', self.on_double_click)
         self.canvas.add_controller(double_click)
+
+        # Add right-click handler for app assignment
+        right_click = Gtk.GestureClick.new()
+        right_click.set_button(3)
+        right_click.connect('pressed', self.on_right_click)
+        self.canvas.add_controller(right_click)
 
         # Add keyboard handler
         key_controller = Gtk.EventControllerKey.new()
@@ -426,6 +433,20 @@ class BSPDesigner(Gtk.Box):
             clicked_node = self.find_leaf_at(self.root, nx, ny)
             if clicked_node:
                 self.show_app_dialog(clicked_node)
+
+    def on_right_click(self, gesture, n_press):
+        """Handle right-click to assign app"""
+        x = gesture.get_current_event().get_position()[1]
+        y = gesture.get_current_event().get_position()[2]
+
+        width = self.canvas.get_width()
+        height = self.canvas.get_height()
+        nx = x / width
+        ny = y / height
+
+        clicked_node = self.find_leaf_at(self.root, nx, ny)
+        if clicked_node:
+            self.show_app_dialog(clicked_node)
 
     def find_split_at(self, node, x, y, canvas_w, canvas_h, threshold=8):
         """Find any split line near the cursor position"""
