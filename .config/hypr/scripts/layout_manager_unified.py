@@ -121,36 +121,62 @@ class BSPDesigner(Gtk.Box):
 
     def setup_ui(self):
         """Set up the designer UI"""
-        # Header
-        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        header.set_margin_start(20)
-        header.set_margin_end(20)
-        header.set_margin_top(15)
-        header.set_margin_bottom(15)
+        # Header (only show if not embedded)
+        if self.on_back_callback:
+            header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            header.set_margin_start(20)
+            header.set_margin_end(20)
+            header.set_margin_top(15)
+            header.set_margin_bottom(15)
 
-        back_btn = Gtk.Button(label="← Back")
-        back_btn.connect('clicked', lambda w: self.on_back_callback())
-        header.append(back_btn)
+            back_btn = Gtk.Button(label="← Back")
+            back_btn.connect('clicked', lambda w: self.on_back_callback())
+            header.append(back_btn)
 
-        title = Gtk.Label()
-        title.set_markup("<big><b>Layout Designer</b></big>")
-        title.set_hexpand(True)
-        header.append(title)
+            title = Gtk.Label()
+            title.set_markup("<big><b>Layout Designer</b></big>")
+            title.set_hexpand(True)
+            header.append(title)
 
-        clear_btn = Gtk.Button(label="Clear")
-        clear_btn.connect('clicked', self.on_clear)
-        header.append(clear_btn)
+            clear_btn = Gtk.Button(label="Clear")
+            clear_btn.connect('clicked', self.on_clear)
+            header.append(clear_btn)
 
-        save_btn = Gtk.Button(label="Save Layout")
-        save_btn.connect('clicked', lambda w: self.on_save_callback(self.root))
-        header.append(save_btn)
+            save_btn = Gtk.Button(label="Save Layout")
+            save_btn.connect('clicked', lambda w: self.on_save_callback(self.root))
+            header.append(save_btn)
 
-        self.append(header)
+            self.append(header)
 
-        # Instructions
+        # Compact toolbar for embedded mode
+        else:
+            toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            toolbar.set_margin_start(5)
+            toolbar.set_margin_end(5)
+            toolbar.set_margin_top(5)
+            toolbar.set_margin_bottom(5)
+
+            clear_btn = Gtk.Button(label="Clear")
+            clear_btn.connect('clicked', self.on_clear)
+            toolbar.append(clear_btn)
+
+            save_btn = Gtk.Button(label="Save")
+            save_btn.connect('clicked', lambda w: self.on_save_callback(self.root))
+            toolbar.append(save_btn)
+
+            toolbar.append(Gtk.Label())  # Spacer
+            toolbar.get_last_child().set_hexpand(True)
+
+            self.append(toolbar)
+
+        # Instructions (compact in embedded mode)
         instructions = Gtk.Label()
-        instructions.set_markup("<i>Drag windows to swap/insert | Drag edges to resize | Double-click to set app | Shift+Click to split | Shift+D to delete</i>")
-        instructions.set_margin_bottom(10)
+        if self.on_back_callback:
+            instructions.set_markup("<i>Drag windows to swap/insert | Drag edges to resize | Double-click to set app | Shift+Click to split | Shift+D to delete</i>")
+            instructions.set_margin_bottom(10)
+        else:
+            instructions.set_markup("<small><i>Drag windows • Resize edges • Double-click app • Shift+Click split • Shift+D delete</i></small>")
+            instructions.set_margin_bottom(5)
         self.append(instructions)
 
         # Canvas
@@ -1353,18 +1379,20 @@ class LayoutManagerUnified(Gtk.Window):
         page.append(left_panel)
 
         # Right panel - Layout preview/details
-        right_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        right_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         right_panel.set_hexpand(True)
-        right_panel.set_margin_start(20)
-        right_panel.set_margin_end(20)
-        right_panel.set_margin_top(20)
-        right_panel.set_margin_bottom(20)
+        right_panel.set_vexpand(True)
+        right_panel.set_margin_start(15)
+        right_panel.set_margin_end(15)
+        right_panel.set_margin_top(10)
+        right_panel.set_margin_bottom(10)
 
         # Preview header with buttons
         preview_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        preview_header.set_margin_bottom(5)
 
         self.layout_preview_title = Gtk.Label()
-        self.layout_preview_title.set_markup("<big><b>Select a layout</b></big>")
+        self.layout_preview_title.set_markup("<b>Select a layout</b>")
         self.layout_preview_title.set_hexpand(True)
         self.layout_preview_title.set_halign(Gtk.Align.START)
         preview_header.append(self.layout_preview_title)
@@ -1372,7 +1400,7 @@ class LayoutManagerUnified(Gtk.Window):
         # Buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
 
-        self.layout_apply_btn = Gtk.Button(label="Apply Layout")
+        self.layout_apply_btn = Gtk.Button(label="Apply")
         self.layout_apply_btn.connect('clicked', self.on_apply_layout)
         self.layout_apply_btn.set_sensitive(False)
         button_box.append(self.layout_apply_btn)
@@ -3404,7 +3432,7 @@ class LayoutManagerUnified(Gtk.Window):
         layout_name = row.layout_name
 
         # Update title
-        self.layout_preview_title.set_markup(f"<big><b>{layout_name}</b></big>")
+        self.layout_preview_title.set_markup(f"<b>{layout_name}</b>")
 
         # Enable buttons
         self.layout_apply_btn.set_sensitive(True)
@@ -3477,7 +3505,7 @@ class LayoutManagerUnified(Gtk.Window):
                         self.current_selected_layout = None
 
                         # Reset UI
-                        self.layout_preview_title.set_markup("<big><b>Select a layout</b></big>")
+                        self.layout_preview_title.set_markup("<b>Select a layout</b>")
                         self.layout_apply_btn.set_sensitive(False)
                         self.layout_delete_btn.set_sensitive(False)
 
@@ -3528,7 +3556,7 @@ class LayoutManagerUnified(Gtk.Window):
         self.embedded_designer.on_clear(None)
         self.current_selected_layout = None
         self.embedded_designer.editing_path = None
-        self.layout_preview_title.set_markup("<big><b>New Layout</b></big>")
+        self.layout_preview_title.set_markup("<b>New Layout</b>")
         self.layout_apply_btn.set_sensitive(False)
         self.layout_delete_btn.set_sensitive(False)
         self.layouts_list.unselect_all()
