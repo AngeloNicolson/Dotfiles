@@ -426,15 +426,17 @@ class BSPDesigner(Gtk.Box):
             if clicked_node:
                 self.show_app_dialog(clicked_node)
 
-    def get_edge_at(self, node, x, y, canvas_w, canvas_h, threshold=12):
+    def get_edge_at(self, node, x, y, canvas_w, canvas_h, threshold=8):
         """Check if point is near an edge of the node"""
         if not node or not node.parent:
             return None
 
-        node_x = node.x * canvas_w
-        node_y = node.y * canvas_h
-        node_w = node.w * canvas_w
-        node_h = node.h * canvas_h
+        # Account for the 2px visual offset used in drawing
+        gap = 2
+        node_x = node.x * canvas_w + gap
+        node_y = node.y * canvas_h + gap
+        node_w = node.w * canvas_w - gap * 2
+        node_h = node.h * canvas_h - gap * 2
 
         parent = node.parent
 
