@@ -274,11 +274,11 @@ class BSPDesigner(Gtk.Box):
 
     def draw_window(self, cr, x, y, w, h, node, is_dragging=False, is_expanded_sibling=False):
         """Draw a window rectangle with rounded corners"""
-        radius = 8
-        x_inner = x + 4
-        y_inner = y + 4
-        w_inner = w - 8
-        h_inner = h - 8
+        radius = 4
+        x_inner = x + 2
+        y_inner = y + 2
+        w_inner = w - 4
+        h_inner = h - 4
 
         # Rounded rectangle background
         cr.new_sub_path()
@@ -299,19 +299,19 @@ class BSPDesigner(Gtk.Box):
         # Border - with different colors for selected, hovered, or normal
         if is_dragging:
             cr.set_source_rgba(0.8, 0.6, 0.2, 0.8)  # Orange when dragging
-            cr.set_line_width(3)
+            cr.set_line_width(2)
         elif is_expanded_sibling:
             cr.set_source_rgba(0.6, 0.6, 0.8, 0.8)  # Blue-ish for expanded sibling
-            cr.set_line_width(2)
+            cr.set_line_width(1.5)
         elif node == self.selected_node:
             cr.set_source_rgb(0.8, 0.6, 0.2)  # Orange for selected
-            cr.set_line_width(3)
+            cr.set_line_width(2)
         elif node == self.hovered_node:
             cr.set_source_rgba(0.6, 0.8, 1.0, 0.6)  # Light blue for hovered
-            cr.set_line_width(2)
+            cr.set_line_width(1.5)
         else:
             cr.set_source_rgb(0.5, 0.5, 0.5)  # Gray for normal
-            cr.set_line_width(2)
+            cr.set_line_width(1)
         cr.stroke()
 
         # App label
