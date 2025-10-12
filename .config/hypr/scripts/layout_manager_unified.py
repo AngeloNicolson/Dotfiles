@@ -202,9 +202,8 @@ class BSPDesigner(Gtk.Box):
         self.canvas.add_controller(double_click)
 
         # Add right-click handler for app assignment
-        right_click = Gtk.GestureClick.new()
-        right_click.set_button(3)
-        right_click.connect('pressed', self.on_right_click)
+        right_click = Gtk.GestureClick(button=3)
+        right_click.connect('released', self.on_right_click)
         self.canvas.add_controller(right_click)
 
         # Add keyboard handler
@@ -434,11 +433,9 @@ class BSPDesigner(Gtk.Box):
             if clicked_node:
                 self.show_app_dialog(clicked_node)
 
-    def on_right_click(self, gesture, n_press):
+    def on_right_click(self, gesture, n_press, x, y):
         """Handle right-click to assign app"""
-        print(f"[DEBUG] Right-click handler called, n_press={n_press}")
-        x, y = gesture.get_current_event().get_position()
-        print(f"[DEBUG] Position: {x}, {y}")
+        print(f"[DEBUG] Right-click handler called at {x}, {y}")
 
         width = self.canvas.get_width()
         height = self.canvas.get_height()
