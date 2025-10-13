@@ -6,7 +6,7 @@
     {
       "type": "window",
       "app": "foot",
-      "terminal_command": "cd Documents"
+      "working_dir": "~/Docments"
     },
     {
       "type": "container",

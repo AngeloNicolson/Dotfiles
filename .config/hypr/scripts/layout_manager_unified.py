@@ -7,7 +7,8 @@ Provides a single interface for all layout management operations
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
-from gi.repository import Gtk, Gdk, Gio
+gi.require_version('Pango', '1.0')
+from gi.repository import Gtk, Gdk, Gio, Pango
 import json
 import os
 import sys
@@ -651,9 +652,13 @@ class BSPDesigner(Gtk.Box):
         terminal_box.append(work_dir_label)
 
         work_dir_entry = Gtk.Entry()
-        work_dir_entry.set_placeholder_text("e.g., ~/projects/myproject (use Tab to autocomplete)")
+        work_dir_entry.set_placeholder_text("Start typing from ~/")
         if node.working_dir:
             work_dir_entry.set_text(node.working_dir)
+        else:
+            # Default to home directory
+            work_dir_entry.set_text("~/")
+            work_dir_entry.set_position(-1)
         terminal_box.append(work_dir_entry)
 
         # Setup path autocompletion with inline ghost text
@@ -668,9 +673,7 @@ class BSPDesigner(Gtk.Box):
         ghost_label = Gtk.Label()
         ghost_label.set_halign(Gtk.Align.START)
         ghost_label.set_valign(Gtk.Align.CENTER)
-        ghost_label.set_margin_start(5)
-        ghost_label.add_css_class('dim-label')
-        ghost_label.set_sensitive(False)  # Make it non-interactive
+        ghost_label.set_can_target(False)  # Make it non-interactive
         overlay.add_overlay(ghost_label)
 
         def get_completion(text):
@@ -716,9 +719,16 @@ class BSPDesigner(Gtk.Box):
             self.work_dir_current_suggestion = suggestion
 
             if suggestion and text and suggestion.startswith(text):
-                # Show the remaining part of the suggestion
+                # Show only the remaining part of the suggestion (ghost part)
                 ghost_text = suggestion[len(text):]
-                ghost_label.set_markup(f'<span foreground="#888888">{text}{ghost_text}</span>')
+
+                # Calculate the width of the typed text to position the ghost text
+                layout = work_dir_entry.create_pango_layout(text)
+                text_width, _ = layout.get_pixel_size()
+
+                # Position the ghost label after the typed text
+                ghost_label.set_margin_start(5 + text_width)
+                ghost_label.set_markup(f'<span foreground="#666666">{ghost_text}</span>')
             else:
                 ghost_label.set_text('')
 
