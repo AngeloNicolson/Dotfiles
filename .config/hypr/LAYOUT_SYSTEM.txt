@@ -1,0 +1,116 @@
+Hyprland BSP Layout System
+==========================
+
+OVERVIEW
+--------
+A window layout management system for Hyprland that allows you to:
+- Create BSP (Binary Space Partitioning) layouts visually
+- Save layouts as JSON files (git-portable, no temp files)
+- Apply layouts to spawn windows in precise positions
+- Snap windows back to their layout positions with Mod+R
+
+KEY COMPONENTS
+--------------
+1. layout_manager_unified.py - Visual layout designer GUI
+2. apply_layout.py - Spawns windows and applies layout
+3. snap_to_layout.py - Repositions existing windows to layout
+4. layouts/saved/*.json - Layout files (BSP tree structure)
+
+HOW IT WORKS
+------------
+
+1. WINDOW IDENTIFICATION
+   - Every spawned window gets tagged: project_{name}_window_{index}
+   - Tags persist across window title changes
+   - Tags allow snap script to find and reposition specific windows
+   - Each window has a unique index (0, 1, 2...) based on BSP tree traversal
+
+2. PRE-POSITIONING (During Spawn)
+
+   Terminals (foot, kitty, etc.):
+   - Launched with --title flag: "project - Window N - app"
+   - Window rules match by title: float, size, move, workspace
+   - Appear at correct position from first frame
+
+   GUI Apps (firefox, chrome, etc.):
+   - Don't respect --title flag
+   - Window rules match by class+workspace
+   - Multiple instances with same class get same rules (overlap)
+   - Solution: Rules are temporary, windows spawn quickly
+
+3. WINDOW TAGGING (After Spawn)
+   - Get list of all windows BEFORE launching
+   - Launch app
+   - Poll for NEW window (address not in previous list)
+   - Tag new window with project_{name}_window_{index}
+   - This ensures EVERY window gets tagged, even duplicates
+
+4. SNAP FUNCTIONALITY (Mod+R)
+   - Get current workspace
+   - Find all windows with tags matching project_*_window_*
+   - Determine active project (most windows)
+   - Load layout file: ~/.config/hypr/layouts/saved/{project}.json
+   - Calculate positions from BSP tree
+   - Move windows from ANY workspace to current workspace
+   - Reposition each window to its slot by index
+
+5. LAYOUT FILE FORMAT
+   {
+     "type": "container",
+     "split": "horizontal" | "vertical",
+     "ratio": 0.0 to 1.0,
+     "children": [
+       {
+         "type": "window",
+         "app": "foot",
+         "working_dir": "~/path",
+         "terminal_command": "nvim"
+       },
+       { another container or window }
+     ]
+   }
+
+KEYBINDS
+--------
+- Mod+Shift+L - Open layout manager GUI
+- Mod+R - Snap windows back to layout positions
+
+WINDOW RULES
+------------
+Permanent (in custom/rules.conf):
+- windowrulev2 = float, initialTitle:^.+ - Window \d+ - .+$
+  Makes all layout-managed windows float
+
+Dynamic (created during spawn, removed after):
+- Terminals: float/size/move by title
+- GUI apps: float/size/move by class+workspace
+
+WORKFLOW
+--------
+1. Create layout in GUI (Mod+Shift+L)
+2. Save layout as "myproject.json"
+3. Apply layout: opens in layout manager or via script
+4. Windows spawn with tags: project_myproject_window_0, etc.
+5. Move/resize windows as needed
+6. Press Mod+R to snap back to layout
+7. Close window - remaining windows keep their slots
+
+TECHNICAL DETAILS
+-----------------
+- No /tmp files - everything git-portable
+- Tags are the source of truth (not titles)
+- Window rules are for pre-positioning only
+- Snap script bypasses rules, uses direct dispatch commands
+- Works across workspaces (gathers windows to current)
+- Handles missing windows gracefully (empty slots)
+
+DEBUGGING
+---------
+Check window tags:
+  hyprctl clients -j | jq '.[] | {class: .class, tags: .tags}'
+
+Check active layout windows:
+  hyprctl clients -j | jq '.[] | select(.tags[] | contains("project_"))'
+
+Test snap script manually:
+  ~/.config/hypr/scripts/snap_to_layout.py

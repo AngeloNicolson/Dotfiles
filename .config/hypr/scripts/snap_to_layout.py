@@ -1,7 +1,32 @@
 #!/usr/bin/env python3
 """
 Snap To Layout - Reposition windows to match their layout positions
-Uses window titles to identify windows and their project/index
+Keybind: Mod+R
+
+HOW IT WORKS:
+1. Get current workspace ID
+2. Find all windows with tags: project_{name}_window_{index}
+3. Group windows by project name
+4. Determine active project (the one with most windows)
+5. Load layout file: ~/.config/hypr/layouts/saved/{project}.json
+6. Calculate positions from BSP tree (based on monitor size and gaps)
+7. For each tagged window:
+   a. Move window to current workspace (if on different workspace)
+   b. Resize window to exact dimensions
+   c. Move window to exact position
+
+FEATURES:
+- Works across workspaces (gathers windows from anywhere)
+- Handles missing windows gracefully (empty slots remain)
+- Uses tags (not titles) so works after terminal title changes
+- Works for all app types (terminals, Firefox, etc.)
+
+WINDOW IDENTIFICATION:
+- Uses tags created by apply_layout.py
+- Format: project_{project_name}_window_{index}
+- Each window keeps its original slot index even if others are closed
+
+See LAYOUT_SYSTEM.txt for full architecture documentation.
 """
 
 import os

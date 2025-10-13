@@ -2,6 +2,30 @@
 """
 Unified Layout Manager for Hyprland
 Provides a single interface for all layout management operations
+Keybind: Mod+Shift+L
+
+HOW IT WORKS:
+1. Visual BSP layout designer with drag-and-drop
+2. Create containers (horizontal/vertical splits) and window nodes
+3. Configure each window: app, working directory, terminal commands
+4. Save layouts as JSON files in ~/.config/hypr/layouts/saved/
+5. Apply layouts to spawn windows in exact positions
+6. Manage workspace-to-layout assignments
+
+LAYOUT STRUCTURE:
+- BSP tree: containers split space recursively
+- Each split has a ratio (0.0 to 1.0)
+- Leaf nodes are windows with app configuration
+- Layouts are git-portable JSON files
+
+FEATURES:
+- Card-based layout browser
+- Live preview while editing
+- Path autocompletion for working directories
+- Floating window rules configuration
+- No temporary files - everything in git repo
+
+See LAYOUT_SYSTEM.txt for full architecture documentation.
 """
 
 import gi

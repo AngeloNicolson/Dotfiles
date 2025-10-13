@@ -2,6 +2,29 @@
 """
 Apply Layout Script for Hyprland
 Applies a saved window layout by launching applications and arranging them
+
+HOW IT WORKS:
+1. Load layout JSON file (BSP tree structure)
+2. Calculate positions for each window based on monitor size and gaps
+3. For each window in the layout:
+   a. Create window rules for pre-positioning (float, size, move)
+      - Terminals: Use title-based rules (they respect --title flag)
+      - GUI apps: Use class+workspace rules
+   b. Get snapshot of current windows before launching
+   c. Launch app with custom title (terminals) or default (GUI apps)
+   d. Poll for NEW window (compare before/after window lists)
+   e. Tag window with project_{name}_window_{index}
+   f. Window appears at correct position due to pre-positioning rules
+
+WINDOW TAGGING:
+- Tags persist across title changes
+- Format: project_{project_name}_window_{index}
+- Used by snap_to_layout.py to find and reposition windows
+
+USAGE:
+  apply_layout.py <layout_file.json> [workspace] [--reposition-only]
+
+See LAYOUT_SYSTEM.txt for full architecture documentation.
 """
 
 import json
@@ -30,6 +53,36 @@ def run_hyprctl(command):
 def get_active_window():
     """Get the currently active window"""
     return run_hyprctl('activewindow')
+
+
+def get_all_window_addresses():
+    """Get addresses of all current windows"""
+    try:
+        result = subprocess.run(['hyprctl', '-j', 'clients'],
+                               capture_output=True, text=True, check=False)
+        if not result.stdout:
+            return set()
+        clients = json.loads(result.stdout)
+        return {client['address'] for client in clients}
+    except Exception:
+        return set()
+
+
+def wait_for_new_window(previous_addresses, timeout=2.0, poll_interval=0.1):
+    """Wait for a new window to appear and return its address"""
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        current_addresses = get_all_window_addresses()
+        new_addresses = current_addresses - previous_addresses
+
+        if new_addresses:
+            # Return the first new window address
+            return new_addresses.pop()
+
+        time.sleep(poll_interval)
+
+    return None
 
 
 def find_window_by_title(window_title):
@@ -231,16 +284,18 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                         capture_output=True, check=False
                     )
 
+                # Get current windows before launching
+                previous_addresses = get_all_window_addresses()
+
                 # Launch with descriptive title
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
                 launch_app(app, terminal_command, working_dir, window_title)
 
-                # Wait for window to spawn and get the active window (simpler and more reliable)
-                time.sleep(0.5)  # Give window time to fully spawn and stabilize
-                window = get_active_window()
-                if window and 'address' in window:
-                    existing_address = window['address']
+                # Wait for NEW window to appear
+                new_address = wait_for_new_window(previous_addresses, timeout=2.0)
+                if new_address:
+                    existing_address = new_address
                     # Tag the window for snap functionality
                     tag_window(existing_address, project_id, current_index)
                     # Brief pause before spawning next window
