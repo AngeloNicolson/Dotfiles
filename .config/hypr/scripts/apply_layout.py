@@ -239,11 +239,10 @@ def apply_layout(layout_file, workspace=None):
                 window_info['height']
             )
 
-        # Register layout with snap daemon
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        daemon_script = os.path.join(script_dir, 'layout_snap_daemon.py')
-        subprocess.Popen([daemon_script, 'register', str(workspace_id), layout_file],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Save layout file for snap functionality
+        state_file = f'/tmp/hypr_layout_{workspace_id}'
+        with open(state_file, 'w') as f:
+            f.write(os.path.abspath(layout_file))
 
         print(f"Layout from {layout_file} applied successfully")
         return True

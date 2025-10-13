@@ -1,11 +1,11 @@
 {
   "type": "container",
   "split": "horizontal",
-  "ratio": 0.5,
+  "ratio": 0.2865853392704023,
   "children": [
     {
       "type": "window",
-      "app": "app"
+      "app": "foot"
     },
     {
       "type": "container",
@@ -14,11 +14,11 @@
       "children": [
         {
           "type": "window",
-          "app": "app"
+          "app": "foot"
         },
         {
           "type": "window",
-          "app": "app"
+          "app": "foot"
         }
       ]
     }
