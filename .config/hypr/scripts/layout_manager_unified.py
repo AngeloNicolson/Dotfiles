@@ -2173,15 +2173,36 @@ class LayoutManagerUnified(Gtk.Window):
                 ws_num = entry.get_text().strip()
                 if ws_num and ws_num.isdigit():
                     ws_id = int(ws_num)
+
+                    # Check if workspace already exists on ANY monitor
+                    workspace_exists = False
+                    for mon, ws_list in self.editor_state.items():
+                        if ws_id in ws_list:
+                            workspace_exists = True
+                            break
+
+                    if workspace_exists:
+                        # Show error dialog
+                        error_dialog = Gtk.MessageDialog(
+                            transient_for=self,
+                            modal=True,
+                            message_type=Gtk.MessageType.ERROR,
+                            buttons=Gtk.ButtonsType.OK,
+                            text=f"Workspace {ws_id} already exists"
+                        )
+                        error_dialog.set_secondary_text("Each workspace number can only exist once across all monitors.")
+                        error_dialog.connect('response', lambda d, r: d.close())
+                        error_dialog.present()
+                        return
+
                     # Add to editor state
                     if monitor_name not in self.editor_state:
                         self.editor_state[monitor_name] = []
-                    if ws_id not in self.editor_state[monitor_name]:
-                        self.editor_state[monitor_name].append(ws_id)
-                        self.editor_state[monitor_name].sort()
+                    self.editor_state[monitor_name].append(ws_id)
+                    self.editor_state[monitor_name].sort()
 
-                        # Refresh the monitor box
-                        self.refresh_editor_monitor_box(monitor_name)
+                    # Refresh the monitor box
+                    self.refresh_editor_monitor_box(monitor_name)
 
         dialog.connect('response', on_response)
         dialog.present()
