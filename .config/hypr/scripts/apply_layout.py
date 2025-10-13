@@ -115,7 +115,7 @@ def launch_app(app_command, terminal_command=None, working_dir=None):
         is_terminal = any(term in app_command.lower() for term in terminal_apps)
 
         if is_terminal and (terminal_command or working_dir):
-            # Build terminal command with custom args
+            # Build terminal command as a list (don't use shell=True)
             cmd_parts = [app_command]
 
             # Add working directory if specified
@@ -138,16 +138,21 @@ def launch_app(app_command, terminal_command=None, working_dir=None):
                     # Fallback for other terminals
                     cmd_parts.extend(['-e', 'sh', '-c', terminal_command])
 
-            full_command = ' '.join(cmd_parts)
+            # Use list directly without shell
+            subprocess.Popen(
+                cmd_parts,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
         else:
-            full_command = app_command
+            # For non-terminal apps, use shell
+            subprocess.Popen(
+                app_command,
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
 
-        subprocess.Popen(
-            full_command,
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
         time.sleep(0.5)  # Wait for window to appear
     except Exception as e:
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
