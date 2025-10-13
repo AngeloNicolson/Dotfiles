@@ -1299,9 +1299,9 @@ class LayoutManagerUnified(Gtk.Window):
         manage_page = self.create_manage_layouts_page()
         self.notebook.append_page(manage_page, Gtk.Label(label="Manage Layouts"))
 
-        # Tab 3: Workspace Layout (combines editor and layout management)
+        # Tab 3: Projects (combines editor and layout management)
         workspace_layout_page = self.create_workspace_layout_page()
-        self.notebook.append_page(workspace_layout_page, Gtk.Label(label="Workspace Layout"))
+        self.notebook.append_page(workspace_layout_page, Gtk.Label(label="Projects"))
 
         # Tab 5: Settings
         settings_page = self.create_settings_page()
