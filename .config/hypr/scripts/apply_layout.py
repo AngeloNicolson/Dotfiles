@@ -126,9 +126,17 @@ def launch_app(app_command, terminal_command=None, working_dir=None):
                 elif 'wezterm' in app_command:
                     cmd_parts.extend(['start', '--cwd', expanded_dir])
 
-            # Add terminal command if specified
+            # Add terminal command if specified - wrap in shell for proper execution
             if terminal_command:
-                cmd_parts.append(terminal_command)
+                # Use shell to handle the command properly
+                if 'foot' in app_command or 'kitty' in app_command or 'alacritty' in app_command:
+                    # These terminals accept commands directly as trailing arguments
+                    cmd_parts.extend(['sh', '-c', terminal_command])
+                elif 'wezterm' in app_command:
+                    cmd_parts.extend(['--', 'sh', '-c', terminal_command])
+                else:
+                    # Fallback for other terminals
+                    cmd_parts.extend(['-e', 'sh', '-c', terminal_command])
 
             full_command = ' '.join(cmd_parts)
         else:

@@ -641,8 +641,12 @@ class BSPDesigner(Gtk.Box):
         term_cmd_label = Gtk.Label(label="Command to run in terminal:", xalign=0)
         terminal_box.append(term_cmd_label)
 
+        term_cmd_help = Gtk.Label(xalign=0)
+        term_cmd_help.set_markup('<span size="small" foreground="#888888">Note: Don\'t use "cd" - use Working Directory below instead</span>')
+        terminal_box.append(term_cmd_help)
+
         term_cmd_entry = Gtk.Entry()
-        term_cmd_entry.set_placeholder_text("e.g., nvim, htop, ssh user@host")
+        term_cmd_entry.set_placeholder_text("e.g., nvim file.txt, htop, ssh user@host")
         if node.terminal_command:
             term_cmd_entry.set_text(node.terminal_command)
         terminal_box.append(term_cmd_entry)
@@ -674,6 +678,7 @@ class BSPDesigner(Gtk.Box):
         ghost_label.set_halign(Gtk.Align.START)
         ghost_label.set_valign(Gtk.Align.CENTER)
         ghost_label.set_can_target(False)  # Make it non-interactive
+        ghost_label.set_visible(True)
 
         # Use CSS to match entry font and positioning
         css_provider = Gtk.CssProvider()
@@ -767,6 +772,9 @@ class BSPDesigner(Gtk.Box):
         work_dir_entry.add_controller(key_controller)
 
         work_dir_entry.connect('changed', on_work_dir_changed)
+
+        # Trigger initial ghost text update
+        update_ghost_text()
 
         def on_response(dlg, response):
             if response == Gtk.ResponseType.OK:
