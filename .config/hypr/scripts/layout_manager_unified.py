@@ -97,6 +97,10 @@ class BSPDesigner(Gtk.Box):
         self.hovered_node = None  # Node under mouse cursor
         self.mouse_x = 0
         self.mouse_y = 0
+
+        # Gap sizes matching Hyprland config
+        self.gaps_in = 4  # Between windows
+        self.gaps_out = 8  # Outer edges
         self.editing_path = None  # Path of layout being edited (if any)
 
         # Drag state
@@ -281,11 +285,16 @@ class BSPDesigner(Gtk.Box):
 
     def draw_window(self, cr, x, y, w, h, node, is_dragging=False, is_expanded_sibling=False):
         """Draw a window rectangle with rounded corners"""
+        # Calculate gap size based on canvas scale (assuming 1920px reference width)
+        canvas_width = self.canvas.get_width()
+        scale = canvas_width / 1920.0
+        gap = max(1, int(self.gaps_in * scale))  # Minimum 1px for visibility
+
         radius = 4
-        x_inner = x + 2
-        y_inner = y + 2
-        w_inner = w - 4
-        h_inner = h - 4
+        x_inner = x + gap
+        y_inner = y + gap
+        w_inner = w - (gap * 2)
+        h_inner = h - (gap * 2)
 
         # Rounded rectangle background
         cr.new_sub_path()
@@ -449,8 +458,9 @@ class BSPDesigner(Gtk.Box):
         if not node or node.is_leaf():
             return None
 
-        # Account for the 2px visual offset
-        gap = 2
+        # Account for the visual gap offset
+        scale = canvas_w / 1920.0
+        gap = max(1, int(self.gaps_in * scale))
         node_x = node.x * canvas_w + gap
         node_y = node.y * canvas_h + gap
         node_w = node.w * canvas_w - gap * 2
@@ -483,8 +493,9 @@ class BSPDesigner(Gtk.Box):
         if not node or not node.parent:
             return None
 
-        # Account for the 2px visual offset used in drawing
-        gap = 2
+        # Account for the visual gap offset used in drawing
+        scale = canvas_w / 1920.0
+        gap = max(1, int(self.gaps_in * scale))
         node_x = node.x * canvas_w + gap
         node_y = node.y * canvas_h + gap
         node_w = node.w * canvas_w - gap * 2
@@ -3495,14 +3506,11 @@ class LayoutManagerUnified(Gtk.Window):
 
     def on_layout_selected(self, list_box, row):
         """Handle layout selection - load into designer"""
-        print(f"[DEBUG] on_layout_selected called with row: {row}")
         if not row:
-            print("[DEBUG] No row selected")
             return
 
         self.current_selected_layout = row.layout_path
         layout_name = row.layout_name
-        print(f"[DEBUG] Loading layout: {layout_name} from {row.layout_path}")
 
         # Update title
         self.layout_preview_title.set_markup(f"<b>{layout_name}</b>")
@@ -3513,14 +3521,10 @@ class LayoutManagerUnified(Gtk.Window):
 
         # Load layout into embedded designer
         try:
-            print(f"[DEBUG] Calling load_layout_from_file")
             self.embedded_designer.load_layout_from_file(row.layout_path)
             self.embedded_designer.editing_path = row.layout_path
-            print(f"[DEBUG] Successfully loaded layout")
         except Exception as e:
-            print(f"[DEBUG] Error loading layout into designer: {e}")
-            import traceback
-            traceback.print_exc()
+            pass
 
     def on_new_layout(self, widget):
         """Create a new layout"""
@@ -3549,7 +3553,9 @@ class LayoutManagerUnified(Gtk.Window):
 
         apply_script = os.path.join(self.scripts_dir, 'apply_layout.py')
         subprocess.Popen([apply_script, self.current_selected_layout])
-        print(f"[Layout Manager] Applying layout")
+
+        # Close the layout manager so it doesn't interfere with the applied layout
+        self.close()
 
     def on_delete_layout(self, widget):
         """Delete the selected layout"""

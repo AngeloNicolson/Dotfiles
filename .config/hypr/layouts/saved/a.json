@@ -1,26 +1,26 @@
 {
   "type": "container",
-  "split": "vertical",
-  "ratio": 0.7,
+  "split": "horizontal",
+  "ratio": 0.5,
   "children": [
     {
+      "type": "window",
+      "app": "app"
+    },
+    {
       "type": "container",
-      "split": "horizontal",
+      "split": "vertical",
       "ratio": 0.5,
       "children": [
         {
           "type": "window",
-          "app": "firefox"
+          "app": "app"
         },
         {
           "type": "window",
-          "app": "kitty"
+          "app": "app"
         }
       ]
-    },
-    {
-      "type": "window",
-      "app": "spotify"
     }
   ]
 }

@@ -33,24 +33,25 @@ def get_active_window():
 
 
 def move_window_to_position(address, x, y, width, height):
-    """Move and resize a window"""
+    """Move and resize a window to exact position (floating mode)"""
     try:
-        subprocess.run([
-            'hyprctl',
-            'dispatch',
-            'movewindowpixel',
-            f'exact {x} {y}',
-            f'address:{address}'
-        ])
-        subprocess.run([
-            'hyprctl',
-            'dispatch',
-            'resizewindowpixel',
-            f'exact {width} {height}',
-            f'address:{address}'
-        ])
+        # Make window floating
+        subprocess.run(['hyprctl', 'dispatch', 'togglefloating', f'address:{address}'],
+                      capture_output=True, check=False)
+        time.sleep(0.1)
+
+        # Move to exact position
+        subprocess.run(['hyprctl', 'dispatch', 'movewindowpixel',
+                       f'exact {int(x)} {int(y)},address:{address}'],
+                      capture_output=True, check=False)
+
+        # Resize to exact size
+        subprocess.run(['hyprctl', 'dispatch', 'resizewindowpixel',
+                       f'exact {int(width)} {int(height)},address:{address}'],
+                      capture_output=True, check=False)
+
     except Exception as e:
-        print(f"Error moving window: {e}", file=sys.stderr)
+        pass
 
 
 def launch_app(app_command):
@@ -67,17 +68,16 @@ def launch_app(app_command):
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
 
 
-def apply_node(node, x, y, width, height, monitor_info):
-    """Recursively apply a layout node"""
+def apply_node(node, x, y, width, height, monitor_info, gaps_in=4):
+    """Recursively apply a layout node with gap awareness"""
     if node['type'] == 'window':
         # Launch the application
         app = node.get('app')
         if app:
-            print(f"Launching {app} at ({x}, {y}) with size ({width}x{height})")
             launch_app(app)
 
             # Get the new window
-            time.sleep(0.3)
+            time.sleep(0.5)
             window = get_active_window()
 
             if window and 'address' in window:
@@ -94,13 +94,21 @@ def apply_node(node, x, y, width, height, monitor_info):
 
         if len(children) >= 2:
             if split == 'horizontal':
-                split_x = x + width * ratio
-                apply_node(children[0], x, y, width * ratio, height, monitor_info)
-                apply_node(children[1], split_x, y, width * (1 - ratio), height, monitor_info)
+                # Account for gap between windows
+                split_w1 = (width - gaps_in) * ratio
+                split_w2 = (width - gaps_in) * (1 - ratio)
+                split_x = x + split_w1 + gaps_in
+
+                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in)
+                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in)
             else:  # vertical
-                split_y = y + height * ratio
-                apply_node(children[0], x, y, width, height * ratio, monitor_info)
-                apply_node(children[1], x, split_y, width, height * (1 - ratio), monitor_info)
+                # Account for gap between windows
+                split_h1 = (height - gaps_in) * ratio
+                split_h2 = (height - gaps_in) * (1 - ratio)
+                split_y = y + split_h1 + gaps_in
+
+                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in)
+                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in)
 
 
 def apply_layout(layout_file, workspace=None):
@@ -116,20 +124,46 @@ def apply_layout(layout_file, workspace=None):
             print("Error: Could not get monitor information", file=sys.stderr)
             return False
 
-        # Use first monitor for now
-        monitor = monitors[0]
+        # Find the focused/active monitor
+        monitor = None
+        for mon in monitors:
+            if mon.get('focused', False):
+                monitor = mon
+                break
+
+        # Fallback to first monitor if none focused
+        if not monitor:
+            monitor = monitors[0]
         mon_x = monitor['x']
         mon_y = monitor['y']
         mon_width = monitor['width']
         mon_height = monitor['height']
+
+        # Account for reserved space (sidebars, bars, etc.)
+        # Format from hyprctl: [left, right, top, bottom]
+        reserved = monitor.get('reserved', [0, 0, 0, 0])
+        reserved_left = reserved[0] if len(reserved) > 0 else 0
+        reserved_right = reserved[1] if len(reserved) > 1 else 0
+        reserved_top = reserved[2] if len(reserved) > 2 else 0
+        reserved_bottom = reserved[3] if len(reserved) > 3 else 0
+
+        # Account for Hyprland gaps (from config: gaps_out=8, gaps_in=4)
+        gaps_out = 8
+        gaps_in = 4
+
+        # Adjust for reserved space and outer gaps
+        usable_x = mon_x + reserved_left + gaps_out
+        usable_y = mon_y + reserved_top + gaps_out
+        usable_width = mon_width - reserved_left - reserved_right - (gaps_out * 2)
+        usable_height = mon_height - reserved_top - reserved_bottom - (gaps_out * 2)
 
         # Switch to workspace if specified
         if workspace:
             subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)])
             time.sleep(0.2)
 
-        # Apply the layout
-        apply_node(layout, mon_x, mon_y, mon_width, mon_height, monitor)
+        # Apply the layout (floating mode with exact positioning)
+        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in)
 
         print(f"Layout from {layout_file} applied successfully")
         return True
