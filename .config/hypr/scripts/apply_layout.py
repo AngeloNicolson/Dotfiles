@@ -32,6 +32,23 @@ def get_active_window():
     return run_hyprctl('activewindow')
 
 
+def find_window_by_title(window_title):
+    """Find a window by its title"""
+    try:
+        result = subprocess.run(['hyprctl', '-j', 'clients'],
+                               capture_output=True, text=True, check=False)
+        if not result.stdout:
+            return None
+
+        clients = json.loads(result.stdout)
+        for client in clients:
+            if client.get('title') == window_title:
+                return client
+        return None
+    except Exception:
+        return None
+
+
 def get_windows_by_project_tag(project_id):
     """Get all windows tagged with a specific project ID"""
     result = subprocess.run(['hyprctl', '-j', 'clients'],
@@ -66,35 +83,56 @@ def move_cursor_to(x, y):
     time.sleep(0.05)
 
 
-def position_floating_window(address, x, y, width, height, project_id, window_index, app_name):
-    """Position window with no delays for instant placement"""
+def create_window_rule(window_title, x, y, width, height):
+    """Create dynamic window rules for pre-positioning before window spawns"""
     try:
-        # Tag the window
-        tag = f'project_{project_id}_window_{window_index}'
+        # Create rules to float, size, and position the window based on title
+        rules = [
+            f'float,title:^{window_title}$',
+            f'size {int(width)} {int(height)},title:^{window_title}$',
+            f'move {int(x)} {int(y)},title:^{window_title}$'
+        ]
 
-        # Execute all positioning commands in one batch (using &&)
-        batch_cmd = (
-            f'hyprctl dispatch togglefloating address:{address} && '
-            f'hyprctl dispatch tagwindow +{tag} address:{address} && '
-            f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{address} && '
-            f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{address}'
-        )
-        subprocess.run(batch_cmd, shell=True, capture_output=True, check=False)
-
-    except Exception as e:
+        for rule in rules:
+            subprocess.run(
+                ['hyprctl', 'keyword', 'windowrulev2', rule],
+                capture_output=True,
+                check=False
+            )
+    except Exception:
         pass
 
 
-def launch_app(app_command, terminal_command=None, working_dir=None):
-    """Launch an application, with optional terminal command and working directory"""
+def tag_window(address, project_id, window_index):
+    """Tag a window for future snapping"""
+    try:
+        tag = f'project_{project_id}_window_{window_index}'
+        subprocess.run(
+            ['hyprctl', 'dispatch', 'tagwindow', f'+{tag}', f'address:{address}'],
+            capture_output=True,
+            check=False
+        )
+    except Exception:
+        pass
+
+
+def launch_app(app_command, terminal_command=None, working_dir=None, window_title=None):
+    """Launch an application, with optional terminal command, working directory, and window title"""
     try:
         # Determine if this is a terminal app
         terminal_apps = ['foot', 'kitty', 'alacritty', 'wezterm', 'terminator', 'gnome-terminal', 'konsole']
         is_terminal = any(term in app_command.lower() for term in terminal_apps)
 
-        if is_terminal and (terminal_command or working_dir):
+        if is_terminal:
             # Build terminal command as a list (don't use shell=True)
             cmd_parts = [app_command]
+
+            # Add window title if specified (for pre-positioning via window rules)
+            if window_title:
+                if 'foot' in app_command or 'kitty' in app_command or 'alacritty' in app_command:
+                    cmd_parts.extend(['--title', window_title])
+                elif 'wezterm' in app_command:
+                    cmd_parts.extend(['--class', window_title])
 
             # Add working directory if specified
             if working_dir:
@@ -131,7 +169,7 @@ def launch_app(app_command, terminal_command=None, working_dir=None):
                 stderr=subprocess.DEVNULL
             )
 
-        time.sleep(0.5)  # Wait for window to appear
+        time.sleep(0.3)  # Shorter wait since window will be pre-positioned
     except Exception as e:
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
 
@@ -149,31 +187,40 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
             existing_address = None
             if existing_windows and current_index in existing_windows:
                 existing_address = existing_windows[current_index]['address']
+                # Just re-tag and re-position existing window
+                tag_window(existing_address, project_id, current_index)
 
-            # If window doesn't exist, launch it
+                # Re-position the existing window (don't toggle float - already floating)
+                batch_cmd = (
+                    f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address} && '
+                    f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{existing_address}'
+                )
+                subprocess.run(batch_cmd, shell=True, capture_output=True, check=False)
+
+            # If window doesn't exist, launch it with pre-positioning
             if not existing_address:
+                # Generate unique window title for pre-positioning
+                window_title = f'hypr_layout_{project_id}_{current_index}'
+
+                # Create window rules to pre-position before window fully renders
+                create_window_rule(window_title, x, y, width, height)
+
+                # Launch with unique title
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
-                launch_app(app, terminal_command, working_dir)
-                time.sleep(0.2)  # Minimal wait for window to appear
-                window = get_active_window()
+                launch_app(app, terminal_command, working_dir, window_title)
+
+                # Wait for window to appear and find it by its unique title
+                time.sleep(0.4)  # Wait for window to spawn
+                window = find_window_by_title(window_title)
                 if window and 'address' in window:
                     existing_address = window['address']
 
-            # Tag window with project info
-            if existing_address:
-                position_floating_window(
-                    existing_address,
-                    int(x),
-                    int(y),
-                    int(width),
-                    int(height),
-                    project_id,
-                    current_index,
-                    app
-                )
+                    # Tag the window for future snapping
+                    tag_window(existing_address, project_id, current_index)
 
-                # Collect for mapping
+            # Collect for mapping
+            if existing_address:
                 windows_list.append({
                     'address': existing_address,
                     'index': current_index,
