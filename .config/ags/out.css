@@ -45,6 +45,18 @@
   font-size: 20px;
   padding-right: 6px;
 }
+.bar .sections .start .pomodoro_button {
+  background-color: #3c3836;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.bar .sections .start .pomodoro_button:hover {
+  background-color: #504945;
+}
+.bar .sections .start .pomodoro_button label {
+  font-size: 18px;
+  padding-right: 4px;
+}
 .bar .sections .start .systray .apps {
   margin-top: 8px;
 }
@@ -430,6 +442,167 @@
   min-height: 150px;
 }
 
+.pomodoro {
+  background-color: #282828;
+  border-right: solid #504945 1px;
+  padding: 2rem;
+  min-width: 300px;
+}
+.pomodoro separator {
+  background-color: #504945;
+  min-height: 1px;
+  margin: 1rem 0;
+}
+.pomodoro .study_block_progress {
+  padding: 1rem 0.5rem;
+  min-width: 50px;
+}
+.pomodoro .study_block_progress .progress_label {
+  font-size: 9px;
+  font-weight: 600;
+  color: #bdae93;
+  margin-bottom: 8px;
+}
+.pomodoro .study_block_progress .progress_bar_container {
+  margin-top: 4px;
+}
+.pomodoro .study_block_progress .progress_bar_container .progress_segment {
+  background-color: #504945;
+  border-radius: 4px;
+  min-width: 24px;
+  min-height: 16px;
+  margin-top: 4px;
+  transition: all 200ms ease;
+}
+.pomodoro .study_block_progress .progress_bar_container .progress_segment.completed {
+  background-color: #98971a;
+}
+.pomodoro .study_block_progress .progress_bar_container .progress_segment.active {
+  background-color: #d79921;
+}
+.pomodoro .study_block_control .study_label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.pomodoro .study_block_control .study_block_button {
+  background-color: #3c3836;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 8px;
+  transition: background-color 200ms ease;
+}
+.pomodoro .study_block_control .study_block_button:hover {
+  background-color: #504945;
+}
+.pomodoro .study_block_control .study_block_button label {
+  color: #458588;
+}
+.pomodoro .session_info .info_label {
+  font-size: 16px;
+  font-weight: 600;
+}
+.pomodoro .session_info .info_text {
+  font-size: 12px;
+  color: #bdae93;
+}
+.pomodoro .session_info .popup_toggle .toggle_label {
+  font-size: 12px;
+  color: #bdae93;
+}
+.pomodoro .session_info .popup_toggle switch {
+  background-color: #504945;
+  border-radius: 12px;
+}
+.pomodoro .session_info .popup_toggle switch slider {
+  background-color: #ebdbb2;
+  border-radius: 50%;
+}
+.pomodoro .session_info .popup_toggle switch:checked {
+  background-color: #458588;
+}
+.pomodoro .session_info .popup_toggle switch:checked slider {
+  background-color: #fbf1c7;
+}
+.pomodoro .time_selector .slider_row .slider_icon {
+  font-size: 20px;
+}
+.pomodoro .time_selector .slider_row .slider_label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #bdae93;
+}
+.pomodoro .time_selector .slider_row .slider_value {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 35px;
+}
+.pomodoro .time_selector .slider_row scale {
+  min-width: 120px;
+}
+.pomodoro .time_selector .slider_row scale trough {
+  background-color: #504945;
+  border-radius: 8px;
+  min-height: 16px;
+}
+.pomodoro .time_selector .slider_row scale highlight {
+  background-color: #458588;
+  border-radius: 8px;
+}
+.pomodoro .time_selector .slider_row scale slider {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+.pomodoro .time_selector .slider_row scale:disabled {
+  opacity: 0.4;
+}
+.pomodoro .time_selector .slider_row scale:disabled trough {
+  background-color: #3c3836;
+}
+.pomodoro .time_selector .slider_row scale:disabled highlight {
+  background-color: #928374;
+}
+.pomodoro .timer_display {
+  padding: 2rem 0;
+}
+.pomodoro .timer_display .timer_text {
+  font-size: 48px;
+  font-weight: 700;
+  font-family: "JetBrainsMono Nerd Font";
+}
+.pomodoro .timer_display .mode_text {
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  transition: color 200ms ease;
+}
+.pomodoro .timer_display .mode_text.work {
+  color: #98971a;
+}
+.pomodoro .timer_display .mode_text.break {
+  color: #d79921;
+}
+.pomodoro .controls .control_button {
+  background-color: #3c3836;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 200ms ease;
+}
+.pomodoro .controls .control_button:hover {
+  background-color: #504945;
+}
+.pomodoro .controls .control_button.start_pause {
+  color: #98971a;
+}
+.pomodoro .controls .control_button.reset {
+  color: #cc241d;
+}
+
 .notification_popups {
   padding: 8px;
 }
@@ -458,4 +631,71 @@
 }
 .notification_popups .meta .summary {
   color: #928374;
+}
+
+.pomodoro_window {
+  background-color: #282828;
+  border-radius: 12px;
+  border: 1px solid #504945;
+  padding: 2rem;
+  min-width: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.pomodoro_window .header {
+  margin-bottom: 1rem;
+}
+.pomodoro_window .header .title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #d79921;
+}
+.pomodoro_window .header .close_button {
+  background-color: #3c3836;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 16px;
+  transition: background-color 200ms ease;
+}
+.pomodoro_window .header .close_button:hover {
+  background-color: #cc241d;
+  color: #282828;
+}
+.pomodoro_window .session_info .info_label {
+  font-size: 16px;
+  font-weight: 600;
+}
+.pomodoro_window .session_info .info_text {
+  font-size: 12px;
+  color: #bdae93;
+}
+.pomodoro_window .timer_display {
+  padding: 2rem 0;
+}
+.pomodoro_window .timer_display .timer_text {
+  font-size: 72px;
+  font-weight: 700;
+  font-family: "JetBrainsMono Nerd Font";
+  color: #d79921;
+}
+.pomodoro_window .break_message {
+  font-size: 16px;
+  color: #bdae93;
+  margin-top: 1rem;
+}
+.pomodoro_window .controls .control_button {
+  background-color: #3c3836;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 200ms ease;
+}
+.pomodoro_window .controls .control_button:hover {
+  background-color: #504945;
+}
+.pomodoro_window .controls .control_button.start_pause {
+  color: #98971a;
+}
+.pomodoro_window .controls .control_button.reset {
+  color: #cc241d;
 }

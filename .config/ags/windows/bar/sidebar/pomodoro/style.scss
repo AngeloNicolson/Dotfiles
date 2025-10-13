@@ -1,0 +1,209 @@
+.pomodoro {
+  background-color: $bg;
+  border-right: solid $bg2 1px;
+  padding: 2rem;
+  min-width: 300px;
+
+  & separator {
+    background-color: $bg2;
+    min-height: 1px;
+    margin: 1rem 0;
+  }
+
+  & .study_block_progress {
+    padding: 1rem 0.5rem;
+    min-width: 50px;
+
+    & .progress_label {
+      font-size: 9px;
+      font-weight: 600;
+      color: $fg2;
+      margin-bottom: 8px;
+    }
+
+    & .progress_bar_container {
+      margin-top: 4px;
+
+      & .progress_segment {
+        background-color: $bg2;
+        border-radius: 4px;
+        min-width: 24px;
+        min-height: 16px;
+        margin-top: 4px;
+        transition: all 200ms ease;
+
+        &.completed {
+          background-color: $green;
+        }
+
+        &.active {
+          background-color: $yellow;
+        }
+      }
+    }
+  }
+
+  & .study_block_control {
+    & .study_label {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    & .study_block_button {
+      background-color: $bg1;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 8px;
+      transition: background-color 200ms ease;
+
+      &:hover {
+        background-color: $bg2;
+      }
+
+      & label {
+        color: $blue;
+      }
+    }
+  }
+
+  & .session_info {
+    & .info_label {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    & .info_text {
+      font-size: 12px;
+      color: $fg2;
+    }
+
+    & .popup_toggle {
+      & .toggle_label {
+        font-size: 12px;
+        color: $fg2;
+      }
+
+      & switch {
+        background-color: $bg2;
+        border-radius: 12px;
+
+        & slider {
+          background-color: $fg;
+          border-radius: 50%;
+        }
+
+        &:checked {
+          background-color: $blue;
+
+          & slider {
+            background-color: $fgh;
+          }
+        }
+      }
+    }
+  }
+
+  & .time_selector {
+    & .slider_row {
+      & .slider_icon {
+        font-size: 20px;
+      }
+
+      & .slider_label {
+        font-size: 11px;
+        font-weight: 500;
+        color: $fg2;
+      }
+
+      & .slider_value {
+        font-size: 12px;
+        font-weight: 600;
+        min-width: 35px;
+      }
+
+      & scale {
+        min-width: 120px;
+
+        & trough {
+          background-color: $bg2;
+          border-radius: 8px;
+          min-height: 16px;
+        }
+
+        & highlight {
+          background-color: $blue;
+          border-radius: 8px;
+        }
+
+        & slider {
+          background-color: transparent;
+          border: none;
+          box-shadow: none;
+        }
+
+        &:disabled {
+          opacity: 0.4;
+
+          & trough {
+            background-color: $bg1;
+          }
+
+          & highlight {
+            background-color: $gray;
+          }
+        }
+      }
+    }
+  }
+
+  & .timer_display {
+    padding: 2rem 0;
+
+    & .timer_text {
+      font-size: 48px;
+      font-weight: 700;
+      font-family: "JetBrainsMono Nerd Font";
+    }
+
+    & .mode_text {
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 0.5rem;
+      transition: color 200ms ease;
+
+      &.work {
+        color: $green;
+      }
+
+      &.break {
+        color: $yellow;
+      }
+    }
+  }
+
+  & .controls {
+    & .control_button {
+      background-color: $bg1;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 200ms ease;
+
+      &:hover {
+        background-color: $bg2;
+      }
+
+      &.start_pause {
+        color: $green;
+      }
+
+      &.reset {
+        color: $red;
+      }
+    }
+  }
+}

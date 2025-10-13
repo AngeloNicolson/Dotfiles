@@ -59,6 +59,16 @@
         }
       }
 
+      & .pomodoro_button {
+        @include section;
+        @include button;
+
+        & label {
+          font-size: 18px;
+          padding-right: 4px;
+        }
+      }
+
       & .systray {
         & .apps {
           margin-top: 8px;

@@ -45,6 +45,16 @@ function StartSection() {
       ),
   });
 
+  const PomodoroButton = Widget.Button({
+    className: "pomodoro_button",
+    cursor: "pointer",
+    child: Widget.Label(""),
+    onPrimaryClick: () =>
+      Utils.exec(
+        `bash -c "${App.configDir}/shared/scripts/sidebar.sh toggle-pomodoro"`,
+      ),
+  });
+
   const revealSystray = Variable(false);
   const SysTray = Widget.Box({
     className: "systray",
@@ -107,6 +117,7 @@ function StartSection() {
       Divider(),
       SearchButton,
       WallpaperButton,
+      PomodoroButton,
       SysTray,
     ],
   });
