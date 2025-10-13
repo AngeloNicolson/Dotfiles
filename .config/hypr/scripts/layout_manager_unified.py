@@ -19,12 +19,14 @@ import time
 
 class BSPNode:
     """Represents a node in the BSP tree"""
-    def __init__(self, x, y, w, h, app=None):
+    def __init__(self, x, y, w, h, app=None, terminal_command=None, working_dir=None):
         self.x = x
         self.y = y
         self.w = w
         self.h = h
         self.app = app  # If None, this is a container
+        self.terminal_command = terminal_command  # Custom command for terminals
+        self.working_dir = working_dir  # Working directory for terminal
         self.split_type = None  # 'horizontal' or 'vertical'
         self.ratio = 0.5
         self.children = []  # [left/top, right/bottom]
@@ -70,10 +72,15 @@ class BSPNode:
     def to_dict(self):
         """Convert to layout JSON format"""
         if self.is_leaf():
-            return {
+            result = {
                 'type': 'window',
                 'app': self.app or 'app'
             }
+            if self.terminal_command:
+                result['terminal_command'] = self.terminal_command
+            if self.working_dir:
+                result['working_dir'] = self.working_dir
+            return result
         else:
             return {
                 'type': 'container',
@@ -576,7 +583,7 @@ class BSPDesigner(Gtk.Box):
         )
         dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
         dialog.add_button("OK", Gtk.ResponseType.OK)
-        dialog.set_default_size(450, 300)
+        dialog.set_default_size(500, 500)
 
         content = dialog.get_content_area()
         content.set_margin_start(20)
@@ -615,7 +622,39 @@ class BSPDesigner(Gtk.Box):
 
         entry = Gtk.Entry()
         entry.set_placeholder_text("e.g., firefox, kitty, code")
+        if node.app:
+            entry.set_text(node.app)
         box.append(entry)
+
+        # Terminal-specific settings
+        terminal_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        terminal_box.set_margin_top(15)
+        box.append(terminal_box)
+
+        terminal_label = Gtk.Label()
+        terminal_label.set_markup("<b>Terminal Settings (optional)</b>")
+        terminal_label.set_xalign(0)
+        terminal_box.append(terminal_label)
+
+        # Terminal command
+        term_cmd_label = Gtk.Label(label="Command to run in terminal:", xalign=0)
+        terminal_box.append(term_cmd_label)
+
+        term_cmd_entry = Gtk.Entry()
+        term_cmd_entry.set_placeholder_text("e.g., nvim, htop, ssh user@host")
+        if node.terminal_command:
+            term_cmd_entry.set_text(node.terminal_command)
+        terminal_box.append(term_cmd_entry)
+
+        # Working directory
+        work_dir_label = Gtk.Label(label="Working directory:", xalign=0)
+        terminal_box.append(work_dir_label)
+
+        work_dir_entry = Gtk.Entry()
+        work_dir_entry.set_placeholder_text("e.g., ~/projects/myproject")
+        if node.working_dir:
+            work_dir_entry.set_text(node.working_dir)
+        terminal_box.append(work_dir_entry)
 
         def on_response(dlg, response):
             if response == Gtk.ResponseType.OK:
@@ -626,6 +665,14 @@ class BSPDesigner(Gtk.Box):
                 else:
                     selected_index = dropdown.get_selected()
                     node.app = common_apps[selected_index]
+
+                # Save terminal-specific settings
+                term_cmd = term_cmd_entry.get_text().strip()
+                node.terminal_command = term_cmd if term_cmd else None
+
+                work_dir = work_dir_entry.get_text().strip()
+                node.working_dir = work_dir if work_dir else None
+
                 self.canvas.queue_draw()
             dlg.close()
 

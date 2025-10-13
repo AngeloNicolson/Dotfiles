@@ -107,11 +107,35 @@ def position_floating_window(address, x, y, width, height, project_id, window_in
         pass
 
 
-def launch_app(app_command):
-    """Launch an application"""
+def launch_app(app_command, terminal_command=None, working_dir=None):
+    """Launch an application, with optional terminal command and working directory"""
     try:
+        # Determine if this is a terminal app
+        terminal_apps = ['foot', 'kitty', 'alacritty', 'wezterm', 'terminator', 'gnome-terminal', 'konsole']
+        is_terminal = any(term in app_command.lower() for term in terminal_apps)
+
+        if is_terminal and (terminal_command or working_dir):
+            # Build terminal command with custom args
+            cmd_parts = [app_command]
+
+            # Add working directory if specified
+            if working_dir:
+                expanded_dir = os.path.expanduser(working_dir)
+                if 'foot' in app_command or 'kitty' in app_command or 'alacritty' in app_command:
+                    cmd_parts.extend(['--working-directory', expanded_dir])
+                elif 'wezterm' in app_command:
+                    cmd_parts.extend(['start', '--cwd', expanded_dir])
+
+            # Add terminal command if specified
+            if terminal_command:
+                cmd_parts.append(terminal_command)
+
+            full_command = ' '.join(cmd_parts)
+        else:
+            full_command = app_command
+
         subprocess.Popen(
-            app_command,
+            full_command,
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
@@ -137,7 +161,9 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
 
             # If window doesn't exist, launch it
             if not existing_address:
-                launch_app(app)
+                terminal_command = node.get('terminal_command')
+                working_dir = node.get('working_dir')
+                launch_app(app, terminal_command, working_dir)
                 time.sleep(0.5)
                 window = get_active_window()
                 if window and 'address' in window:
