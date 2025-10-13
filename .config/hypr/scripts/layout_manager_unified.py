@@ -1295,13 +1295,13 @@ class LayoutManagerUnified(Gtk.Window):
         quick_actions_page = self.create_quick_actions_page()
         self.notebook.append_page(quick_actions_page, Gtk.Label(label="Quick Actions"))
 
-        # Tab 2: Manage Layouts
+        # Tab 2: Projects (BSP layout management)
         manage_page = self.create_manage_layouts_page()
-        self.notebook.append_page(manage_page, Gtk.Label(label="Manage Layouts"))
+        self.notebook.append_page(manage_page, Gtk.Label(label="Projects"))
 
-        # Tab 3: Projects (combines editor and layout management)
+        # Tab 3: Workspace Layout (workspace to monitor assignments)
         workspace_layout_page = self.create_workspace_layout_page()
-        self.notebook.append_page(workspace_layout_page, Gtk.Label(label="Projects"))
+        self.notebook.append_page(workspace_layout_page, Gtk.Label(label="Workspace Layout"))
 
         # Tab 5: Settings
         settings_page = self.create_settings_page()
