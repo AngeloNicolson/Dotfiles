@@ -47,11 +47,11 @@ def snap_layout():
         print(f"Layout file not found: {layout_file}", file=sys.stderr)
         return False
 
-    # Run apply_layout.py
+    # Run apply_layout.py with --reposition-only flag (only reposition existing windows, don't spawn new ones)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     apply_script = os.path.join(script_dir, 'apply_layout.py')
 
-    result = subprocess.run([apply_script, layout_file],
+    result = subprocess.run([apply_script, layout_file, '--reposition-only'],
                            capture_output=True, text=True)
 
     if result.returncode == 0:

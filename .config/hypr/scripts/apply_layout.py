@@ -33,7 +33,7 @@ def get_active_window():
 
 
 def find_window_by_title(window_title):
-    """Find a window by its title"""
+    """Find a window by its initial title (which Hyprland preserves even after title changes)"""
     try:
         result = subprocess.run(['hyprctl', '-j', 'clients'],
                                capture_output=True, text=True, check=False)
@@ -42,15 +42,16 @@ def find_window_by_title(window_title):
 
         clients = json.loads(result.stdout)
         for client in clients:
-            if client.get('title') == window_title:
+            # Check initialTitle which persists even after the window changes its title
+            if client.get('initialTitle') == window_title:
                 return client
         return None
     except Exception:
         return None
 
 
-def get_windows_by_project_tag(project_id):
-    """Get all windows tagged with a specific project ID"""
+def get_windows_by_project_tag(project_id, workspace_id=None):
+    """Get all windows tagged with a specific project ID, optionally filtered by workspace"""
     result = subprocess.run(['hyprctl', '-j', 'clients'],
                            capture_output=True, text=True, check=False)
     if not result.stdout:
@@ -60,6 +61,12 @@ def get_windows_by_project_tag(project_id):
     project_windows = {}
 
     for client in clients:
+        # Filter by workspace if specified
+        if workspace_id is not None:
+            client_workspace = client.get('workspace', {}).get('id')
+            if client_workspace != workspace_id:
+                continue
+
         tags = client.get('tags', [])
         # Look for tags in format: project_<name>_window_<index>
         for tag in tags:
@@ -99,19 +106,6 @@ def create_window_rule(window_title, x, y, width, height):
                 capture_output=True,
                 check=False
             )
-    except Exception:
-        pass
-
-
-def tag_window(address, project_id, window_index):
-    """Tag a window for future snapping"""
-    try:
-        tag = f'project_{project_id}_window_{window_index}'
-        subprocess.run(
-            ['hyprctl', 'dispatch', 'tagwindow', f'+{tag}', f'address:{address}'],
-            capture_output=True,
-            check=False
-        )
     except Exception:
         pass
 
@@ -174,7 +168,7 @@ def launch_app(app_command, terminal_command=None, working_dir=None, window_titl
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
 
 
-def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None, existing_windows=None, window_counter=None, project_id=None):
+def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None, existing_windows=None, window_counter=None, project_id=None, reposition_only=False, workspace_id=None):
     """Recursively apply a layout node"""
     if node['type'] == 'window':
         # Launch the application
@@ -187,9 +181,6 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
             existing_address = None
             if existing_windows and current_index in existing_windows:
                 existing_address = existing_windows[current_index]['address']
-                # Just re-tag and re-position existing window
-                tag_window(existing_address, project_id, current_index)
-
                 # Re-position the existing window (don't toggle float - already floating)
                 batch_cmd = (
                     f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address} && '
@@ -197,27 +188,32 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 )
                 subprocess.run(batch_cmd, shell=True, capture_output=True, check=False)
 
-            # If window doesn't exist, launch it with pre-positioning
-            if not existing_address:
-                # Generate unique window title for pre-positioning
-                window_title = f'hypr_layout_{project_id}_{current_index}'
+            # If window doesn't exist, launch it with pre-positioning (unless reposition_only mode)
+            if not existing_address and not reposition_only:
+                # Generate descriptive window title: "project - Window 1 - app"
+                window_title = f'{project_id} - Window {current_index + 1} - {app}'
 
                 # Create window rules to pre-position before window fully renders
+                # Also add rule to spawn on specific workspace
                 create_window_rule(window_title, x, y, width, height)
+                if workspace_id:
+                    subprocess.run(
+                        ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},title:^{window_title}$'],
+                        capture_output=True, check=False
+                    )
 
-                # Launch with unique title
+                # Launch with descriptive title
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
                 launch_app(app, terminal_command, working_dir, window_title)
 
-                # Wait for window to appear and find it by its unique title
-                time.sleep(0.4)  # Wait for window to spawn
-                window = find_window_by_title(window_title)
+                # Wait for window to spawn and get the active window (simpler and more reliable)
+                time.sleep(0.5)  # Give window time to fully spawn and stabilize
+                window = get_active_window()
                 if window and 'address' in window:
                     existing_address = window['address']
-
-                    # Tag the window for future snapping
-                    tag_window(existing_address, project_id, current_index)
+                    # Brief pause before spawning next window
+                    time.sleep(0.2)
 
             # Collect for mapping
             if existing_address:
@@ -238,19 +234,19 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 split_w2 = (width - gaps_in) * (1 - ratio)
                 split_x = x + split_w1 + gaps_in
 
-                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
-                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
+                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id, reposition_only, workspace_id)
+                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id, reposition_only, workspace_id)
             else:  # vertical
                 # Account for gap between windows
                 split_h1 = (height - gaps_in) * ratio
                 split_h2 = (height - gaps_in) * (1 - ratio)
                 split_y = y + split_h1 + gaps_in
 
-                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
-                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
+                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id, reposition_only, workspace_id)
+                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id, reposition_only, workspace_id)
 
 
-def apply_layout(layout_file, workspace=None):
+def apply_layout(layout_file, workspace=None, reposition_only=False):
     """Apply a layout file to the current or specified workspace"""
     try:
         # Load layout
@@ -312,30 +308,13 @@ def apply_layout(layout_file, workspace=None):
         # Generate project ID from layout filename
         project_id = os.path.splitext(os.path.basename(layout_file))[0]
 
-        # Get existing windows tagged with this project
-        existing_windows = get_windows_by_project_tag(project_id)
+        # Get existing windows tagged with this project on this workspace
+        existing_windows = get_windows_by_project_tag(project_id, workspace_id)
 
         # Spawn and position windows immediately (no two-pass system)
         windows_list = []
         window_counter = [0]  # Use list for mutability in recursion
-        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list, existing_windows, window_counter, project_id)
-
-        # Build mapping
-        window_mapping = {}
-        for window_info in windows_list:
-            window_mapping[window_info['index']] = {
-                'address': window_info['address'],
-                'app': window_info['app']
-            }
-
-        # Save layout file and mapping for snap functionality
-        state_file = f'/tmp/hypr_layout_{workspace_id}'
-        with open(state_file, 'w') as f:
-            f.write(os.path.abspath(layout_file))
-
-        mapping_file = f'/tmp/hypr_layout_{workspace_id}_mapping.json'
-        with open(mapping_file, 'w') as f:
-            json.dump(window_mapping, f)
+        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list, existing_windows, window_counter, project_id, reposition_only, workspace_id)
 
         print(f"Layout from {layout_file} applied successfully")
         return True
@@ -353,13 +332,22 @@ def apply_layout(layout_file, workspace=None):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: apply_layout.py <layout_file> [workspace]", file=sys.stderr)
+        print("Usage: apply_layout.py <layout_file> [workspace] [--reposition-only]", file=sys.stderr)
         sys.exit(1)
 
+    # Parse arguments
     layout_file = sys.argv[1]
-    workspace = sys.argv[2] if len(sys.argv) > 2 else None
+    workspace = None
+    reposition_only = False
 
-    success = apply_layout(layout_file, workspace)
+    # Check for optional arguments
+    for arg in sys.argv[2:]:
+        if arg == '--reposition-only':
+            reposition_only = True
+        elif not workspace:
+            workspace = arg
+
+    success = apply_layout(layout_file, workspace, reposition_only)
     sys.exit(0 if success else 1)
 
 
