@@ -32,19 +32,31 @@ def get_active_window():
     return run_hyprctl('activewindow')
 
 
-def get_workspace_windows(workspace_id):
-    """Get all windows in a specific workspace"""
+def get_windows_by_project_tag(project_id):
+    """Get all windows tagged with a specific project ID"""
     result = subprocess.run(['hyprctl', '-j', 'clients'],
                            capture_output=True, text=True, check=False)
     if not result.stdout:
-        return []
+        return {}
 
     clients = json.loads(result.stdout)
-    workspace_windows = []
+    project_windows = {}
+
     for client in clients:
-        if client.get('workspace', {}).get('id') == workspace_id:
-            workspace_windows.append(client['address'])
-    return workspace_windows
+        tags = client.get('tags', [])
+        # Look for tags in format: project_<name>_window_<index>
+        for tag in tags:
+            if tag.startswith(f'project_{project_id}_window_'):
+                try:
+                    window_index = int(tag.split('_window_')[1])
+                    project_windows[window_index] = {
+                        'address': client['address'],
+                        'app': client.get('class', '')
+                    }
+                except:
+                    pass
+
+    return project_windows
 
 
 def move_cursor_to(x, y):
@@ -54,7 +66,7 @@ def move_cursor_to(x, y):
     time.sleep(0.05)
 
 
-def position_floating_window(address, x, y, width, height):
+def position_floating_window(address, x, y, width, height, project_id, window_index, app_name):
     """Position and resize a floating window with exact coordinates"""
     try:
         # Check if window is already floating
@@ -73,6 +85,11 @@ def position_floating_window(address, x, y, width, height):
                 subprocess.run(['hyprctl', 'dispatch', 'togglefloating', f'address:{address}'],
                               capture_output=True, check=False)
                 time.sleep(0.1)
+
+        # Add project window tag
+        tag = f'project_{project_id}_window_{window_index}'
+        subprocess.run(['hyprctl', 'dispatch', 'tagwindow', f'+{tag} address:{address}'],
+                      capture_output=True, check=False)
 
         # Resize window with exact dimensions
         subprocess.run(['hyprctl', 'dispatch', 'resizewindowpixel',
@@ -115,8 +132,8 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
 
             # Check if we have an existing window at this index
             existing_address = None
-            if existing_windows and current_index < len(existing_windows):
-                existing_address = existing_windows[current_index]
+            if existing_windows and current_index in existing_windows:
+                existing_address = existing_windows[current_index]['address']
 
             # If window doesn't exist, launch it
             if not existing_address:
@@ -133,7 +150,9 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                     'x': int(x),
                     'y': int(y),
                     'width': int(width),
-                    'height': int(height)
+                    'height': int(height),
+                    'index': current_index,
+                    'app': app
                 })
     elif node['type'] == 'container':
         split = node['split']
@@ -218,8 +237,11 @@ def apply_layout(layout_file, workspace=None):
             time.sleep(0.2)
             workspace_id = workspace
 
-        # Get existing windows in the workspace
-        existing_windows = get_workspace_windows(workspace_id)
+        # Generate project ID from layout filename
+        project_id = os.path.splitext(os.path.basename(layout_file))[0]
+
+        # Get existing windows tagged with this project
+        existing_windows = get_windows_by_project_tag(project_id)
 
         # Pass 1: Spawn windows that don't exist, collect all windows
         windows_list = []
@@ -230,19 +252,33 @@ def apply_layout(layout_file, workspace=None):
         time.sleep(0.5)
 
         # Pass 2: Position and resize all windows as floating with exact coordinates
+        window_mapping = {}
         for window_info in windows_list:
             position_floating_window(
                 window_info['address'],
                 window_info['x'],
                 window_info['y'],
                 window_info['width'],
-                window_info['height']
+                window_info['height'],
+                project_id,
+                window_info['index'],
+                window_info['app']
             )
 
-        # Save layout file for snap functionality
+            # Save mapping
+            window_mapping[window_info['index']] = {
+                'address': window_info['address'],
+                'app': window_info['app']
+            }
+
+        # Save layout file and mapping for snap functionality
         state_file = f'/tmp/hypr_layout_{workspace_id}'
         with open(state_file, 'w') as f:
             f.write(os.path.abspath(layout_file))
+
+        mapping_file = f'/tmp/hypr_layout_{workspace_id}_mapping.json'
+        with open(mapping_file, 'w') as f:
+            json.dump(window_mapping, f)
 
         print(f"Layout from {layout_file} applied successfully")
         return True
