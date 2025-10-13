@@ -674,6 +674,17 @@ class BSPDesigner(Gtk.Box):
         ghost_label.set_halign(Gtk.Align.START)
         ghost_label.set_valign(Gtk.Align.CENTER)
         ghost_label.set_can_target(False)  # Make it non-interactive
+
+        # Use CSS to match entry font and positioning
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(b"""
+            label {
+                font-family: monospace;
+                font-size: 13px;
+            }
+        """)
+        ghost_label.get_style_context().add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
         overlay.add_overlay(ghost_label)
 
         def get_completion(text):
@@ -723,12 +734,16 @@ class BSPDesigner(Gtk.Box):
                 ghost_text = suggestion[len(text):]
 
                 # Calculate the width of the typed text to position the ghost text
-                layout = work_dir_entry.create_pango_layout(text)
+                # Create a monospace layout matching the entry's font
+                layout = Pango.Layout(work_dir_entry.get_pango_context())
+                font_desc = Pango.FontDescription("monospace 13")
+                layout.set_font_description(font_desc)
+                layout.set_text(text, -1)
                 text_width, _ = layout.get_pixel_size()
 
-                # Position the ghost label after the typed text
-                ghost_label.set_margin_start(5 + text_width)
-                ghost_label.set_markup(f'<span foreground="#666666">{ghost_text}</span>')
+                # Account for entry's internal padding (typically 6-8px)
+                ghost_label.set_margin_start(8 + text_width)
+                ghost_label.set_markup(f'<span foreground="#888888" font_family="monospace" font_size="13">{ghost_text}</span>')
             else:
                 ghost_label.set_text('')
 
@@ -741,10 +756,13 @@ class BSPDesigner(Gtk.Box):
                 if self.work_dir_current_suggestion:
                     work_dir_entry.set_text(self.work_dir_current_suggestion)
                     work_dir_entry.set_position(-1)  # Move cursor to end
-                    return True  # Consume the event
+                    update_ghost_text()  # Update ghost text after accepting
+                    return True  # Consume the event to prevent dialog from closing
             return False
 
         key_controller = Gtk.EventControllerKey()
+        # Use capture phase to intercept before the dialog
+        key_controller.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         key_controller.connect('key-pressed', on_work_dir_key_press)
         work_dir_entry.add_controller(key_controller)
 
