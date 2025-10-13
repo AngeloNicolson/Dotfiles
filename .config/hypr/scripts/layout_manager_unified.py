@@ -1402,11 +1402,11 @@ class LayoutManagerUnified(Gtk.Window):
         header.set_margin_bottom(10)
 
         title = Gtk.Label()
-        title.set_markup("<b>Saved Layouts</b>")
+        title.set_markup("<b>Saved Projects</b>")
         title.set_halign(Gtk.Align.START)
         header.append(title)
 
-        new_layout_btn = Gtk.Button(label="New Layout")
+        new_layout_btn = Gtk.Button(label="New Project")
         new_layout_btn.connect('clicked', self.on_new_layout_embedded)
         new_layout_btn.set_margin_top(5)
         header.append(new_layout_btn)
@@ -1440,7 +1440,7 @@ class LayoutManagerUnified(Gtk.Window):
         preview_header.set_margin_bottom(5)
 
         self.layout_preview_title = Gtk.Label()
-        self.layout_preview_title.set_markup("<b>Select a layout</b>")
+        self.layout_preview_title.set_markup("<b>Select a project</b>")
         self.layout_preview_title.set_hexpand(True)
         self.layout_preview_title.set_halign(Gtk.Align.START)
         preview_header.append(self.layout_preview_title)
@@ -1448,7 +1448,7 @@ class LayoutManagerUnified(Gtk.Window):
         # Buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
 
-        self.layout_apply_btn = Gtk.Button(label="Apply")
+        self.layout_apply_btn = Gtk.Button(label="Load")
         self.layout_apply_btn.connect('clicked', self.on_apply_layout)
         self.layout_apply_btn.set_sensitive(False)
         button_box.append(self.layout_apply_btn)
@@ -3582,7 +3582,7 @@ class LayoutManagerUnified(Gtk.Window):
                         self.current_selected_layout = None
 
                         # Reset UI
-                        self.layout_preview_title.set_markup("<b>Select a layout</b>")
+                        self.layout_preview_title.set_markup("<b>Select a project</b>")
                         self.layout_apply_btn.set_sensitive(False)
                         self.layout_delete_btn.set_sensitive(False)
 
@@ -3633,7 +3633,7 @@ class LayoutManagerUnified(Gtk.Window):
         self.embedded_designer.on_clear(None)
         self.current_selected_layout = None
         self.embedded_designer.editing_path = None
-        self.layout_preview_title.set_markup("<b>New Layout</b>")
+        self.layout_preview_title.set_markup("<b>New Project</b>")
         self.layout_apply_btn.set_sensitive(False)
         self.layout_delete_btn.set_sensitive(False)
         self.layouts_list.unselect_all()
@@ -3657,7 +3657,7 @@ class LayoutManagerUnified(Gtk.Window):
         dialog = Gtk.Window()
         dialog.set_transient_for(self)
         dialog.set_modal(True)
-        dialog.set_title("Save Layout")
+        dialog.set_title("Save Project")
         dialog.set_default_size(400, 150)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -3667,11 +3667,11 @@ class LayoutManagerUnified(Gtk.Window):
         box.set_margin_bottom(20)
         dialog.set_child(box)
 
-        label = Gtk.Label(label="Layout name:")
+        label = Gtk.Label(label="Project name:")
         box.append(label)
 
         entry = Gtk.Entry()
-        entry.set_placeholder_text("my_layout")
+        entry.set_placeholder_text("my_project")
         box.append(entry)
 
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
