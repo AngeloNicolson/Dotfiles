@@ -650,39 +650,105 @@ class BSPDesigner(Gtk.Box):
         work_dir_label = Gtk.Label(label="Working directory:", xalign=0)
         terminal_box.append(work_dir_label)
 
-        work_dir_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
-        terminal_box.append(work_dir_box)
-
         work_dir_entry = Gtk.Entry()
-        work_dir_entry.set_placeholder_text("e.g., ~/projects/myproject")
-        work_dir_entry.set_hexpand(True)
+        work_dir_entry.set_placeholder_text("e.g., ~/projects/myproject (use Tab to autocomplete)")
         if node.working_dir:
             work_dir_entry.set_text(node.working_dir)
-        work_dir_box.append(work_dir_entry)
+        terminal_box.append(work_dir_entry)
 
-        browse_btn = Gtk.Button(label="Browse...")
-        work_dir_box.append(browse_btn)
+        # Setup path autocompletion
+        self.work_dir_suggestions = []
 
-        def on_browse_clicked(btn):
-            file_dialog = Gtk.FileDialog()
-            file_dialog.set_title("Select Working Directory")
+        def on_work_dir_key_press(controller, keyval, keycode, state):
+            """Handle Tab key for autocompletion"""
+            if keyval == Gdk.KEY_Tab:
+                text = work_dir_entry.get_text()
+                if text and self.work_dir_suggestions:
+                    # Use first suggestion
+                    work_dir_entry.set_text(self.work_dir_suggestions[0])
+                    work_dir_entry.set_position(-1)  # Move cursor to end
+                return True  # Consume the event
+            return False
 
-            def on_folder_selected(dialog_obj, result):
-                try:
-                    folder = dialog_obj.select_folder_finish(result)
-                    if folder:
-                        path = folder.get_path()
-                        # Convert to ~ notation if in home directory
-                        home = os.path.expanduser('~')
-                        if path.startswith(home):
-                            path = '~' + path[len(home):]
-                        work_dir_entry.set_text(path)
-                except Exception as e:
-                    pass
+        key_controller = Gtk.EventControllerKey()
+        key_controller.connect('key-pressed', on_work_dir_key_press)
+        work_dir_entry.add_controller(key_controller)
 
-            file_dialog.select_folder(parent=dialog, callback=on_folder_selected)
+        # Create popup for suggestions
+        suggestion_popover = Gtk.Popover()
+        suggestion_popover.set_parent(work_dir_entry)
+        suggestion_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        suggestion_popover.set_child(suggestion_box)
 
-        browse_btn.connect('clicked', on_browse_clicked)
+        def update_suggestions():
+            """Update suggestion list"""
+            text = work_dir_entry.get_text()
+
+            # Clear existing suggestions
+            while suggestion_box.get_first_child():
+                suggestion_box.remove(suggestion_box.get_first_child())
+            self.work_dir_suggestions = []
+
+            if not text:
+                suggestion_popover.popdown()
+                return
+
+            # Expand ~ and get directory to search
+            expanded = os.path.expanduser(text)
+
+            # Get the directory part and filename part
+            if text.endswith('/'):
+                search_dir = expanded
+                prefix = ''
+            else:
+                search_dir = os.path.dirname(expanded) or '/'
+                prefix = os.path.basename(expanded)
+
+            # Get matching directories
+            try:
+                if os.path.isdir(search_dir):
+                    entries = os.listdir(search_dir)
+                    dirs = [e for e in entries if os.path.isdir(os.path.join(search_dir, e))]
+
+                    # Filter by prefix
+                    matches = [d for d in dirs if d.startswith(prefix)][:8]  # Limit to 8
+
+                    if matches:
+                        for match in sorted(matches):
+                            full_path = os.path.join(search_dir, match)
+                            # Convert back to ~ notation if in home
+                            home = os.path.expanduser('~')
+                            if full_path.startswith(home):
+                                display_path = '~' + full_path[len(home):]
+                            else:
+                                display_path = full_path
+
+                            self.work_dir_suggestions.append(display_path)
+
+                            btn = Gtk.Button(label=display_path)
+                            btn.set_has_frame(False)
+
+                            def make_handler(path):
+                                def on_click(b):
+                                    work_dir_entry.set_text(path)
+                                    suggestion_popover.popdown()
+                                return on_click
+
+                            btn.connect('clicked', make_handler(display_path))
+                            suggestion_box.append(btn)
+
+                        suggestion_popover.popup()
+                    else:
+                        suggestion_popover.popdown()
+                else:
+                    suggestion_popover.popdown()
+            except Exception:
+                suggestion_popover.popdown()
+
+        def on_work_dir_changed(entry):
+            update_suggestions()
+
+        work_dir_entry.connect('changed', on_work_dir_changed)
 
         def on_response(dlg, response):
             if response == Gtk.ResponseType.OK:
