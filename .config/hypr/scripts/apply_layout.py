@@ -67,37 +67,19 @@ def move_cursor_to(x, y):
 
 
 def position_floating_window(address, x, y, width, height, project_id, window_index, app_name):
-    """Position and resize a floating window with exact coordinates"""
+    """Position window with no delays for instant placement"""
     try:
-        # Check if window is already floating
-        result = subprocess.run(['hyprctl', '-j', 'clients'],
-                               capture_output=True, text=True, check=False)
-        if result.stdout:
-            clients = json.loads(result.stdout)
-            is_floating = False
-            for client in clients:
-                if client.get('address') == address:
-                    is_floating = client.get('floating', False)
-                    break
-
-            # Only toggle if not already floating
-            if not is_floating:
-                subprocess.run(['hyprctl', 'dispatch', 'togglefloating', f'address:{address}'],
-                              capture_output=True, check=False)
-
-        # Add project window tag
+        # Tag the window
         tag = f'project_{project_id}_window_{window_index}'
-        subprocess.run(['hyprctl', 'dispatch', 'tagwindow', f'+{tag} address:{address}'],
-                      capture_output=True, check=False)
 
-        # Resize and move in quick succession
-        subprocess.run(['hyprctl', 'dispatch', 'resizewindowpixel',
-                       f'exact {int(width)} {int(height)},address:{address}'],
-                      capture_output=True, check=False)
-
-        subprocess.run(['hyprctl', 'dispatch', 'movewindowpixel',
-                       f'exact {int(x)} {int(y)},address:{address}'],
-                      capture_output=True, check=False)
+        # Execute all positioning commands in one batch (using &&)
+        batch_cmd = (
+            f'hyprctl dispatch togglefloating address:{address} && '
+            f'hyprctl dispatch tagwindow +{tag} address:{address} && '
+            f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{address} && '
+            f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{address}'
+        )
+        subprocess.run(batch_cmd, shell=True, capture_output=True, check=False)
 
     except Exception as e:
         pass
@@ -173,12 +155,12 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
                 launch_app(app, terminal_command, working_dir)
-                time.sleep(0.3)
+                time.sleep(0.2)  # Minimal wait for window to appear
                 window = get_active_window()
                 if window and 'address' in window:
                     existing_address = window['address']
 
-            # Position window immediately after getting it
+            # Tag window with project info
             if existing_address:
                 position_floating_window(
                     existing_address,
