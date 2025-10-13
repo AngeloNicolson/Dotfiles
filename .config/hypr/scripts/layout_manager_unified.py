@@ -1216,7 +1216,12 @@ class BSPDesigner(Gtk.Box):
     def json_to_bsp(self, data, x, y, w, h):
         """Recursively convert JSON layout to BSP tree"""
         if data['type'] == 'window':
-            node = BSPNode(x, y, w, h, app=data.get('app'))
+            node = BSPNode(
+                x, y, w, h,
+                app=data.get('app'),
+                terminal_command=data.get('terminal_command'),
+                working_dir=data.get('working_dir')
+            )
             return node
         else:
             # Container node
@@ -2117,6 +2122,11 @@ class LayoutManagerUnified(Gtk.Window):
         self.workspace_apply_btn.set_sensitive(False)
         button_box.append(self.workspace_apply_btn)
 
+        self.workspace_set_default_btn = Gtk.Button(label="Set as Default")
+        self.workspace_set_default_btn.connect('clicked', self.on_set_default_workspace_config)
+        self.workspace_set_default_btn.set_sensitive(False)
+        button_box.append(self.workspace_set_default_btn)
+
         self.workspace_delete_btn = Gtk.Button(label="Delete")
         self.workspace_delete_btn.add_css_class('destructive-action')
         self.workspace_delete_btn.connect('clicked', self.on_delete_workspace_editor)
@@ -2148,6 +2158,192 @@ class LayoutManagerUnified(Gtk.Window):
 
         return tab
 
+    def get_workspace_projects_file(self):
+        """Get the path to the workspace-to-project mappings file"""
+        return Path.home() / '.config' / 'hypr' / 'layouts' / 'workspace_projects.json'
+
+    def load_workspace_projects(self):
+        """Load workspace-to-project mappings from file"""
+        mapping_file = self.get_workspace_projects_file()
+        if not mapping_file.exists():
+            return {}
+        try:
+            with open(mapping_file, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def save_workspace_projects(self, mappings):
+        """Save workspace-to-project mappings to file"""
+        mapping_file = self.get_workspace_projects_file()
+        mapping_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(mapping_file, 'w') as f:
+                json.dump(mappings, f, indent=2)
+        except Exception as e:
+            print(f"Error saving workspace projects: {e}")
+
+    def get_project_for_workspace(self, ws_id):
+        """Get the assigned project for a workspace"""
+        mappings = self.load_workspace_projects()
+        return mappings.get(str(ws_id))
+
+    def set_project_for_workspace(self, ws_id, project_path):
+        """Assign a project to a workspace"""
+        mappings = self.load_workspace_projects()
+        if project_path:
+            mappings[str(ws_id)] = str(project_path)
+        else:
+            # Remove mapping if project_path is None/empty
+            mappings.pop(str(ws_id), None)
+        self.save_workspace_projects(mappings)
+
+    def get_default_workspace_config_file(self):
+        """Get the path to the default workspace config marker file"""
+        return Path.home() / '.config' / 'hypr' / 'layouts' / 'default_workspace_config.txt'
+
+    def get_default_workspace_config(self):
+        """Get the default workspace configuration path"""
+        marker_file = self.get_default_workspace_config_file()
+        if not marker_file.exists():
+            return None
+        try:
+            with open(marker_file, 'r') as f:
+                default_path = f.read().strip()
+                if default_path and Path(default_path).exists():
+                    return Path(default_path)
+        except Exception:
+            pass
+        return None
+
+    def set_default_workspace_config(self, config_path):
+        """Set a workspace configuration as the default"""
+        marker_file = self.get_default_workspace_config_file()
+        marker_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(marker_file, 'w') as f:
+                f.write(str(config_path))
+        except Exception as e:
+            print(f"Error setting default workspace config: {e}")
+
+    def on_set_default_workspace_config(self, widget):
+        """Set the current config as default for startup"""
+        if not self.current_editing_config:
+            return
+
+        self.set_default_workspace_config(self.current_editing_config)
+
+        # Refresh list to show default badge
+        self.refresh_workspaces_tab()
+
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            modal=True,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text="Default Configuration Set"
+        )
+        dialog.set_secondary_text(f"'{self.current_editing_config.stem}' will load automatically on system startup.")
+        dialog.connect('response', lambda d, r: d.close())
+        dialog.present()
+
+    def show_project_assignment_dialog(self, ws_id):
+        """Show dialog to assign a project to a workspace"""
+        dialog = Gtk.Dialog(
+            title=f"Assign Project to Workspace {ws_id}",
+            transient_for=self,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Remove Assignment", Gtk.ResponseType.REJECT)
+        dialog.add_button("Assign", Gtk.ResponseType.OK)
+        dialog.set_default_size(400, 300)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        content.append(box)
+
+        # Current assignment display
+        current_project = self.get_project_for_workspace(ws_id)
+        current_label = Gtk.Label(xalign=0)
+        if current_project:
+            project_name = Path(current_project).stem
+            current_label.set_markup(f"<b>Current:</b> {project_name}")
+        else:
+            current_label.set_markup("<b>Current:</b> No project assigned")
+        box.append(current_label)
+
+        # Project selection
+        select_label = Gtk.Label(label="Select a project:", xalign=0)
+        select_label.set_margin_top(10)
+        box.append(select_label)
+
+        # Get saved projects
+        saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+        project_files = []
+        if saved_dir.exists():
+            project_files = sorted(saved_dir.glob('*.json'))
+
+        if not project_files:
+            no_projects_label = Gtk.Label(label="No saved projects found. Create one first!")
+            no_projects_label.add_css_class('dim-label')
+            box.append(no_projects_label)
+            dialog.set_response_enabled(Gtk.ResponseType.OK, False)
+        else:
+            # Create list box with projects
+            scrolled = Gtk.ScrolledWindow()
+            scrolled.set_vexpand(True)
+            scrolled.set_min_content_height(200)
+
+            project_list = Gtk.ListBox()
+            project_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+            scrolled.set_child(project_list)
+
+            # Populate with projects
+            selected_index = -1
+            for idx, project_file in enumerate(project_files):
+                row = Gtk.ListBoxRow()
+                label = Gtk.Label(label=project_file.stem)
+                label.set_halign(Gtk.Align.START)
+                label.set_margin_start(10)
+                label.set_margin_end(10)
+                label.set_margin_top(8)
+                label.set_margin_bottom(8)
+                row.set_child(label)
+                row.project_path = project_file
+                project_list.append(row)
+
+                # Select current project if it matches
+                if current_project and Path(current_project) == project_file:
+                    selected_index = idx
+
+            # Select the current project row
+            if selected_index >= 0:
+                project_list.select_row(project_list.get_row_at_index(selected_index))
+
+            box.append(scrolled)
+
+            def on_response(dlg, response):
+                if response == Gtk.ResponseType.OK:
+                    selected_row = project_list.get_selected_row()
+                    if selected_row:
+                        self.set_project_for_workspace(ws_id, selected_row.project_path)
+                        self.refresh_live_workspaces()
+                elif response == Gtk.ResponseType.REJECT:
+                    # Remove assignment
+                    self.set_project_for_workspace(ws_id, None)
+                    self.refresh_live_workspaces()
+                dlg.close()
+
+            dialog.connect('response', on_response)
+
+        dialog.present()
+
     def refresh_workspaces_tab(self):
         """Refresh the workspaces config list"""
         # Clear list
@@ -2157,23 +2353,45 @@ class LayoutManagerUnified(Gtk.Window):
             self.workspaces_config_list.remove(child)
             child = next_child
 
-        # Get saved configs
-        saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+        # Get saved configs (separate from projects)
+        saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'workspace_configs'
         if not saved_dir.exists():
             return
 
+        # Get default config to mark it
+        default_config = self.get_default_workspace_config()
+
         config_files = list(saved_dir.glob('*.json'))
+        default_row = None
         for config_file in sorted(config_files):
             row = Gtk.ListBoxRow()
+
+            # Create box to hold name and badge
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            box.set_margin_start(15)
+            box.set_margin_end(15)
+            box.set_margin_top(10)
+            box.set_margin_bottom(10)
+
             label = Gtk.Label(label=config_file.stem)
             label.set_halign(Gtk.Align.START)
-            label.set_margin_start(15)
-            label.set_margin_end(15)
-            label.set_margin_top(10)
-            label.set_margin_bottom(10)
-            row.set_child(label)
+            box.append(label)
+
+            # Add "default" badge if this is the default config
+            if default_config and config_file == default_config:
+                badge = Gtk.Label()
+                badge.set_markup('<span background="#88c0d0" foreground="#2e3440" size="small" weight="bold"> DEFAULT </span>')
+                badge.set_halign(Gtk.Align.START)
+                box.append(badge)
+                default_row = row
+
+            row.set_child(box)
             row.config_file = config_file
             self.workspaces_config_list.append(row)
+
+        # Auto-select the default config if it exists
+        if default_row:
+            self.workspaces_config_list.select_row(default_row)
 
     def on_workspace_config_selected(self, list_box, row):
         """Load selected config into editor"""
@@ -2189,6 +2407,7 @@ class LayoutManagerUnified(Gtk.Window):
         # Enable buttons
         self.workspace_save_btn.set_sensitive(True)
         self.workspace_apply_btn.set_sensitive(True)
+        self.workspace_set_default_btn.set_sensitive(True)
         self.workspace_delete_btn.set_sensitive(True)
 
         # Load config and populate editor
@@ -2314,6 +2533,15 @@ class LayoutManagerUnified(Gtk.Window):
         ws_label.set_markup(f"<b>Workspace {ws_id}</b>")
         button_box.append(ws_label)
 
+        # Show assigned project if any
+        project_path = self.get_project_for_workspace(ws_id)
+        if project_path:
+            project_name = Path(project_path).stem
+            project_label = Gtk.Label()
+            project_label.set_markup(f'<span foreground="#88c0d0">📋 {project_name}</span>')
+            project_label.add_css_class('dim-label')
+            button_box.append(project_label)
+
         button = Gtk.Button()
         button.set_child(button_box)
         button.set_hexpand(True)
@@ -2335,6 +2563,11 @@ class LayoutManagerUnified(Gtk.Window):
         drag_source.connect('drag-begin', on_drag_begin)
         button.add_controller(drag_source)
 
+        # Add right-click handler for project assignment
+        right_click = Gtk.GestureClick(button=3)
+        right_click.connect('released', lambda gesture, n, x, y: self.on_workspace_card_right_click(ws_id, monitor_name))
+        button.add_controller(right_click)
+
         container.append(button)
 
         # Remove button
@@ -2344,6 +2577,108 @@ class LayoutManagerUnified(Gtk.Window):
         container.append(remove_btn)
 
         return container
+
+    def on_workspace_card_right_click(self, ws_id, monitor_name):
+        """Handle right-click on workspace card in editor - show project assignment"""
+        # Show project assignment dialog
+        self.show_project_assignment_dialog_for_editor(ws_id, monitor_name)
+
+    def show_project_assignment_dialog_for_editor(self, ws_id, monitor_name):
+        """Show project assignment dialog and refresh editor after assignment"""
+        dialog = Gtk.Dialog(
+            title=f"Assign Project to Workspace {ws_id}",
+            transient_for=self,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Remove Assignment", Gtk.ResponseType.REJECT)
+        dialog.add_button("Assign", Gtk.ResponseType.OK)
+        dialog.set_default_size(400, 300)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        content.append(box)
+
+        # Current assignment display
+        current_project = self.get_project_for_workspace(ws_id)
+        current_label = Gtk.Label(xalign=0)
+        if current_project:
+            project_name = Path(current_project).stem
+            current_label.set_markup(f"<b>Current:</b> {project_name}")
+        else:
+            current_label.set_markup("<b>Current:</b> No project assigned")
+        box.append(current_label)
+
+        # Project selection
+        select_label = Gtk.Label(label="Select a project:", xalign=0)
+        select_label.set_margin_top(10)
+        box.append(select_label)
+
+        # Get saved projects
+        saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+        project_files = []
+        if saved_dir.exists():
+            project_files = sorted(saved_dir.glob('*.json'))
+
+        if not project_files:
+            no_projects_label = Gtk.Label(label="No saved projects found. Create one first!")
+            no_projects_label.add_css_class('dim-label')
+            box.append(no_projects_label)
+            dialog.set_response_enabled(Gtk.ResponseType.OK, False)
+        else:
+            # Create list box with projects
+            scrolled = Gtk.ScrolledWindow()
+            scrolled.set_vexpand(True)
+            scrolled.set_min_content_height(200)
+
+            project_list = Gtk.ListBox()
+            project_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+            scrolled.set_child(project_list)
+
+            # Populate with projects
+            selected_index = -1
+            for idx, project_file in enumerate(project_files):
+                row = Gtk.ListBoxRow()
+                label = Gtk.Label(label=project_file.stem)
+                label.set_halign(Gtk.Align.START)
+                label.set_margin_start(10)
+                label.set_margin_end(10)
+                label.set_margin_top(8)
+                label.set_margin_bottom(8)
+                row.set_child(label)
+                row.project_path = project_file
+                project_list.append(row)
+
+                # Select current project if it matches
+                if current_project and Path(current_project) == project_file:
+                    selected_index = idx
+
+            # Select the current project row
+            if selected_index >= 0:
+                project_list.select_row(project_list.get_row_at_index(selected_index))
+
+            box.append(scrolled)
+
+            def on_response(dlg, response):
+                if response == Gtk.ResponseType.OK:
+                    selected_row = project_list.get_selected_row()
+                    if selected_row:
+                        self.set_project_for_workspace(ws_id, selected_row.project_path)
+                        self.refresh_editor_monitor_box(monitor_name)
+                elif response == Gtk.ResponseType.REJECT:
+                    # Remove assignment
+                    self.set_project_for_workspace(ws_id, None)
+                    self.refresh_editor_monitor_box(monitor_name)
+                dlg.close()
+
+            dialog.connect('response', on_response)
+
+        dialog.present()
 
     def show_monitor_context_menu(self, monitor_name):
         """Show context menu to add workspace"""
@@ -2476,7 +2811,7 @@ class LayoutManagerUnified(Gtk.Window):
                     self.refresh_workspaces_tab()
 
                     # Auto-select the newly created config
-                    saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+                    saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'workspace_configs'
                     config_file = saved_dir / f"{name}.json"
 
                     # Find and select the row
@@ -2802,8 +3137,8 @@ class LayoutManagerUnified(Gtk.Window):
             self.saved_monitors_container.remove(child)
             child = next_child
 
-        # Get saved config files
-        saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+        # Get saved config files (separate from projects)
+        saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'workspace_configs'
 
         if not saved_dir.exists():
             label = Gtk.Label(label="No saved configurations yet")
@@ -2987,6 +3322,43 @@ class LayoutManagerUnified(Gtk.Window):
             dialog.connect('response', lambda d, r: d.close())
             dialog.present()
 
+    def on_add_workspace_to_monitor(self, monitor_name):
+        """Add a workspace to a specific monitor via right-click"""
+        dialog = Gtk.Dialog(
+            title=f"Add Workspace to {monitor_name}",
+            transient_for=self,
+            modal=True
+        )
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Add", Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_margin_start(20)
+        content.set_margin_end(20)
+        content.set_margin_top(20)
+        content.set_margin_bottom(20)
+
+        # Workspace ID
+        id_label = Gtk.Label(label="Workspace ID:")
+        id_label.set_halign(Gtk.Align.START)
+        content.append(id_label)
+
+        id_entry = Gtk.Entry()
+        id_entry.set_placeholder_text("e.g., 6")
+        id_entry.set_margin_top(5)
+        content.append(id_entry)
+
+        def on_response(dlg, response):
+            if response == Gtk.ResponseType.OK:
+                ws_id = id_entry.get_text().strip()
+                if ws_id and ws_id.isdigit():
+                    self.add_workspace_to_config(int(ws_id), monitor_name)
+                    self.refresh_live_workspaces()
+            dlg.close()
+
+        dialog.connect('response', on_response)
+        dialog.present()
+
     def create_monitor_box(self, monitor_name, workspaces):
         """Create a visual box representing a monitor with its workspaces"""
         # Main container - expand to fill available space
@@ -3035,6 +3407,11 @@ class LayoutManagerUnified(Gtk.Window):
         drop_target.connect('leave', on_container_leave)
         ws_list.add_controller(drop_target)
 
+        # Add right-click to add workspace
+        right_click = Gtk.GestureClick(button=3)
+        right_click.connect('released', lambda gesture, n, x, y: self.on_add_workspace_to_monitor(monitor_name))
+        ws_list.add_controller(right_click)
+
         container.append(ws_list)
         return container
 
@@ -3056,6 +3433,15 @@ class LayoutManagerUnified(Gtk.Window):
             win_label = Gtk.Label(label=f"{windows} window{'s' if windows != 1 else ''}")
             win_label.add_css_class('dim-label')
             button_box.append(win_label)
+
+        # Show assigned project if any
+        project_path = self.get_project_for_workspace(ws_id)
+        if project_path:
+            project_name = Path(project_path).stem
+            project_label = Gtk.Label()
+            project_label.set_markup(f'<span foreground="#88c0d0">📋 {project_name}</span>')
+            project_label.add_css_class('dim-label')
+            button_box.append(project_label)
 
         button = Gtk.Button()
         button.set_child(button_box)
@@ -3096,6 +3482,11 @@ class LayoutManagerUnified(Gtk.Window):
         drop_target.connect('enter', on_drag_enter)
         drop_target.connect('leave', on_drag_leave)
         button.add_controller(drop_target)
+
+        # Add right-click handler for project assignment
+        right_click = Gtk.GestureClick(button=3)
+        right_click.connect('released', lambda gesture, n, x, y: self.show_project_assignment_dialog(ws_id))
+        button.add_controller(right_click)
 
         return button
 
@@ -3396,8 +3787,8 @@ class LayoutManagerUnified(Gtk.Window):
     def save_workspace_config_to_file(self, name, workspaces):
         """Save workspace configuration to a JSON file"""
         try:
-            # Create saved configs directory
-            saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+            # Create saved configs directory (separate from projects)
+            saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'workspace_configs'
             saved_dir.mkdir(parents=True, exist_ok=True)
 
             # Create config data
@@ -3438,8 +3829,8 @@ class LayoutManagerUnified(Gtk.Window):
     def on_load_workspace_config(self, widget):
         """Show list of saved configurations to load"""
         try:
-            # Get list of saved configs
-            saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+            # Get list of saved configs (separate from projects)
+            saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'workspace_configs'
 
             if not saved_dir.exists():
                 dialog = Gtk.MessageDialog(
@@ -3673,27 +4064,28 @@ class LayoutManagerUnified(Gtk.Window):
             self.layouts_list.remove(child)
             child = next_child
 
-        if not os.path.exists(self.layouts_dir):
+        # Only load from saved directory (not workspace_configs)
+        saved_dir = os.path.join(self.layouts_dir, "saved")
+        if not os.path.exists(saved_dir):
             return
 
-        # Load all layout files
-        for root, dirs, files in os.walk(self.layouts_dir):
-            for file in files:
-                if file.endswith('.json'):
-                    path = os.path.join(root, file)
-                    name = os.path.splitext(file)[0].replace('_', ' ').title()
+        # Load all layout files from saved directory only
+        for file in sorted(os.listdir(saved_dir)):
+            if file.endswith('.json'):
+                path = os.path.join(saved_dir, file)
+                name = os.path.splitext(file)[0].replace('_', ' ').title()
 
-                    row = Gtk.ListBoxRow()
-                    label = Gtk.Label(label=name)
-                    label.set_halign(Gtk.Align.START)
-                    label.set_margin_start(15)
-                    label.set_margin_end(15)
-                    label.set_margin_top(10)
-                    label.set_margin_bottom(10)
-                    row.set_child(label)
-                    row.layout_path = path
-                    row.layout_name = name
-                    self.layouts_list.append(row)
+                row = Gtk.ListBoxRow()
+                label = Gtk.Label(label=name)
+                label.set_halign(Gtk.Align.START)
+                label.set_margin_start(15)
+                label.set_margin_end(15)
+                label.set_margin_top(10)
+                label.set_margin_bottom(10)
+                row.set_child(label)
+                row.layout_path = path
+                row.layout_name = name
+                self.layouts_list.append(row)
 
     def on_layout_selected(self, list_box, row):
         """Handle layout selection - load into designer"""
@@ -3714,8 +4106,12 @@ class LayoutManagerUnified(Gtk.Window):
         try:
             self.embedded_designer.load_layout_from_file(row.layout_path)
             self.embedded_designer.editing_path = row.layout_path
+            # Force canvas redraw
+            self.embedded_designer.canvas.queue_draw()
         except Exception as e:
-            pass
+            print(f"Error loading layout: {e}")
+            import traceback
+            traceback.print_exc()
 
     def on_new_layout(self, widget):
         """Create a new layout"""

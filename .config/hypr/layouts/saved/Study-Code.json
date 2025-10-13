@@ -1,0 +1,17 @@
+{
+  "type": "container",
+  "split": "horizontal",
+  "ratio": 0.23693042183586946,
+  "children": [
+    {
+      "type": "window",
+      "app": "foot",
+      "working_dir": "~/Documents/massey_mainframe"
+    },
+    {
+      "type": "window",
+      "app": "foot",
+      "working_dir": "~/Documents/massey_mainframe"
+    }
+  ]
+}

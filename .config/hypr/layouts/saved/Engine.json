@@ -1,0 +1,15 @@
+{
+  "type": "container",
+  "split": "horizontal",
+  "ratio": 0.2552230515961863,
+  "children": [
+    {
+      "type": "window",
+      "app": "app"
+    },
+    {
+      "type": "window",
+      "app": "app"
+    }
+  ]
+}
