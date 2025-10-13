@@ -239,6 +239,12 @@ def apply_layout(layout_file, workspace=None):
                 window_info['height']
             )
 
+        # Register layout with snap daemon
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        daemon_script = os.path.join(script_dir, 'layout_snap_daemon.py')
+        subprocess.Popen([daemon_script, 'register', str(workspace_id), layout_file],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
         print(f"Layout from {layout_file} applied successfully")
         return True
 
