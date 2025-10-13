@@ -32,6 +32,21 @@ def get_active_window():
     return run_hyprctl('activewindow')
 
 
+def get_workspace_windows(workspace_id):
+    """Get all windows in a specific workspace"""
+    result = subprocess.run(['hyprctl', '-j', 'clients'],
+                           capture_output=True, text=True, check=False)
+    if not result.stdout:
+        return []
+
+    clients = json.loads(result.stdout)
+    workspace_windows = []
+    for client in clients:
+        if client.get('workspace', {}).get('id') == workspace_id:
+            workspace_windows.append(client['address'])
+    return workspace_windows
+
+
 def move_cursor_to(x, y):
     """Move cursor to specific position"""
     subprocess.run(['hyprctl', 'dispatch', 'movecursor', f'{int(x)} {int(y)}'],
@@ -42,14 +57,22 @@ def move_cursor_to(x, y):
 def position_floating_window(address, x, y, width, height):
     """Position and resize a floating window with exact coordinates"""
     try:
-        # Make window floating
-        subprocess.run(['hyprctl', 'dispatch', 'togglefloating', f'address:{address}'],
-                      capture_output=True, check=False)
-        time.sleep(0.1)
+        # Check if window is already floating
+        result = subprocess.run(['hyprctl', '-j', 'clients'],
+                               capture_output=True, text=True, check=False)
+        if result.stdout:
+            clients = json.loads(result.stdout)
+            is_floating = False
+            for client in clients:
+                if client.get('address') == address:
+                    is_floating = client.get('floating', False)
+                    break
 
-        # Add tag to identify windows from layout manager
-        subprocess.run(['hyprctl', 'dispatch', 'tagwindow', f'+layout_managed address:{address}'],
-                      capture_output=True, check=False)
+            # Only toggle if not already floating
+            if not is_floating:
+                subprocess.run(['hyprctl', 'dispatch', 'togglefloating', f'address:{address}'],
+                              capture_output=True, check=False)
+                time.sleep(0.1)
 
         # Resize window with exact dimensions
         subprocess.run(['hyprctl', 'dispatch', 'resizewindowpixel',
@@ -81,23 +104,32 @@ def launch_app(app_command):
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
 
 
-def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None):
+def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None, existing_windows=None, window_counter=None):
     """Recursively apply a layout node"""
     if node['type'] == 'window':
         # Launch the application
         app = node.get('app')
-        if app:
-            # Launch app
-            launch_app(app)
+        if app and windows_list is not None:
+            current_index = window_counter[0] if window_counter else 0
+            window_counter[0] += 1
 
-            # Get the new window
-            time.sleep(0.5)
-            window = get_active_window()
+            # Check if we have an existing window at this index
+            existing_address = None
+            if existing_windows and current_index < len(existing_windows):
+                existing_address = existing_windows[current_index]
 
-            if window and 'address' in window and windows_list is not None:
-                # Collect window info for later positioning
+            # If window doesn't exist, launch it
+            if not existing_address:
+                launch_app(app)
+                time.sleep(0.5)
+                window = get_active_window()
+                if window and 'address' in window:
+                    existing_address = window['address']
+
+            # Collect window info for positioning
+            if existing_address:
                 windows_list.append({
-                    'address': window['address'],
+                    'address': existing_address,
                     'x': int(x),
                     'y': int(y),
                     'width': int(width),
@@ -115,16 +147,16 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 split_w2 = (width - gaps_in) * (1 - ratio)
                 split_x = x + split_w1 + gaps_in
 
-                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list)
-                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list)
+                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
+                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
             else:  # vertical
                 # Account for gap between windows
                 split_h1 = (height - gaps_in) * ratio
                 split_h2 = (height - gaps_in) * (1 - ratio)
                 split_y = y + split_h1 + gaps_in
 
-                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list)
-                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list)
+                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
+                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
 
 
 def apply_layout(layout_file, workspace=None):
@@ -173,16 +205,28 @@ def apply_layout(layout_file, workspace=None):
         usable_width = mon_width - reserved_left - reserved_right - (gaps_out * 2)
         usable_height = mon_height - reserved_top - reserved_bottom - (gaps_out * 2)
 
+        # Get current workspace
+        active_workspace = run_hyprctl('activeworkspace')
+        if not active_workspace:
+            print("Error: Could not get active workspace", file=sys.stderr)
+            return False
+        workspace_id = active_workspace.get('id')
+
         # Switch to workspace if specified
         if workspace:
             subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)])
             time.sleep(0.2)
+            workspace_id = workspace
 
-        # Pass 1: Spawn all windows
+        # Get existing windows in the workspace
+        existing_windows = get_workspace_windows(workspace_id)
+
+        # Pass 1: Spawn windows that don't exist, collect all windows
         windows_list = []
-        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list)
+        window_counter = [0]  # Use list for mutability in recursion
+        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list, existing_windows, window_counter)
 
-        # Wait for all windows to settle
+        # Wait for any new windows to settle
         time.sleep(0.5)
 
         # Pass 2: Position and resize all windows as floating with exact coordinates
