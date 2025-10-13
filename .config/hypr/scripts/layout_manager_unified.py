@@ -3495,11 +3495,14 @@ class LayoutManagerUnified(Gtk.Window):
 
     def on_layout_selected(self, list_box, row):
         """Handle layout selection - load into designer"""
+        print(f"[DEBUG] on_layout_selected called with row: {row}")
         if not row:
+            print("[DEBUG] No row selected")
             return
 
         self.current_selected_layout = row.layout_path
         layout_name = row.layout_name
+        print(f"[DEBUG] Loading layout: {layout_name} from {row.layout_path}")
 
         # Update title
         self.layout_preview_title.set_markup(f"<b>{layout_name}</b>")
@@ -3510,10 +3513,14 @@ class LayoutManagerUnified(Gtk.Window):
 
         # Load layout into embedded designer
         try:
+            print(f"[DEBUG] Calling load_layout_from_file")
             self.embedded_designer.load_layout_from_file(row.layout_path)
             self.embedded_designer.editing_path = row.layout_path
+            print(f"[DEBUG] Successfully loaded layout")
         except Exception as e:
-            print(f"Error loading layout into designer: {e}")
+            print(f"[DEBUG] Error loading layout into designer: {e}")
+            import traceback
+            traceback.print_exc()
 
     def on_new_layout(self, widget):
         """Create a new layout"""
