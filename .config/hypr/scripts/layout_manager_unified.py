@@ -656,42 +656,27 @@ class BSPDesigner(Gtk.Box):
             work_dir_entry.set_text(node.working_dir)
         terminal_box.append(work_dir_entry)
 
-        # Setup path autocompletion
-        self.work_dir_suggestions = []
+        # Setup path autocompletion with inline ghost text
+        self.work_dir_current_suggestion = None
 
-        def on_work_dir_key_press(controller, keyval, keycode, state):
-            """Handle Tab key for autocompletion"""
-            if keyval == Gdk.KEY_Tab:
-                text = work_dir_entry.get_text()
-                if text and self.work_dir_suggestions:
-                    # Use first suggestion
-                    work_dir_entry.set_text(self.work_dir_suggestions[0])
-                    work_dir_entry.set_position(-1)  # Move cursor to end
-                return True  # Consume the event
-            return False
+        # Overlay label for ghost text
+        overlay = Gtk.Overlay()
+        terminal_box.remove(work_dir_entry)
+        overlay.set_child(work_dir_entry)
+        terminal_box.append(overlay)
 
-        key_controller = Gtk.EventControllerKey()
-        key_controller.connect('key-pressed', on_work_dir_key_press)
-        work_dir_entry.add_controller(key_controller)
+        ghost_label = Gtk.Label()
+        ghost_label.set_halign(Gtk.Align.START)
+        ghost_label.set_valign(Gtk.Align.CENTER)
+        ghost_label.set_margin_start(5)
+        ghost_label.add_css_class('dim-label')
+        ghost_label.set_sensitive(False)  # Make it non-interactive
+        overlay.add_overlay(ghost_label)
 
-        # Create popup for suggestions
-        suggestion_popover = Gtk.Popover()
-        suggestion_popover.set_parent(work_dir_entry)
-        suggestion_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        suggestion_popover.set_child(suggestion_box)
-
-        def update_suggestions():
-            """Update suggestion list"""
-            text = work_dir_entry.get_text()
-
-            # Clear existing suggestions
-            while suggestion_box.get_first_child():
-                suggestion_box.remove(suggestion_box.get_first_child())
-            self.work_dir_suggestions = []
-
+        def get_completion(text):
+            """Get the best completion for the current text"""
             if not text:
-                suggestion_popover.popdown()
-                return
+                return None
 
             # Expand ~ and get directory to search
             expanded = os.path.expanduser(text)
@@ -710,43 +695,48 @@ class BSPDesigner(Gtk.Box):
                     entries = os.listdir(search_dir)
                     dirs = [e for e in entries if os.path.isdir(os.path.join(search_dir, e))]
 
-                    # Filter by prefix
-                    matches = [d for d in dirs if d.startswith(prefix)][:8]  # Limit to 8
-
+                    # Filter by prefix and get first match
+                    matches = sorted([d for d in dirs if d.startswith(prefix)])
                     if matches:
-                        for match in sorted(matches):
-                            full_path = os.path.join(search_dir, match)
-                            # Convert back to ~ notation if in home
-                            home = os.path.expanduser('~')
-                            if full_path.startswith(home):
-                                display_path = '~' + full_path[len(home):]
-                            else:
-                                display_path = full_path
-
-                            self.work_dir_suggestions.append(display_path)
-
-                            btn = Gtk.Button(label=display_path)
-                            btn.set_has_frame(False)
-
-                            def make_handler(path):
-                                def on_click(b):
-                                    work_dir_entry.set_text(path)
-                                    suggestion_popover.popdown()
-                                return on_click
-
-                            btn.connect('clicked', make_handler(display_path))
-                            suggestion_box.append(btn)
-
-                        suggestion_popover.popup()
-                    else:
-                        suggestion_popover.popdown()
-                else:
-                    suggestion_popover.popdown()
+                        full_path = os.path.join(search_dir, matches[0])
+                        # Convert back to ~ notation if in home
+                        home = os.path.expanduser('~')
+                        if full_path.startswith(home):
+                            return '~' + full_path[len(home):]
+                        else:
+                            return full_path
             except Exception:
-                suggestion_popover.popdown()
+                pass
+            return None
+
+        def update_ghost_text():
+            """Update the ghost text showing completion"""
+            text = work_dir_entry.get_text()
+            suggestion = get_completion(text)
+            self.work_dir_current_suggestion = suggestion
+
+            if suggestion and text and suggestion.startswith(text):
+                # Show the remaining part of the suggestion
+                ghost_text = suggestion[len(text):]
+                ghost_label.set_markup(f'<span foreground="#888888">{text}{ghost_text}</span>')
+            else:
+                ghost_label.set_text('')
 
         def on_work_dir_changed(entry):
-            update_suggestions()
+            update_ghost_text()
+
+        def on_work_dir_key_press(controller, keyval, keycode, state):
+            """Handle Enter/Return key for accepting completion"""
+            if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+                if self.work_dir_current_suggestion:
+                    work_dir_entry.set_text(self.work_dir_current_suggestion)
+                    work_dir_entry.set_position(-1)  # Move cursor to end
+                    return True  # Consume the event
+            return False
+
+        key_controller = Gtk.EventControllerKey()
+        key_controller.connect('key-pressed', on_work_dir_key_press)
+        work_dir_entry.add_controller(key_controller)
 
         work_dir_entry.connect('changed', on_work_dir_changed)
 
