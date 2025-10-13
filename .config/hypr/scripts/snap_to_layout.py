@@ -35,22 +35,9 @@ def get_active_workspace():
     return None
 
 
-def parse_window_title(title):
-    """Parse window title to extract project name and window index
-    Expected format: '{project} - Window {index} - {app}'
-    Returns: (project_name, window_index) or (None, None)
-    """
-    # Match pattern: "project - Window N - app"
-    match = re.match(r'^(.+?) - Window (\d+) - .+$', title)
-    if match:
-        project_name = match.group(1)
-        window_index = int(match.group(2)) - 1  # Convert to 0-indexed
-        return (project_name, window_index)
-    return (None, None)
-
-
 def get_all_project_windows():
     """Get all windows across all workspaces grouped by project
+    Uses tags in format: project_{name}_window_{index}
     Returns: {project_name: {window_index: address, ...}, ...}
     """
     result = subprocess.run(['hyprctl', '-j', 'clients'],
@@ -62,14 +49,20 @@ def get_all_project_windows():
     projects = {}
 
     for client in clients:
-        # Parse initialTitle (persists even if window title changes)
-        initial_title = client.get('initialTitle', '')
-        project_name, window_index = parse_window_title(initial_title)
+        tags = client.get('tags', [])
+        # Look for tags in format: project_{name}_window_{index}
+        for tag in tags:
+            if tag.startswith('project_') and '_window_' in tag:
+                try:
+                    parts = tag.split('_window_')
+                    project_name = parts[0].replace('project_', '')
+                    window_index = int(parts[1])
 
-        if project_name and window_index is not None:
-            if project_name not in projects:
-                projects[project_name] = {}
-            projects[project_name][window_index] = client['address']
+                    if project_name not in projects:
+                        projects[project_name] = {}
+                    projects[project_name][window_index] = client['address']
+                except:
+                    pass
 
     return projects
 

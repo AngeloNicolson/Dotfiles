@@ -90,19 +90,26 @@ def move_cursor_to(x, y):
     time.sleep(0.05)
 
 
-def create_window_rule(window_title, x, y, width, height, app_class=None, workspace_id=None):
+def create_window_rule(window_title, x, y, width, height, app_class=None, workspace_id=None, is_terminal=False):
     """Create dynamic window rules for pre-positioning before window spawns"""
     try:
-        # Create rules to float, size, and position the window based on title
-        rules = [
-            f'float,title:^{window_title}$',
-            f'size {int(width)} {int(height)},title:^{window_title}$',
-            f'move {int(x)} {int(y)},title:^{window_title}$'
-        ]
+        rules = []
 
-        # For non-terminal apps that don't respect --title, also create class-based float rule
-        if app_class and workspace_id:
-            rules.append(f'float,class:({app_class}),workspace:{workspace_id}')
+        if is_terminal:
+            # For terminals: use title-based rules (they respect --title flag)
+            rules = [
+                f'float,title:^{window_title}$',
+                f'size {int(width)} {int(height)},title:^{window_title}$',
+                f'move {int(x)} {int(y)},title:^{window_title}$'
+            ]
+        else:
+            # For GUI apps: use class+workspace rules (they don't respect --title)
+            if app_class and workspace_id:
+                rules = [
+                    f'float,class:({app_class}),workspace:{workspace_id}',
+                    f'size {int(width)} {int(height)},class:({app_class}),workspace:{workspace_id}',
+                    f'move {int(x)} {int(y)},class:({app_class}),workspace:{workspace_id}'
+                ]
 
         for rule in rules:
             subprocess.run(
@@ -110,6 +117,19 @@ def create_window_rule(window_title, x, y, width, height, app_class=None, worksp
                 capture_output=True,
                 check=False
             )
+    except Exception:
+        pass
+
+
+def tag_window(address, project_id, window_index):
+    """Tag a window for future snapping"""
+    try:
+        tag = f'project_{project_id}_window_{window_index}'
+        subprocess.run(
+            ['hyprctl', 'dispatch', 'tagwindow', f'+{tag}', f'address:{address}'],
+            capture_output=True,
+            check=False
+        )
     except Exception:
         pass
 
@@ -185,7 +205,8 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
             existing_address = None
             if existing_windows and current_index in existing_windows:
                 existing_address = existing_windows[current_index]['address']
-                # Re-position the existing window (don't toggle float - already floating)
+                # Re-tag and re-position the existing window (don't toggle float - already floating)
+                tag_window(existing_address, project_id, current_index)
                 batch_cmd = (
                     f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address} && '
                     f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{existing_address}'
@@ -197,10 +218,14 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 # Generate descriptive window title: "project - Window 1 - app"
                 window_title = f'{project_id} - Window {current_index + 1} - {app}'
 
+                # Detect if this is a terminal app
+                terminal_apps = ['foot', 'kitty', 'alacritty', 'wezterm', 'terminator', 'gnome-terminal', 'konsole']
+                is_terminal = any(term in app.lower() for term in terminal_apps)
+
                 # Create window rules to pre-position before window fully renders
                 # Also add rule to spawn on specific workspace
-                create_window_rule(window_title, x, y, width, height, app, workspace_id)
-                if workspace_id:
+                create_window_rule(window_title, x, y, width, height, app, workspace_id, is_terminal)
+                if workspace_id and is_terminal:
                     subprocess.run(
                         ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},title:^{window_title}$'],
                         capture_output=True, check=False
@@ -216,6 +241,8 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 window = get_active_window()
                 if window and 'address' in window:
                     existing_address = window['address']
+                    # Tag the window for snap functionality
+                    tag_window(existing_address, project_id, current_index)
                     # Brief pause before spawning next window
                     time.sleep(0.2)
 
