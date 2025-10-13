@@ -84,24 +84,20 @@ def position_floating_window(address, x, y, width, height, project_id, window_in
             if not is_floating:
                 subprocess.run(['hyprctl', 'dispatch', 'togglefloating', f'address:{address}'],
                               capture_output=True, check=False)
-                time.sleep(0.1)
 
         # Add project window tag
         tag = f'project_{project_id}_window_{window_index}'
         subprocess.run(['hyprctl', 'dispatch', 'tagwindow', f'+{tag} address:{address}'],
                       capture_output=True, check=False)
 
-        # Resize window with exact dimensions
+        # Resize and move in quick succession
         subprocess.run(['hyprctl', 'dispatch', 'resizewindowpixel',
                        f'exact {int(width)} {int(height)},address:{address}'],
                       capture_output=True, check=False)
-        time.sleep(0.1)
 
-        # Move window to exact position
         subprocess.run(['hyprctl', 'dispatch', 'movewindowpixel',
                        f'exact {int(x)} {int(y)},address:{address}'],
                       capture_output=True, check=False)
-        time.sleep(0.1)
 
     except Exception as e:
         pass
@@ -158,7 +154,7 @@ def launch_app(app_command, terminal_command=None, working_dir=None):
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
 
 
-def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None, existing_windows=None, window_counter=None):
+def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None, existing_windows=None, window_counter=None, project_id=None):
     """Recursively apply a layout node"""
     if node['type'] == 'window':
         # Launch the application
@@ -177,19 +173,27 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
                 launch_app(app, terminal_command, working_dir)
-                time.sleep(0.5)
+                time.sleep(0.3)
                 window = get_active_window()
                 if window and 'address' in window:
                     existing_address = window['address']
 
-            # Collect window info for positioning
+            # Position window immediately after getting it
             if existing_address:
+                position_floating_window(
+                    existing_address,
+                    int(x),
+                    int(y),
+                    int(width),
+                    int(height),
+                    project_id,
+                    current_index,
+                    app
+                )
+
+                # Collect for mapping
                 windows_list.append({
                     'address': existing_address,
-                    'x': int(x),
-                    'y': int(y),
-                    'width': int(width),
-                    'height': int(height),
                     'index': current_index,
                     'app': app
                 })
@@ -205,16 +209,16 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 split_w2 = (width - gaps_in) * (1 - ratio)
                 split_x = x + split_w1 + gaps_in
 
-                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
-                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
+                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
+                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
             else:  # vertical
                 # Account for gap between windows
                 split_h1 = (height - gaps_in) * ratio
                 split_h2 = (height - gaps_in) * (1 - ratio)
                 split_y = y + split_h1 + gaps_in
 
-                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
-                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list, existing_windows, window_counter)
+                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
+                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list, existing_windows, window_counter, project_id)
 
 
 def apply_layout(layout_file, workspace=None):
@@ -282,29 +286,14 @@ def apply_layout(layout_file, workspace=None):
         # Get existing windows tagged with this project
         existing_windows = get_windows_by_project_tag(project_id)
 
-        # Pass 1: Spawn windows that don't exist, collect all windows
+        # Spawn and position windows immediately (no two-pass system)
         windows_list = []
         window_counter = [0]  # Use list for mutability in recursion
-        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list, existing_windows, window_counter)
+        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list, existing_windows, window_counter, project_id)
 
-        # Wait for any new windows to settle
-        time.sleep(0.5)
-
-        # Pass 2: Position and resize all windows as floating with exact coordinates
+        # Build mapping
         window_mapping = {}
         for window_info in windows_list:
-            position_floating_window(
-                window_info['address'],
-                window_info['x'],
-                window_info['y'],
-                window_info['width'],
-                window_info['height'],
-                project_id,
-                window_info['index'],
-                window_info['app']
-            )
-
-            # Save mapping
             window_mapping[window_info['index']] = {
                 'address': window_info['address'],
                 'app': window_info['app']
