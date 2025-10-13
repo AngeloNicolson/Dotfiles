@@ -8,30 +8,8 @@
       "app": "foot"
     },
     {
-      "type": "container",
-      "split": "horizontal",
-      "ratio": 0.5,
-      "children": [
-        {
-          "type": "window",
-          "app": "firefox"
-        },
-        {
-          "type": "container",
-          "split": "vertical",
-          "ratio": 0.5,
-          "children": [
-            {
-              "type": "window",
-              "app": "foot"
-            },
-            {
-              "type": "window",
-              "app": "foot"
-            }
-          ]
-        }
-      ]
+      "type": "window",
+      "app": "firefox"
     }
   ]
 }

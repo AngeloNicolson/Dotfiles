@@ -32,23 +32,36 @@ def get_active_window():
     return run_hyprctl('activewindow')
 
 
-def move_window_to_position(address, x, y, width, height):
-    """Move and resize a window to exact position (floating mode)"""
+def move_cursor_to(x, y):
+    """Move cursor to specific position"""
+    subprocess.run(['hyprctl', 'dispatch', 'movecursor', f'{int(x)} {int(y)}'],
+                  capture_output=True, check=False)
+    time.sleep(0.05)
+
+
+def position_floating_window(address, x, y, width, height):
+    """Position and resize a floating window with exact coordinates"""
     try:
         # Make window floating
         subprocess.run(['hyprctl', 'dispatch', 'togglefloating', f'address:{address}'],
                       capture_output=True, check=False)
         time.sleep(0.1)
 
-        # Move to exact position
-        subprocess.run(['hyprctl', 'dispatch', 'movewindowpixel',
-                       f'exact {int(x)} {int(y)},address:{address}'],
+        # Add tag to identify windows from layout manager
+        subprocess.run(['hyprctl', 'dispatch', 'tagwindow', f'+layout_managed address:{address}'],
                       capture_output=True, check=False)
 
-        # Resize to exact size
+        # Resize window with exact dimensions
         subprocess.run(['hyprctl', 'dispatch', 'resizewindowpixel',
                        f'exact {int(width)} {int(height)},address:{address}'],
                       capture_output=True, check=False)
+        time.sleep(0.1)
+
+        # Move window to exact position
+        subprocess.run(['hyprctl', 'dispatch', 'movewindowpixel',
+                       f'exact {int(x)} {int(y)},address:{address}'],
+                      capture_output=True, check=False)
+        time.sleep(0.1)
 
     except Exception as e:
         pass
@@ -68,25 +81,28 @@ def launch_app(app_command):
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
 
 
-def apply_node(node, x, y, width, height, monitor_info, gaps_in=4):
-    """Recursively apply a layout node with gap awareness"""
+def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None):
+    """Recursively apply a layout node"""
     if node['type'] == 'window':
         # Launch the application
         app = node.get('app')
         if app:
+            # Launch app
             launch_app(app)
 
             # Get the new window
             time.sleep(0.5)
             window = get_active_window()
 
-            if window and 'address' in window:
-                # Move and resize the window
-                move_window_to_position(
-                    window['address'],
-                    int(x), int(y),
-                    int(width), int(height)
-                )
+            if window and 'address' in window and windows_list is not None:
+                # Collect window info for later positioning
+                windows_list.append({
+                    'address': window['address'],
+                    'x': int(x),
+                    'y': int(y),
+                    'width': int(width),
+                    'height': int(height)
+                })
     elif node['type'] == 'container':
         split = node['split']
         ratio = node.get('ratio', 0.5)
@@ -99,16 +115,16 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4):
                 split_w2 = (width - gaps_in) * (1 - ratio)
                 split_x = x + split_w1 + gaps_in
 
-                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in)
-                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in)
+                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list)
+                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list)
             else:  # vertical
                 # Account for gap between windows
                 split_h1 = (height - gaps_in) * ratio
                 split_h2 = (height - gaps_in) * (1 - ratio)
                 split_y = y + split_h1 + gaps_in
 
-                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in)
-                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in)
+                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list)
+                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list)
 
 
 def apply_layout(layout_file, workspace=None):
@@ -162,8 +178,22 @@ def apply_layout(layout_file, workspace=None):
             subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)])
             time.sleep(0.2)
 
-        # Apply the layout (floating mode with exact positioning)
-        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in)
+        # Pass 1: Spawn all windows
+        windows_list = []
+        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list)
+
+        # Wait for all windows to settle
+        time.sleep(0.5)
+
+        # Pass 2: Position and resize all windows as floating with exact coordinates
+        for window_info in windows_list:
+            position_floating_window(
+                window_info['address'],
+                window_info['x'],
+                window_info['y'],
+                window_info['width'],
+                window_info['height']
+            )
 
         print(f"Layout from {layout_file} applied successfully")
         return True

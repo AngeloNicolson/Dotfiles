@@ -1,0 +1,98 @@
+# Cassette Futurism Theme Plan
+
+## Design Philosophy
+Cassette futurism aesthetic - a retro-futuristic style inspired by 1970s-80s technology, featuring beige/tan plastics, chunky buttons, segmented displays, and utilitarian design.
+
+## Color Palette
+
+### Primary Colors
+- Base: #D4C5B0 (warm beige/tan - plastic casing)
+- Surface: #E8DCC8 (light beige)
+- Background: #2A2520 (dark brown - shadowed areas)
+
+### Accent Colors
+- Orange: #FF6B35 (LED indicator)
+- Red: #D32F2F (record/alert)
+- Green: #4CAF50 (play/active)
+- Amber: #FFA726 (VFD display glow)
+
+### Text/Display
+- Primary text: #FF8C00 (amber VFD glow)
+- Secondary text: #FFA726 (dimmed amber)
+- Inactive: #8B7355 (faded beige)
+
+## UI Elements
+
+### Buttons
+- Chunky rectangular buttons with beveled edges
+- Mechanical-looking tactile design
+- Color: base beige with darker borders
+- Active state: slight orange/amber glow
+
+### Displays
+- Segmented 7-segment or dot matrix style
+- VFD amber glow effect
+- Monospace fonts only
+- Dark background with amber text
+
+### Panels/Surfaces
+- Textured plastic appearance
+- Subtle grain or brushed effect
+- Rounded corners (not too smooth)
+- Visible seams and panel lines
+
+### Progress/Meters
+- Horizontal LED bar graphs
+- VU meter style
+- Segmented blocks (not smooth gradients)
+- Orange/red/green color coding
+
+## Typography
+- Monospace fonts for all text
+- OCR-A or similar technical fonts
+- 7-segment style for numbers
+- Fixed-width display aesthetic
+
+## Effects
+- Subtle CRT scanlines on displays
+- Soft amber glow on active elements
+- Minimal shadows (flat 80s aesthetic)
+- No blur or modern effects
+- Slight texture/grain overlay
+
+## Widget Styling
+
+### Top Bar
+- Beige panel with darker top edge
+- Segmented sections with visible dividers
+- Amber text displays
+- Small LED-style indicators
+
+### Notifications
+- Beige panel with orange border when active
+- Amber text on dark background
+- Chunky dismiss button
+
+### System Tray
+- Icon style: simplified, flat, amber-colored
+- Background: dark inset panel
+- Indicators: LED dots (red/green/amber)
+
+### Media Player
+- Cassette deck aesthetic
+- Play/pause as physical button style
+- Progress as horizontal LED bar
+- Album art in inset panel with beige frame
+
+### Volume/Brightness
+- VU meter style bars
+- Segmented blocks
+- Color graduation: green → amber → red
+- Chunky slider with visible notches
+
+## Implementation Notes
+- Use CSS box-shadows for beveled button effects
+- Implement custom SVG for LED indicators
+- Use text-shadow for VFD glow
+- Add grain texture overlay via CSS
+- Consider using bitmap fonts for authenticity
