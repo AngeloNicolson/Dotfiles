@@ -5,7 +5,8 @@
   "children": [
     {
       "type": "window",
-      "app": "foot"
+      "app": "foot",
+      "terminal_command": "cd Documents"
     },
     {
       "type": "container",

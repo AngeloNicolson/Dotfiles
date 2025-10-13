@@ -650,11 +650,39 @@ class BSPDesigner(Gtk.Box):
         work_dir_label = Gtk.Label(label="Working directory:", xalign=0)
         terminal_box.append(work_dir_label)
 
+        work_dir_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        terminal_box.append(work_dir_box)
+
         work_dir_entry = Gtk.Entry()
         work_dir_entry.set_placeholder_text("e.g., ~/projects/myproject")
+        work_dir_entry.set_hexpand(True)
         if node.working_dir:
             work_dir_entry.set_text(node.working_dir)
-        terminal_box.append(work_dir_entry)
+        work_dir_box.append(work_dir_entry)
+
+        browse_btn = Gtk.Button(label="Browse...")
+        work_dir_box.append(browse_btn)
+
+        def on_browse_clicked(btn):
+            file_dialog = Gtk.FileDialog()
+            file_dialog.set_title("Select Working Directory")
+
+            def on_folder_selected(dialog_obj, result):
+                try:
+                    folder = dialog_obj.select_folder_finish(result)
+                    if folder:
+                        path = folder.get_path()
+                        # Convert to ~ notation if in home directory
+                        home = os.path.expanduser('~')
+                        if path.startswith(home):
+                            path = '~' + path[len(home):]
+                        work_dir_entry.set_text(path)
+                except Exception as e:
+                    pass
+
+            file_dialog.select_folder(parent=dialog, callback=on_folder_selected)
+
+        browse_btn.connect('clicked', on_browse_clicked)
 
         def on_response(dlg, response):
             if response == Gtk.ResponseType.OK:
