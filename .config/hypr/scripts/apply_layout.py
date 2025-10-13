@@ -90,7 +90,7 @@ def move_cursor_to(x, y):
     time.sleep(0.05)
 
 
-def create_window_rule(window_title, x, y, width, height):
+def create_window_rule(window_title, x, y, width, height, app_class=None, workspace_id=None):
     """Create dynamic window rules for pre-positioning before window spawns"""
     try:
         # Create rules to float, size, and position the window based on title
@@ -99,6 +99,10 @@ def create_window_rule(window_title, x, y, width, height):
             f'size {int(width)} {int(height)},title:^{window_title}$',
             f'move {int(x)} {int(y)},title:^{window_title}$'
         ]
+
+        # For non-terminal apps that don't respect --title, also create class-based float rule
+        if app_class and workspace_id:
+            rules.append(f'float,class:({app_class}),workspace:{workspace_id}')
 
         for rule in rules:
             subprocess.run(
@@ -195,7 +199,7 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
 
                 # Create window rules to pre-position before window fully renders
                 # Also add rule to spawn on specific workspace
-                create_window_rule(window_title, x, y, width, height)
+                create_window_rule(window_title, x, y, width, height, app, workspace_id)
                 if workspace_id:
                     subprocess.run(
                         ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},title:^{window_title}$'],
