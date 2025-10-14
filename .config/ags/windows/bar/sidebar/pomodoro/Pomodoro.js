@@ -74,37 +74,107 @@ function HoursSlider(studyHours) {
   })
 }
 
-function Controls() {
-  const StartPauseButton = Widget.Button({
-    className: 'control_button start_pause',
-    hexpand: true,
-    child: Widget.Label({
-      label: Pomodoro.bind('state').transform((state) => {
-        if (state === 'running') return '󰏤 Pause'
-        if (state === 'paused') return ' Resume'
-        return ' Start'
-      }),
-      setup: (self) => {
-        const state = Pomodoro.state
-        if (state === 'running') self.label = '󰏤 Pause'
-        else if (state === 'paused') self.label = ' Resume'
-        else self.label = ' Start'
-      },
-    }),
-    onPrimaryClick: () => Pomodoro.toggle(),
-  })
-
-  const ResetButton = Widget.Button({
-    className: 'control_button reset',
-    hexpand: true,
-    child: Widget.Label(' Reset'),
-    onPrimaryClick: () => Pomodoro.reset(),
-  })
-
+function Controls(studyHours) {
   return Widget.Box({
     className: 'controls',
+    vertical: true,
     spacing: 8,
-    children: [StartPauseButton, ResetButton],
+    setup: (self) => {
+      const updateControls = () => {
+        const state = Pomodoro.state
+        const blockActive = Pomodoro.study_block_active
+        const hours = studyHours.value
+
+        if (state === 'stopped') {
+          // Show Start Session and Start Block buttons stacked
+          self.children = [
+            Widget.Button({
+              className: 'control_button start_pause',
+              hexpand: true,
+              child: Widget.Label(' Start Session'),
+              onPrimaryClick: () => Pomodoro.start(),
+            }),
+            Widget.Button({
+              className: 'control_button start_pause',
+              hexpand: true,
+              sensitive: hours > 0,
+              child: Widget.Label(hours > 0 ? ` Start Block (${hours}h)` : ' Start Block'),
+              onPrimaryClick: () => {
+                if (hours > 0) {
+                  const ratio = { work: 50, break: 10 }
+                  const totalMinutes = hours * 60
+                  const cycleTime = ratio.work + ratio.break
+                  const totalPomodoros = Math.floor(totalMinutes / cycleTime)
+                  Pomodoro.startStudyBlock(totalPomodoros)
+                }
+              },
+            }),
+          ]
+        } else if (state === 'running') {
+          // Show Pause and Stop
+          self.children = [
+            Widget.Box({
+              spacing: 8,
+              children: [
+                Widget.Button({
+                  className: 'control_button start_pause',
+                  hexpand: true,
+                  child: Widget.Label('󰏤 Pause'),
+                  onPrimaryClick: () => Pomodoro.pause(),
+                }),
+                Widget.Button({
+                  className: 'control_button reset',
+                  hexpand: true,
+                  child: Widget.Label(blockActive ? ' Stop Block' : ' Stop'),
+                  onPrimaryClick: () => {
+                    if (blockActive) {
+                      Pomodoro.stopStudyBlock()
+                    } else {
+                      Pomodoro.reset()
+                    }
+                  },
+                }),
+              ],
+            }),
+          ]
+        } else {
+          // Paused - show Resume and Stop
+          self.children = [
+            Widget.Box({
+              spacing: 8,
+              children: [
+                Widget.Button({
+                  className: 'control_button start_pause',
+                  hexpand: true,
+                  child: Widget.Label(' Resume'),
+                  onPrimaryClick: () => Pomodoro.start(),
+                }),
+                Widget.Button({
+                  className: 'control_button reset',
+                  hexpand: true,
+                  child: Widget.Label(blockActive ? ' Stop Block' : ' Stop'),
+                  onPrimaryClick: () => {
+                    if (blockActive) {
+                      Pomodoro.stopStudyBlock()
+                    } else {
+                      Pomodoro.reset()
+                    }
+                  },
+                }),
+              ],
+            }),
+          ]
+        }
+      }
+
+      // Initial update
+      updateControls()
+
+      // Hook for updates
+      self.hook(Pomodoro, updateControls, 'state-changed')
+      self.hook(Pomodoro, updateControls, 'study-block-changed')
+      studyHours.connect('changed', updateControls)
+    },
   })
 }
 
@@ -412,23 +482,6 @@ function StudyBlockControl(studyHours) {
         }),
         hpack: 'center',
       }),
-      Widget.Button({
-        className: 'study_block_button',
-        hexpand: true,
-        sensitive: isStudyMode.bind(),
-        child: Widget.Label({
-          label: Pomodoro.bind('study_block_active').as(active =>
-            active ? ' Stop Block' : ' Start Block'
-          ),
-        }),
-        onClicked: () => {
-          if (Pomodoro.study_block_active) {
-            Pomodoro.stopStudyBlock()
-          } else {
-            Pomodoro.startStudyBlock(pomodoroCount.value)
-          }
-        },
-      }),
     ],
   })
 }
@@ -493,7 +546,7 @@ export default function() {
             studyHours.value = 0
           }, studyHours),
           TimerDisplay(),
-          Controls(),
+          Controls(studyHours),
           Widget.Separator(),
           StudyBlockControl(studyHours),
         ],
