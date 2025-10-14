@@ -12,6 +12,16 @@ function Header() {
         hexpand: true,
       }),
       Widget.Button({
+        className: 'audio_toggle',
+        child: Widget.Label({
+          label: Pomodoro.bind('audio_enabled').transform(enabled => enabled ? '󰕾' : '󰖁'),
+        }),
+        tooltipText: Pomodoro.bind('audio_enabled').transform(enabled => enabled ? 'Disable Audio' : 'Enable Audio'),
+        onClicked: () => {
+          Pomodoro.toggleAudio()
+        },
+      }),
+      Widget.Button({
         className: 'close_button',
         child: Widget.Label(''),
         tooltipText: 'Close (break continues in background)',

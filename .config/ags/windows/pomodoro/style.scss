@@ -15,6 +15,19 @@
       color: $yellow;
     }
 
+    & .audio_toggle {
+      background-color: $bg1;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 16px;
+      margin-right: 8px;
+      transition: background-color 200ms ease;
+
+      &:hover {
+        background-color: $bg2;
+      }
+    }
+
     & .close_button {
       background-color: $bg1;
       border-radius: 6px;

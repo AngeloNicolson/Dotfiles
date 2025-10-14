@@ -152,10 +152,12 @@ class PomodoroService extends Service {
       Utils.execAsync(['bash', '-c', `pkill -f "mpv.*pomodoro-music"`]).catch(() => {})
     }
 
-    // Start mpv with IPC socket for volume control
+    // Pick a random track from the playlist
+    const randomTrack = playlist[Math.floor(Math.random() * playlist.length)]
+
+    // Start mpv with IPC socket for volume control, loop the single track
     const socketPath = '/tmp/ags-pomodoro-mpv-socket'
-    const playlistArgs = playlist.join('\n')
-    Utils.execAsync(['bash', '-c', `echo "${playlistArgs}" | mpv --input-ipc-server=${socketPath} --playlist=- --loop-playlist --volume=${this.#currentVolume} --no-video --really-quiet --title=pomodoro-music 2>/dev/null &`])
+    Utils.execAsync(['bash', '-c', `mpv --input-ipc-server=${socketPath} --loop --volume=${this.#currentVolume} --no-video --really-quiet --title=pomodoro-music "${randomTrack}" 2>/dev/null &`])
       .catch(e => console.log('MPV playback failed:', e))
 
     this.#mpvProcess = true
@@ -184,15 +186,32 @@ class PomodoroService extends Service {
     const dimmedVolume = this.#currentVolume * 0.5
     this.#setVolume(dimmedVolume)
 
-    // Play alert sound over the dimmed music
-    const alertPath = `${App.configDir}/assets/alert.mp3`
+    // Determine which notification to play based on current mode
+    const themePath = `${App.configDir}/assets/music-themes/${this.#currentTheme}/notifications`
+    const notificationFile = this.#mode === 'work' ? 'session_end.mp3' : 'break_end.mp3'
+    const notificationPath = `${themePath}/${notificationFile}`
 
     try {
-      Utils.exec(`test -f ${alertPath}`)
-      Utils.execAsync(['mpv', '--volume=50', '--no-video', alertPath])
-        .catch(e => console.log('Alert play failed:', e))
+      Utils.exec(`test -f ${notificationPath}`)
+      Utils.execAsync(['mpv', '--volume=50', '--no-video', notificationPath])
+        .catch(e => console.log('Notification play failed:', e))
     } catch (e) {
-      console.log('No alert sound found at:', alertPath)
+      console.log(`No notification found at: ${notificationPath}`)
+    }
+  }
+
+  #playStudyBlockStarted() {
+    if (!this.#audioEnabled) return
+
+    const themePath = `${App.configDir}/assets/music-themes/${this.#currentTheme}/notifications`
+    const notificationPath = `${themePath}/study_block_started.mp3`
+
+    try {
+      Utils.exec(`test -f ${notificationPath}`)
+      Utils.execAsync(['mpv', '--volume=50', '--no-video', notificationPath])
+        .catch(e => console.log('Study block notification play failed:', e))
+    } catch (e) {
+      console.log(`No study block notification found at: ${notificationPath}`)
     }
   }
 
@@ -343,6 +362,9 @@ class PomodoroService extends Service {
     this.notify('study-block-active')
     this.notify('study-block-completed')
     this.notify('study-block-total')
+
+    // Play study block started notification
+    this.#playStudyBlockStarted()
 
     // Auto-start first work session
     this.start()

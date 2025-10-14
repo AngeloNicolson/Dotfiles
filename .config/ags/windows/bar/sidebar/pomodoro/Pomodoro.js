@@ -322,6 +322,28 @@ function SessionInfo() {
           }),
         ],
       }),
+      Widget.Box({
+        className: 'popup_toggle',
+        spacing: 8,
+        hpack: 'center',
+        children: [
+          Widget.Switch({
+            setup: (self) => {
+              self.active = Pomodoro.audio_enabled
+              self.hook(Pomodoro, () => {
+                self.active = Pomodoro.audio_enabled
+              }, 'notify::audio-enabled')
+            },
+            onActivate: ({ active }) => {
+              Pomodoro.toggleAudio()
+            },
+          }),
+          Widget.Label({
+            className: 'toggle_label',
+            label: 'Audio',
+          }),
+        ],
+      }),
     ],
   })
 }
