@@ -465,8 +465,8 @@ class PomodoroService extends Service {
     this.#timeRemaining = this.#WORK_TIME
     this.#workSessionsCompleted = 0
 
-    // Fade out music when reset
-    this.#fadeOut()
+    // Fade out music quickly when stopped
+    this.#fadeOutFast(false)
 
     if (this.#interval) {
       clearInterval(this.#interval)
