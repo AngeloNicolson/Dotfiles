@@ -109,6 +109,26 @@
     }
   }
 
+  & .mode_selector {
+    & .mode_button {
+      background-color: $bg1;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 200ms ease;
+
+      &:hover {
+        background-color: $bg2;
+      }
+
+      &.active {
+        background-color: $blue;
+        color: $bg;
+      }
+    }
+  }
+
   & .session_info {
     & .info_label {
       font-size: 16px;

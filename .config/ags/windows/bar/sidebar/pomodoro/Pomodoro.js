@@ -529,8 +529,43 @@ function StudyBlockProgress() {
   })
 }
 
+function ModeSelector(currentMode) {
+  return Widget.Box({
+    className: 'mode_selector',
+    spacing: 8,
+    homogeneous: true,
+    children: [
+      Widget.Button({
+        className: 'mode_button',
+        label: 'Single Session',
+        onClicked: () => {
+          currentMode.value = 'single'
+        },
+        setup: (self) => {
+          self.hook(currentMode, () => {
+            self.toggleClassName('active', currentMode.value === 'single')
+          })
+        },
+      }),
+      Widget.Button({
+        className: 'mode_button',
+        label: 'Study Block',
+        onClicked: () => {
+          currentMode.value = 'block'
+        },
+        setup: (self) => {
+          self.hook(currentMode, () => {
+            self.toggleClassName('active', currentMode.value === 'block')
+          })
+        },
+      }),
+    ],
+  })
+}
+
 export default function() {
   const studyHours = Variable(0)
+  const currentMode = Variable('single')
 
   return Widget.Box({
     className: 'pomodoro',
@@ -544,12 +579,28 @@ export default function() {
         vertical: true,
         spacing: 20,
         children: [
-          StudyBlockControl(studyHours),
-          Widget.Separator(),
-          TimeSelector(() => {
-            // Reset study hours when manual time adjustment is made
-            studyHours.value = 0
-          }, studyHours),
+          ModeSelector(currentMode),
+          Widget.Box({
+            vertical: true,
+            spacing: 20,
+            setup: (self) => {
+              const updateContent = () => {
+                if (currentMode.value === 'single') {
+                  self.children = [
+                    TimeSelector(() => {
+                      studyHours.value = 0
+                    }, studyHours),
+                  ]
+                } else {
+                  self.children = [
+                    StudyBlockControl(studyHours),
+                  ]
+                }
+              }
+              updateContent()
+              currentMode.connect('changed', updateContent)
+            },
+          }),
           Widget.Box({
             spacing: 16,
             children: [
