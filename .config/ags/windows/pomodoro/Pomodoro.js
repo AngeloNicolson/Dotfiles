@@ -83,11 +83,12 @@ function PomodoroWidget() {
 
 const showBreakPopup = Variable(false);
 
-export default Widget.Window({
-  name: 'pomodoro',
+export default (monitor = 0) => Widget.Window({
+  name: `pomodoro${monitor}`,
+  monitor,
   layer: 'overlay',
   anchor: ['top', 'bottom', 'left', 'right'],
-  keymode: 'exclusive',
+  keymode: monitor === 0 ? 'exclusive' : 'none',
   visible: showBreakPopup.bind(),
   child: Widget.Overlay({
     child: Widget.Box({
@@ -97,25 +98,27 @@ export default Widget.Window({
       Widget.Box({
         vpack: 'center',
         hpack: 'center',
-        child: PomodoroWidget(),
+        child: monitor === 0 ? PomodoroWidget() : Widget.Box(),
       }),
     ],
   }),
   setup: (self) => {
-    self.keybind('Escape', () => {
-      showBreakPopup.value = false
-    })
+    if (monitor === 0) {
+      self.keybind('Escape', () => {
+        showBreakPopup.value = false
+      })
 
-    // Auto-show on break start if break popup is enabled
-    self.hook(Pomodoro, () => {
-      if (breakPopupEnabled.value && Pomodoro.state === 'running') {
-        showBreakPopup.value = true
-      }
-    }, 'break-started')
+      // Auto-show on break start if break popup is enabled
+      self.hook(Pomodoro, () => {
+        if (breakPopupEnabled.value && Pomodoro.state === 'running') {
+          showBreakPopup.value = true
+        }
+      }, 'break-started')
 
-    // Auto-hide on break end
-    self.hook(Pomodoro, () => {
-      showBreakPopup.value = false
-    }, 'break-ended')
+      // Auto-hide on break end
+      self.hook(Pomodoro, () => {
+        showBreakPopup.value = false
+      }, 'break-ended')
+    }
   },
 });
