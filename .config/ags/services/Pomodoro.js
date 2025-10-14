@@ -19,6 +19,7 @@ class PomodoroService extends Service {
         'current-theme': ['string', 'r'],
         'available-themes': ['jsobject', 'r'],
         'audio-enabled': ['boolean', 'r'],
+        'target-volume': ['int', 'r'],
       }
     )
   }
@@ -580,6 +581,21 @@ class PomodoroService extends Service {
     }
 
     return this.#audioEnabled
+  }
+
+  setTargetVolume(volume) {
+    this.#targetVolume = Math.max(0, Math.min(100, volume))
+    this.notify('target-volume')
+
+    // Update current volume if music is playing
+    if (this.#mpvProcess && this.#state === 'running') {
+      this.#currentVolume = this.#targetVolume
+      this.#setVolume(this.#targetVolume)
+    }
+  }
+
+  getTargetVolume() {
+    return this.#targetVolume
   }
 
   #onTimerComplete() {

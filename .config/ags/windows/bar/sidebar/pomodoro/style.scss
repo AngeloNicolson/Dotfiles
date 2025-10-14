@@ -168,6 +168,48 @@
         }
       }
     }
+
+    & .volume_control {
+      padding: 0.5rem 0;
+
+      & .volume_icon {
+        font-size: 16px;
+        color: $blue;
+      }
+
+      & .volume_label {
+        font-size: 12px;
+        color: $fg2;
+      }
+
+      & .volume_value {
+        font-size: 11px;
+        font-weight: 600;
+        color: $fg;
+      }
+
+      & .volume_slider scale {
+        min-width: 100%;
+
+        & trough {
+          background-color: $bg2;
+          border-radius: 8px;
+          min-height: 12px;
+        }
+
+        & highlight {
+          background-color: $blue;
+          border-radius: 8px;
+          min-height: 12px;
+        }
+
+        & slider {
+          background-color: transparent;
+          border: none;
+          box-shadow: none;
+        }
+      }
+    }
   }
 
   & .time_selector {
