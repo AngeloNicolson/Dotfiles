@@ -485,11 +485,11 @@ class PomodoroService extends Service {
     this.notify('study-block-completed')
     this.notify('study-block-total')
 
-    // Play study block started notification, then start work session
-    this.#playStudyBlockStarted(() => {
-      // Auto-start first work session after notification
-      this.start()
-    })
+    // Start timer immediately
+    this.start()
+
+    // Play study block started notification
+    this.#playStudyBlockStarted()
   }
 
   stopStudyBlock() {

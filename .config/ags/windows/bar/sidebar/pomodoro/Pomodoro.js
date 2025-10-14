@@ -345,49 +345,62 @@ function SessionInfo() {
         ],
       }),
       Widget.Box({
-        className: 'volume_control',
+        className: 'time_selector',
         vertical: true,
-        spacing: 4,
+        spacing: 8,
         children: [
           Widget.Box({
-            spacing: 8,
+            className: 'slider_row',
+            spacing: 12,
             children: [
               Widget.Label({
-                className: 'volume_icon',
+                className: 'slider_icon',
                 label: '󰕾',
               }),
-              Widget.Label({
-                className: 'volume_label',
-                label: 'Volume',
+              Widget.Box({
+                vertical: true,
+                spacing: 2,
                 hexpand: true,
-                hpack: 'start',
-              }),
-              Widget.Label({
-                className: 'volume_value',
-                setup: (self) => {
-                  self.label = `${Pomodoro.getTargetVolume()}%`
-                  self.hook(Pomodoro, () => {
-                    self.label = `${Pomodoro.getTargetVolume()}%`
-                  }, 'notify::target-volume')
-                },
+                children: [
+                  Widget.Box({
+                    spacing: 4,
+                    children: [
+                      Widget.Label({
+                        className: 'slider_label',
+                        label: 'Volume:',
+                        hpack: 'start',
+                      }),
+                      Widget.Label({
+                        className: 'slider_label',
+                        setup: (self) => {
+                          self.label = `${Pomodoro.getTargetVolume()}%`
+                          self.hook(Pomodoro, () => {
+                            self.label = `${Pomodoro.getTargetVolume()}%`
+                          }, 'notify::target-volume')
+                        },
+                        hpack: 'start',
+                      }),
+                    ],
+                  }),
+                  Widget.Slider({
+                    className: 'slider',
+                    drawValue: false,
+                    min: 0,
+                    max: 100,
+                    step: 5,
+                    value: Pomodoro.getTargetVolume(),
+                    onChange: ({ value }) => {
+                      Pomodoro.setTargetVolume(Math.round(value))
+                    },
+                    setup: (self) => {
+                      self.hook(Pomodoro, () => {
+                        self.value = Pomodoro.getTargetVolume()
+                      }, 'notify::target-volume')
+                    },
+                  }),
+                ],
               }),
             ],
-          }),
-          Widget.Slider({
-            className: 'volume_slider',
-            drawValue: false,
-            min: 0,
-            max: 100,
-            step: 5,
-            value: Pomodoro.getTargetVolume(),
-            onChange: ({ value }) => {
-              Pomodoro.setTargetVolume(Math.round(value))
-            },
-            setup: (self) => {
-              self.hook(Pomodoro, () => {
-                self.value = Pomodoro.getTargetVolume()
-              }, 'notify::target-volume')
-            },
           }),
         ],
       }),
