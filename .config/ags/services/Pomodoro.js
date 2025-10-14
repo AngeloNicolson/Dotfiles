@@ -42,8 +42,8 @@ class PomodoroService extends Service {
   // Audio playback
   #mpvProcess = null
   #fadeInterval = null
-  #FADE_DURATION = 2000 // 2 seconds for fade in/out
-  #FADE_STEPS = 20
+  #FADE_DURATION = 7000 // 7 seconds for fade in/out
+  #FADE_STEPS = 35
   #targetVolume = 30 // Max volume (30%)
   #currentVolume = 0
   #workPlaylist = []
@@ -206,18 +206,29 @@ class PomodoroService extends Service {
     }
   }
 
-  #playStudyBlockStarted() {
-    if (!this.#audioEnabled) return
+  #playStudyBlockStarted(onComplete) {
+    if (!this.#audioEnabled) {
+      if (onComplete) onComplete()
+      return
+    }
 
     const themePath = `${App.configDir}/assets/music-themes/${this.#currentTheme}/notifications`
     const notificationPath = `${themePath}/study_block_started.mp3`
 
     try {
       Utils.exec(`test -f ${notificationPath}`)
-      Utils.execAsync(['mpv', '--volume=50', '--no-video', notificationPath])
-        .catch(e => console.log('Study block notification play failed:', e))
+      // Wait for notification to complete before calling onComplete
+      Utils.execAsync(['bash', '-c', `mpv --volume=50 --no-video "${notificationPath}"`])
+        .then(() => {
+          if (onComplete) onComplete()
+        })
+        .catch(e => {
+          console.log('Study block notification play failed:', e)
+          if (onComplete) onComplete()
+        })
     } catch (e) {
       console.log(`No study block notification found at: ${notificationPath}`)
+      if (onComplete) onComplete()
     }
   }
 
@@ -376,11 +387,11 @@ class PomodoroService extends Service {
     this.notify('study-block-completed')
     this.notify('study-block-total')
 
-    // Play study block started notification
-    this.#playStudyBlockStarted()
-
-    // Auto-start first work session
-    this.start()
+    // Play study block started notification, then start work session
+    this.#playStudyBlockStarted(() => {
+      // Auto-start first work session after notification
+      this.start()
+    })
   }
 
   stopStudyBlock() {
