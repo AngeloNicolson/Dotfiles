@@ -50,6 +50,34 @@
       margin-bottom: 4px;
     }
 
+    & .ratio_selector {
+      margin-top: 8px;
+
+      & .ratio_button {
+        background-color: $bg1;
+        border-radius: 6px;
+        padding: 6px 8px;
+        font-size: 11px;
+        font-weight: 500;
+        transition: all 200ms ease;
+
+        &:hover {
+          background-color: $bg2;
+        }
+
+        &.active {
+          background-color: $blue;
+          color: $bg;
+        }
+      }
+    }
+
+    & .study_summary {
+      font-size: 11px;
+      color: $fg2;
+      margin-top: 8px;
+    }
+
     & .study_block_button {
       background-color: $bg1;
       border-radius: 8px;
@@ -65,6 +93,18 @@
 
       & label {
         color: $blue;
+      }
+
+      &:disabled {
+        opacity: 0.4;
+
+        &:hover {
+          background-color: $bg1;
+        }
+
+        & label {
+          color: $gray;
+        }
       }
     }
   }

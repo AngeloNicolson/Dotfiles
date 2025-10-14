@@ -62,7 +62,7 @@ function Controls() {
   })
 }
 
-function TimeSelector() {
+function TimeSelector(onManualChange, studyHours) {
   return Widget.Box({
     className: 'time_selector',
     vertical: true,
@@ -94,6 +94,7 @@ function TimeSelector() {
                 value: Pomodoro.getWorkTime(),
                 onChange: ({ value }) => {
                   Pomodoro.setWorkTime(Math.round(value))
+                  if (onManualChange) onManualChange()
                 },
                 setup: (self) => {
                   self.value = Pomodoro.getWorkTime()
@@ -140,6 +141,7 @@ function TimeSelector() {
                 value: Pomodoro.getBreakTime(),
                 onChange: ({ value }) => {
                   Pomodoro.setBreakTime(Math.round(value))
+                  if (onManualChange) onManualChange()
                 },
                 setup: (self) => {
                   self.value = Pomodoro.getBreakTime()
@@ -159,6 +161,16 @@ function TimeSelector() {
             self.label = `${Pomodoro.getBreakTime()}m`
           }, 'timer-changed'),
         ],
+      }),
+      Widget.Slider({
+        drawValue: false,
+        min: 0,
+        max: 4,
+        step: 1,
+        value: studyHours.bind(),
+        onChange: ({ value }) => {
+          studyHours.value = Math.round(value)
+        },
       }),
     ],
   })
@@ -196,8 +208,56 @@ function SessionInfo() {
   })
 }
 
-function StudyBlockControl() {
-  const studyBlockSize = Variable(4)
+function StudyBlockControl(studyHours) {
+  print('StudyBlockControl called')
+  const selectedRatio = Variable('50-10')
+  const isStudyMode = Variable(false)
+
+  const ratios = {
+    '25-5': { work: 25, break: 5, label: '25/5' },
+    '50-10': { work: 50, break: 10, label: '50/10' },
+    '45-15': { work: 45, break: 15, label: '45/15' },
+  }
+
+  const calculatePomodoros = (hours, ratioKey) => {
+    const totalMinutes = hours * 60
+    const ratio = ratios[ratioKey]
+    const cycleTime = ratio.work + ratio.break
+    return Math.floor(totalMinutes / cycleTime)
+  }
+
+  const pomodoroCount = Variable(0)
+
+  // Initialize study mode based on current hours value
+  if (studyHours.value >= 1) {
+    isStudyMode.value = true
+    const ratio = ratios[selectedRatio.value]
+    Pomodoro.setWorkTime(ratio.work)
+    Pomodoro.setBreakTime(ratio.break)
+    pomodoroCount.value = calculatePomodoros(studyHours.value, selectedRatio.value)
+  }
+
+  studyHours.connect('changed', ({ value }) => {
+    if (value >= 1) {
+      isStudyMode.value = true
+      const ratio = ratios[selectedRatio.value]
+      Pomodoro.setWorkTime(ratio.work)
+      Pomodoro.setBreakTime(ratio.break)
+      pomodoroCount.value = calculatePomodoros(value, selectedRatio.value)
+    } else {
+      isStudyMode.value = false
+      pomodoroCount.value = 0
+    }
+  })
+
+  selectedRatio.connect('changed', ({ value }) => {
+    if (studyHours.value >= 1) {
+      const ratio = ratios[value]
+      Pomodoro.setWorkTime(ratio.work)
+      Pomodoro.setBreakTime(ratio.break)
+      pomodoroCount.value = calculatePomodoros(studyHours.value, value)
+    }
+  })
 
   return Widget.Box({
     className: 'study_block_control',
@@ -210,41 +270,38 @@ function StudyBlockControl() {
         hpack: 'start',
       }),
       Widget.Box({
-        spacing: 12,
-        children: [
-          Widget.Box({
-            vertical: true,
-            spacing: 2,
-            hexpand: true,
-            children: [
-              Widget.Label({
-                className: 'slider_label',
-                label: 'Pomodoros',
-                hpack: 'start',
-              }),
-              Widget.Slider({
-                className: 'slider',
-                drawValue: false,
-                min: 1,
-                max: 12,
-                step: 1,
-                value: studyBlockSize.bind(),
-                onChange: ({ value }) => {
-                  studyBlockSize.value = Math.round(value)
-                },
-                sensitive: Pomodoro.bind('study_block_active').as(active => !active),
-              }),
-            ],
-          }),
-          Widget.Label({
-            className: 'slider_value',
-            label: studyBlockSize.bind().as(v => `${v}`),
-          }),
-        ],
+        className: 'ratio_selector',
+        spacing: 6,
+        homogeneous: true,
+        visible: isStudyMode.bind(),
+        children: Object.entries(ratios).map(([key, ratio]) =>
+          Widget.Button({
+            className: 'ratio_button',
+            label: ratio.label,
+            onClicked: () => {
+              selectedRatio.value = key
+            },
+            setup: (self) => {
+              self.hook(selectedRatio, () => {
+                self.toggleClassName('active', selectedRatio.value === key)
+              })
+            },
+          })
+        ),
+      }),
+      Widget.Label({
+        className: 'study_summary',
+        visible: isStudyMode.bind(),
+        label: pomodoroCount.bind().as(count => {
+          const ratio = ratios[selectedRatio.value]
+          return `${count} × (${ratio.work}min + ${ratio.break}min)`
+        }),
+        hpack: 'center',
       }),
       Widget.Button({
         className: 'study_block_button',
         hexpand: true,
+        sensitive: isStudyMode.bind(),
         child: Widget.Label({
           label: Pomodoro.bind('study_block_active').as(active =>
             active ? ' Stop Block' : ' Start Block'
@@ -254,7 +311,7 @@ function StudyBlockControl() {
           if (Pomodoro.study_block_active) {
             Pomodoro.stopStudyBlock()
           } else {
-            Pomodoro.startStudyBlock(studyBlockSize.value)
+            Pomodoro.startStudyBlock(pomodoroCount.value)
           }
         },
       }),
@@ -306,6 +363,8 @@ function StudyBlockProgress() {
 }
 
 export default function() {
+  const studyHours = Variable(0)
+
   return Widget.Box({
     className: 'pomodoro',
     vertical: true,
@@ -315,11 +374,14 @@ export default function() {
         spacing: 20,
         children: [
           SessionInfo(),
-          TimeSelector(),
+          TimeSelector(() => {
+            // Reset study hours when manual time adjustment is made
+            studyHours.value = 0
+          }, studyHours),
           TimerDisplay(),
           Controls(),
           Widget.Separator(),
-          StudyBlockControl(),
+          StudyBlockControl(studyHours),
         ],
       }),
       Widget.Box({
