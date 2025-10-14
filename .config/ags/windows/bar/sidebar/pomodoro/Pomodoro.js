@@ -74,7 +74,7 @@ function HoursSlider(studyHours) {
   })
 }
 
-function Controls(studyHours) {
+function Controls(studyHours, currentMode) {
   return Widget.Box({
     className: 'controls',
     vertical: true,
@@ -84,28 +84,25 @@ function Controls(studyHours) {
         const state = Pomodoro.state
         const blockActive = Pomodoro.study_block_active
         const hours = studyHours.value
+        const mode = currentMode.value
 
         if (state === 'stopped') {
-          // Show Start Session and Start Block buttons stacked
+          // Show single Start button
           self.children = [
             Widget.Button({
               className: 'control_button start_pause',
               hexpand: true,
-              child: Widget.Label(' Start Session'),
-              onPrimaryClick: () => Pomodoro.start(),
-            }),
-            Widget.Button({
-              className: 'control_button start_pause',
-              hexpand: true,
-              sensitive: hours > 0,
-              child: Widget.Label(hours > 0 ? ` Start Block (${hours}h)` : ' Start Block'),
+              sensitive: mode === 'single' || hours > 0,
+              child: Widget.Label(mode === 'block' && hours > 0 ? ` Start Block (${hours}h)` : ' Start'),
               onPrimaryClick: () => {
-                if (hours > 0) {
+                if (mode === 'block' && hours > 0) {
                   const ratio = { work: 50, break: 10 }
                   const totalMinutes = hours * 60
                   const cycleTime = ratio.work + ratio.break
                   const totalPomodoros = Math.floor(totalMinutes / cycleTime)
                   Pomodoro.startStudyBlock(totalPomodoros)
+                } else {
+                  Pomodoro.start()
                 }
               },
             }),
@@ -174,6 +171,7 @@ function Controls(studyHours) {
       self.hook(Pomodoro, updateControls, 'state-changed')
       self.hook(Pomodoro, updateControls, 'study-block-changed')
       studyHours.connect('changed', updateControls)
+      currentMode.connect('changed', updateControls)
     },
   })
 }
@@ -587,7 +585,7 @@ export default function() {
               Widget.Box({ hexpand: true }),
             ],
           }),
-          Controls(studyHours),
+          Controls(studyHours, currentMode),
         ],
       }),
     ],

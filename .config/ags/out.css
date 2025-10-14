@@ -506,7 +506,7 @@
 .pomodoro .study_block_control .study_summary {
   font-size: 11px;
   color: #bdae93;
-  margin-top: 8px;
+  margin-top: 2px;
 }
 .pomodoro .study_block_control .study_block_button {
   background-color: #3c3836;
@@ -548,7 +548,7 @@
   color: #282828;
 }
 .pomodoro .mode_content_container {
-  min-height: 150px;
+  min-height: 110px;
 }
 .pomodoro .session_info .info_label {
   font-size: 16px;
