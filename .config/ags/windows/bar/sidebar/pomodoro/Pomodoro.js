@@ -331,7 +331,6 @@ function SessionInfo() {
 function StudyBlockControl(studyHours) {
   print('StudyBlockControl called')
   const selectedRatio = Variable('50-10')
-  const isStudyMode = Variable(false)
 
   const ratios = {
     '25-5': { work: 25, break: 5, label: '25/5' },
@@ -348,35 +347,24 @@ function StudyBlockControl(studyHours) {
 
   const pomodoroCount = Variable(0)
 
-  // Initialize study mode based on current hours value
-  if (studyHours.value >= 1) {
-    isStudyMode.value = true
+  // Initialize with default ratio
+  const ratio = ratios[selectedRatio.value]
+  Pomodoro.setWorkTime(ratio.work)
+  Pomodoro.setBreakTime(ratio.break)
+  pomodoroCount.value = calculatePomodoros(studyHours.value, selectedRatio.value)
+
+  studyHours.connect('changed', ({ value }) => {
     const ratio = ratios[selectedRatio.value]
     Pomodoro.setWorkTime(ratio.work)
     Pomodoro.setBreakTime(ratio.break)
-    pomodoroCount.value = calculatePomodoros(studyHours.value, selectedRatio.value)
-  }
-
-  studyHours.connect('changed', ({ value }) => {
-    if (value >= 1) {
-      isStudyMode.value = true
-      const ratio = ratios[selectedRatio.value]
-      Pomodoro.setWorkTime(ratio.work)
-      Pomodoro.setBreakTime(ratio.break)
-      pomodoroCount.value = calculatePomodoros(value, selectedRatio.value)
-    } else {
-      isStudyMode.value = false
-      pomodoroCount.value = 0
-    }
+    pomodoroCount.value = calculatePomodoros(value, selectedRatio.value)
   })
 
   selectedRatio.connect('changed', ({ value }) => {
-    if (studyHours.value >= 1) {
-      const ratio = ratios[value]
-      Pomodoro.setWorkTime(ratio.work)
-      Pomodoro.setBreakTime(ratio.break)
-      pomodoroCount.value = calculatePomodoros(studyHours.value, value)
-    }
+    const ratio = ratios[value]
+    Pomodoro.setWorkTime(ratio.work)
+    Pomodoro.setBreakTime(ratio.break)
+    pomodoroCount.value = calculatePomodoros(studyHours.value, value)
   })
 
   return Widget.Box({
@@ -384,10 +372,24 @@ function StudyBlockControl(studyHours) {
     vertical: true,
     spacing: 8,
     children: [
-      Widget.Label({
-        className: 'study_label',
-        label: 'Study Block',
-        hpack: 'start',
+      Widget.Box({
+        className: 'ratio_selector',
+        spacing: 6,
+        homogeneous: true,
+        children: Object.entries(ratios).map(([key, ratio]) =>
+          Widget.Button({
+            className: 'ratio_button',
+            label: ratio.label,
+            onClicked: () => {
+              selectedRatio.value = key
+            },
+            setup: (self) => {
+              self.hook(selectedRatio, () => {
+                self.toggleClassName('active', selectedRatio.value === key)
+              })
+            },
+          })
+        ),
       }),
       Widget.Box({
         className: 'time_selector',
@@ -439,38 +441,8 @@ function StudyBlockControl(studyHours) {
           }),
         ],
       }),
-      Widget.Box({
-        className: 'ratio_selector',
-        spacing: 6,
-        homogeneous: true,
-        visible: isStudyMode.bind(),
-        children: Object.entries(ratios).map(([key, ratio]) =>
-          Widget.Button({
-            className: 'ratio_button',
-            label: ratio.label,
-            onClicked: () => {
-              selectedRatio.value = key
-            },
-            setup: (self) => {
-              self.hook(selectedRatio, () => {
-                self.toggleClassName('active', selectedRatio.value === key)
-              })
-            },
-          })
-        ),
-      }),
       Widget.Label({
         className: 'study_summary',
-        visible: isStudyMode.bind(),
-        label: pomodoroCount.bind().as(count => {
-          const ratio = ratios[selectedRatio.value]
-          return `${count} × (${ratio.work}min + ${ratio.break}min)`
-        }),
-        hpack: 'center',
-      }),
-      Widget.Label({
-        className: 'study_summary',
-        visible: isStudyMode.bind(),
         label: studyHours.bind().as(hours => {
           if (hours === 0) return ''
           const now = new Date()
