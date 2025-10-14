@@ -176,6 +176,8 @@
         & highlight {
           background-color: $blue;
           border-radius: 8px;
+          min-width: 16px;
+          min-height: 16px;
         }
 
         & slider {

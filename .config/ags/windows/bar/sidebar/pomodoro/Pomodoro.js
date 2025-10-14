@@ -88,7 +88,7 @@ function TimeSelector(onManualChange, studyHours) {
               Widget.Slider({
                 className: 'slider',
                 drawValue: false,
-                min: 1,
+                min: 0,
                 max: 90,
                 step: 1,
                 value: Pomodoro.getWorkTime(),
@@ -135,7 +135,7 @@ function TimeSelector(onManualChange, studyHours) {
               Widget.Slider({
                 className: 'slider',
                 drawValue: false,
-                min: 1,
+                min: 0,
                 max: 30,
                 step: 1,
                 value: Pomodoro.getBreakTime(),
@@ -162,15 +162,41 @@ function TimeSelector(onManualChange, studyHours) {
           }, 'timer-changed'),
         ],
       }),
-      Widget.Slider({
-        drawValue: false,
-        min: 0,
-        max: 4,
-        step: 1,
-        value: studyHours.bind(),
-        onChange: ({ value }) => {
-          studyHours.value = Math.round(value)
-        },
+      Widget.Box({
+        className: 'slider_row',
+        spacing: 12,
+        children: [
+          Widget.Label({
+            className: 'slider_icon',
+            label: '',
+          }),
+          Widget.Box({
+            vertical: true,
+            spacing: 2,
+            children: [
+              Widget.Label({
+                className: 'slider_label',
+                label: 'Hours',
+                hpack: 'start',
+              }),
+              Widget.Slider({
+                className: 'slider',
+                drawValue: false,
+                min: 0,
+                max: 8,
+                step: 1,
+                value: studyHours.bind(),
+                onChange: ({ value }) => {
+                  studyHours.value = Math.round(value)
+                },
+              }),
+            ],
+          }),
+          Widget.Label({
+            className: 'slider_value',
+            label: studyHours.bind().as(v => v === 0 ? '--' : `${v}h`),
+          }),
+        ],
       }),
     ],
   })
