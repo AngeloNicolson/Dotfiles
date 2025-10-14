@@ -32,6 +32,8 @@ polkit-kde-agent
 pipewire
 wireplumber
 pavucontrol
+mpv
+socat
 
 # System
 python
