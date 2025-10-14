@@ -200,9 +200,12 @@ class PomodoroService extends Service {
     const notificationFile = this.#mode === 'work' ? 'session_end.mp3' : 'break_end.mp3'
     const notificationPath = `${themePath}/${notificationFile}`
 
+    // Use target volume for notification
+    const notificationVolume = this.#targetVolume
+
     try {
       Utils.exec(`test -f ${notificationPath}`)
-      Utils.execAsync(['mpv', '--volume=50', '--no-video', notificationPath])
+      Utils.execAsync(['mpv', `--volume=${notificationVolume}`, '--no-video', notificationPath])
         .catch(e => console.log('Notification play failed:', e))
     } catch (e) {
       console.log(`No notification found at: ${notificationPath}`)
@@ -218,10 +221,13 @@ class PomodoroService extends Service {
     const themePath = `${App.configDir}/assets/music-themes/${this.#currentTheme}/notifications`
     const notificationPath = `${themePath}/study_block_started.mp3`
 
+    // Use target volume for notification
+    const notificationVolume = this.#targetVolume
+
     try {
       Utils.exec(`test -f ${notificationPath}`)
       // Wait for notification to complete before calling onComplete
-      Utils.execAsync(['bash', '-c', `mpv --volume=50 --no-video "${notificationPath}"`])
+      Utils.execAsync(['bash', '-c', `mpv --volume=${notificationVolume} --no-video "${notificationPath}"`])
         .then(() => {
           if (onComplete) onComplete()
         })
