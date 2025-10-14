@@ -440,6 +440,10 @@ function StudyBlockControl(studyHours) {
     pomodoroCount.value = calculatePomodoros(value, selectedRatio.value)
   })
 
+  const getStepSize = (ratioKey) => {
+    return ratioKey === '25-5' ? 0.5 : 1
+  }
+
   selectedRatio.connect('changed', ({ value }) => {
     const ratio = ratios[value]
     Pomodoro.setWorkTime(ratio.work)
@@ -502,7 +506,10 @@ function StudyBlockControl(studyHours) {
                       }),
                       Widget.Label({
                         className: 'slider_label',
-                        label: studyHours.bind().as(v => v === 0 ? '--' : `${v}h`),
+                        label: studyHours.bind().as(v => {
+                          if (v === 0) return '--'
+                          return v % 1 === 0 ? `${v}h` : `${v}h`
+                        }),
                         hpack: 'start',
                       }),
                     ],
@@ -512,13 +519,20 @@ function StudyBlockControl(studyHours) {
                     drawValue: false,
                     min: 0,
                     max: 8,
-                    step: 1,
+                    step: getStepSize(selectedRatio.value),
                     value: studyHours.bind(),
                     onChange: ({ value }) => {
-                      studyHours.value = Math.round(value)
+                      const step = getStepSize(selectedRatio.value)
+                      studyHours.value = Math.round(value / step) * step
                     },
                     setup: (self) => {
                       self.sensitive = Pomodoro.state === 'stopped'
+                      self.hook(selectedRatio, () => {
+                        self.step = getStepSize(selectedRatio.value)
+                        // Snap current value to new step size
+                        const step = getStepSize(selectedRatio.value)
+                        studyHours.value = Math.round(studyHours.value / step) * step
+                      })
                     },
                   }).hook(Pomodoro, (self) => {
                     self.sensitive = Pomodoro.state === 'stopped'
