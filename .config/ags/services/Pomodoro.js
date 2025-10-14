@@ -104,16 +104,18 @@ class PomodoroService extends Service {
 
     // Discover available themes
     try {
-      const themesStr = Utils.exec(`ls -d ${configDir}/assets/music-themes/*/ 2>/dev/null | xargs -n 1 basename`)
+      const themesStr = Utils.exec(`bash -c "cd ${configDir}/assets/music-themes && ls -d */ 2>/dev/null | sed 's|/||g'"`)
       this.#availableThemes = themesStr.trim().split('\n').filter(f => f)
+      console.log('Available themes:', this.#availableThemes)
     } catch (e) {
-      console.log('No music themes found')
-      this.#availableThemes = ['default']
+      console.log('No music themes found:', e)
+      this.#availableThemes = []
     }
 
-    // Load default theme or first available theme
+    // Load first available theme
     if (this.#availableThemes.length > 0) {
-      this.#currentTheme = this.#availableThemes.includes('default') ? 'default' : this.#availableThemes[0]
+      this.#currentTheme = this.#availableThemes[0]
+      console.log('Selected theme:', this.#currentTheme)
     }
 
     this.#loadThemePlaylists()
@@ -145,7 +147,10 @@ class PomodoroService extends Service {
   #startPlayback() {
     const playlist = this.#isWorkMusic ? this.#workPlaylist : this.#breakPlaylist
 
-    if (playlist.length === 0) return
+    if (playlist.length === 0) {
+      console.log('No playlist available for', this.#isWorkMusic ? 'work' : 'break')
+      return
+    }
 
     // Stop any existing playback
     if (this.#mpvProcess) {
@@ -154,6 +159,7 @@ class PomodoroService extends Service {
 
     // Pick a random track from the playlist
     const randomTrack = playlist[Math.floor(Math.random() * playlist.length)]
+    console.log(`Starting playback: ${randomTrack} at volume ${this.#currentVolume}`)
 
     // Start mpv with IPC socket for volume control, loop the single track
     const socketPath = '/tmp/ags-pomodoro-mpv-socket'
@@ -216,12 +222,19 @@ class PomodoroService extends Service {
   }
 
   #fadeIn(isWorkMode = true) {
-    if (!this.#audioEnabled) return
+    if (!this.#audioEnabled) {
+      console.log('Audio disabled, skipping fade in')
+      return
+    }
 
     const playlist = isWorkMode ? this.#workPlaylist : this.#breakPlaylist
-    if (playlist.length === 0) return
+    if (playlist.length === 0) {
+      console.log('No playlist for fade in')
+      return
+    }
 
     this.#isWorkMusic = isWorkMode
+    console.log(`Fading in ${isWorkMode ? 'work' : 'break'} music`)
 
     // Clear any existing fade
     if (this.#fadeInterval) {
