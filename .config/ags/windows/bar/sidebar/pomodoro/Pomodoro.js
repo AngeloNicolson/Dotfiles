@@ -553,25 +553,32 @@ export default function() {
         children: [
           ModeSelector(currentMode),
           Widget.Box({
+            className: 'mode_content_container',
             vertical: true,
             spacing: 20,
-            setup: (self) => {
-              const updateContent = () => {
-                if (currentMode.value === 'single') {
-                  self.children = [
-                    TimeSelector(() => {
-                      studyHours.value = 0
-                    }, studyHours),
-                  ]
-                } else {
-                  self.children = [
-                    StudyBlockControl(studyHours),
-                  ]
-                }
-              }
-              updateContent()
-              currentMode.connect('changed', updateContent)
-            },
+            children: [
+              Widget.Box({
+                vertical: true,
+                spacing: 20,
+                setup: (self) => {
+                  const updateContent = () => {
+                    if (currentMode.value === 'single') {
+                      self.children = [
+                        TimeSelector(() => {
+                          studyHours.value = 0
+                        }, studyHours),
+                      ]
+                    } else {
+                      self.children = [
+                        StudyBlockControl(studyHours),
+                      ]
+                    }
+                  }
+                  updateContent()
+                  currentMode.connect('changed', updateContent)
+                },
+              }),
+            ],
           }),
           Widget.Box({
             spacing: 16,

@@ -129,6 +129,10 @@
     }
   }
 
+  & .mode_content_container {
+    min-height: 150px;
+  }
+
   & .session_info {
     & .info_label {
       font-size: 16px;
