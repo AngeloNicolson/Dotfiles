@@ -572,7 +572,7 @@
   min-width: 35px;
 }
 .pomodoro .time_selector .slider_row scale {
-  min-width: 120px;
+  min-width: 100px;
 }
 .pomodoro .time_selector .slider_row scale trough {
   background-color: #504945;
@@ -582,6 +582,8 @@
 .pomodoro .time_selector .slider_row scale highlight {
   background-color: #458588;
   border-radius: 8px;
+  min-width: 16px;
+  min-height: 16px;
 }
 .pomodoro .time_selector .slider_row scale slider {
   background-color: transparent;
@@ -598,7 +600,7 @@
   background-color: #928374;
 }
 .pomodoro .timer_display {
-  padding: 2rem 0;
+  padding: 3rem 0 2rem 0;
 }
 .pomodoro .timer_display .timer_text {
   font-size: 48px;
@@ -731,3 +733,5 @@
 .pomodoro_window .controls .control_button.reset {
   color: #cc241d;
 }
+
+/*# sourceMappingURL=out.css.map */

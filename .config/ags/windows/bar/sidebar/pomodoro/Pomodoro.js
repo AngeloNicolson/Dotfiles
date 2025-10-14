@@ -536,33 +536,30 @@ export default function() {
     className: 'pomodoro',
     vertical: true,
     children: [
+      SessionInfo(),
+      TimerDisplay(),
       Widget.Box({
+        vexpand: true,
+        vpack: 'end',
         vertical: true,
         spacing: 20,
         children: [
-          SessionInfo(),
           StudyBlockControl(studyHours),
           Widget.Separator(),
           TimeSelector(() => {
             // Reset study hours when manual time adjustment is made
             studyHours.value = 0
           }, studyHours),
+          Widget.Box({
+            spacing: 16,
+            children: [
+              StudyBlockProgress(),
+              Widget.Box({ hexpand: true }),
+            ],
+          }),
+          Controls(studyHours),
         ],
       }),
-      Widget.Box({
-        vexpand: true,
-        vpack: 'center',
-        hpack: 'center',
-        children: [TimerDisplay()],
-      }),
-      Widget.Box({
-        spacing: 16,
-        children: [
-          StudyBlockProgress(),
-          Widget.Box({ hexpand: true }),
-        ],
-      }),
-      Controls(studyHours),
     ],
   })
 }

@@ -165,7 +165,7 @@
       }
 
       & scale {
-        min-width: 100%;
+        min-width: 100px;
 
         & trough {
           background-color: $bg2;
@@ -202,7 +202,7 @@
   }
 
   & .timer_display {
-    padding: 2rem 0;
+    padding: 3rem 0 2rem 0;
 
     & .timer_text {
       font-size: 48px;
