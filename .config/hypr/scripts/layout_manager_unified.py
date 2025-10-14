@@ -32,7 +32,7 @@ import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
 gi.require_version('Pango', '1.0')
-from gi.repository import Gtk, Gdk, Gio, Pango
+from gi.repository import Gtk, Gdk, Gio, Pango, GLib
 import json
 import os
 import sys
@@ -1413,6 +1413,12 @@ class LayoutManagerUnified(Gtk.Window):
         self.load_css()
 
         self.setup_ui()
+
+        # Start auto-refresh timer for Live tab (every 7 seconds)
+        self.refresh_timeout_id = GLib.timeout_add_seconds(7, self.auto_refresh_live)
+
+        # Clean up timer on window destroy
+        self.connect('destroy', self.on_window_destroy)
 
     def load_css(self):
         """Load custom CSS for card styling"""
@@ -3042,7 +3048,7 @@ class LayoutManagerUnified(Gtk.Window):
         return []
 
     def get_workspaces(self):
-        """Get list of workspaces from hyprctl"""
+        """Get list of workspaces from hyprctl (filtered to 1-9 only)"""
         try:
             result = subprocess.run(
                 ['hyprctl', '-j', 'workspaces'],
@@ -3050,7 +3056,9 @@ class LayoutManagerUnified(Gtk.Window):
                 text=True
             )
             if result.returncode == 0:
-                return json.loads(result.stdout)
+                workspaces = json.loads(result.stdout)
+                # Filter to only show workspaces 1-9
+                return [ws for ws in workspaces if 1 <= ws.get('id', 0) <= 9]
         except Exception as e:
             print(f"Error getting workspaces: {e}")
         return []
@@ -3091,32 +3099,13 @@ class LayoutManagerUnified(Gtk.Window):
             self.live_monitors_container.remove(child)
             child = next_child
 
-        # Get data
+        # Get data - only live workspaces, no saved configs
         monitors = self.get_monitors()
         live_workspaces = self.get_workspaces()
-        saved_workspaces = self.get_saved_workspaces()
-
-        # Create a dict of live workspaces by ID for lookup
-        live_ws_dict = {ws.get('id'): ws for ws in live_workspaces}
-
-        # Merge: use live data if workspace exists, otherwise create placeholder from saved config
-        all_workspaces = []
-        for saved_ws in saved_workspaces:
-            ws_id = saved_ws.get('id')
-            if ws_id in live_ws_dict:
-                # Use live workspace data
-                all_workspaces.append(live_ws_dict[ws_id])
-            else:
-                # Create placeholder from saved config
-                all_workspaces.append({
-                    'id': ws_id,
-                    'monitor': saved_ws.get('monitor', 'Unknown'),
-                    'windows': 0
-                })
 
         # Group workspaces by monitor
         ws_by_monitor = {}
-        for ws in all_workspaces:
+        for ws in live_workspaces:
             monitor_name = ws.get('monitor', 'Unknown')
             if monitor_name not in ws_by_monitor:
                 ws_by_monitor[monitor_name] = []
@@ -3127,6 +3116,25 @@ class LayoutManagerUnified(Gtk.Window):
             monitor_name = monitor['name']
             monitor_box = self.create_monitor_box(monitor_name, ws_by_monitor.get(monitor_name, []))
             self.live_monitors_container.append(monitor_box)
+
+    def auto_refresh_live(self):
+        """Auto-refresh callback for live workspace polling"""
+        try:
+            # Only refresh if the Live tab is currently visible
+            current_page = self.workspace_tabs.get_current_page()
+            if current_page == 0:  # Live tab is the first tab (index 0)
+                self.refresh_live_workspaces()
+        except Exception as e:
+            print(f"Error in auto-refresh: {e}")
+
+        # Return True to continue the timeout loop
+        return True
+
+    def on_window_destroy(self, widget):
+        """Clean up resources when window is destroyed"""
+        if hasattr(self, 'refresh_timeout_id') and self.refresh_timeout_id:
+            GLib.source_remove(self.refresh_timeout_id)
+            self.refresh_timeout_id = None
 
     def refresh_saved_workspaces(self):
         """Refresh list of saved workspace configurations"""
