@@ -11,6 +11,7 @@
 
 # AGS cache and state
 .config/ags/.states.json
+.config/ags/assets/music-themes/**/*.mp3
 
 # Hyprland logs
 .config/hypr/*.log
