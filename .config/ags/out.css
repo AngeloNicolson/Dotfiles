@@ -485,6 +485,29 @@
   font-weight: 600;
   margin-bottom: 4px;
 }
+.pomodoro .study_block_control .ratio_selector {
+  margin-top: 8px;
+}
+.pomodoro .study_block_control .ratio_selector .ratio_button {
+  background-color: #3c3836;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 200ms ease;
+}
+.pomodoro .study_block_control .ratio_selector .ratio_button:hover {
+  background-color: #504945;
+}
+.pomodoro .study_block_control .ratio_selector .ratio_button.active {
+  background-color: #458588;
+  color: #282828;
+}
+.pomodoro .study_block_control .study_summary {
+  font-size: 11px;
+  color: #bdae93;
+  margin-top: 8px;
+}
 .pomodoro .study_block_control .study_block_button {
   background-color: #3c3836;
   border-radius: 8px;
@@ -499,6 +522,15 @@
 }
 .pomodoro .study_block_control .study_block_button label {
   color: #458588;
+}
+.pomodoro .study_block_control .study_block_button:disabled {
+  opacity: 0.4;
+}
+.pomodoro .study_block_control .study_block_button:disabled:hover {
+  background-color: #3c3836;
+}
+.pomodoro .study_block_control .study_block_button:disabled label {
+  color: #928374;
 }
 .pomodoro .session_info .info_label {
   font-size: 16px;

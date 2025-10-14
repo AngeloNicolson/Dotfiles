@@ -28,6 +28,52 @@ function TimerDisplay() {
   })
 }
 
+function HoursSlider(studyHours) {
+  return Widget.Box({
+    className: 'time_selector',
+    vertical: true,
+    spacing: 8,
+    children: [
+      Widget.Box({
+        className: 'slider_row',
+        spacing: 12,
+        children: [
+          Widget.Label({
+            className: 'slider_icon',
+            label: '',
+          }),
+          Widget.Box({
+            vertical: true,
+            spacing: 2,
+            children: [
+              Widget.Label({
+                className: 'slider_label',
+                label: 'Hours',
+                hpack: 'start',
+              }),
+              Widget.Slider({
+                className: 'slider',
+                drawValue: false,
+                min: 0,
+                max: 8,
+                step: 1,
+                value: studyHours.bind(),
+                onChange: ({ value }) => {
+                  studyHours.value = Math.round(value)
+                },
+              }),
+            ],
+          }),
+          Widget.Label({
+            className: 'slider_value',
+            label: studyHours.bind().as(v => v === 0 ? '--' : `${v}h`),
+          }),
+        ],
+      }),
+    ],
+  })
+}
+
 function Controls() {
   const StartPauseButton = Widget.Button({
     className: 'control_button start_pause',
@@ -79,11 +125,24 @@ function TimeSelector(onManualChange, studyHours) {
           Widget.Box({
             vertical: true,
             spacing: 2,
+            hexpand: true,
             children: [
-              Widget.Label({
-                className: 'slider_label',
-                label: 'Work Time',
-                hpack: 'start',
+              Widget.Box({
+                spacing: 4,
+                children: [
+                  Widget.Label({
+                    className: 'slider_label',
+                    label: 'Work Time:',
+                    hpack: 'start',
+                  }),
+                  Widget.Label({
+                    className: 'slider_label',
+                    label: Pomodoro.bind('time_remaining').transform(() => `${Pomodoro.getWorkTime()}m`),
+                    hpack: 'start',
+                  }).hook(Pomodoro, (self) => {
+                    self.label = `${Pomodoro.getWorkTime()}m`
+                  }, 'timer-changed'),
+                ],
               }),
               Widget.Slider({
                 className: 'slider',
@@ -107,12 +166,6 @@ function TimeSelector(onManualChange, studyHours) {
               }, 'timer-changed'),
             ],
           }),
-          Widget.Label({
-            className: 'slider_value',
-            label: `${Pomodoro.getWorkTime()}m`,
-          }).hook(Pomodoro, (self) => {
-            self.label = `${Pomodoro.getWorkTime()}m`
-          }, 'timer-changed'),
         ],
       }),
       Widget.Box({
@@ -126,11 +179,24 @@ function TimeSelector(onManualChange, studyHours) {
           Widget.Box({
             vertical: true,
             spacing: 2,
+            hexpand: true,
             children: [
-              Widget.Label({
-                className: 'slider_label',
-                label: 'Break Time',
-                hpack: 'start',
+              Widget.Box({
+                spacing: 4,
+                children: [
+                  Widget.Label({
+                    className: 'slider_label',
+                    label: 'Break Time:',
+                    hpack: 'start',
+                  }),
+                  Widget.Label({
+                    className: 'slider_label',
+                    label: Pomodoro.bind('time_remaining').transform(() => `${Pomodoro.getBreakTime()}m`),
+                    hpack: 'start',
+                  }).hook(Pomodoro, (self) => {
+                    self.label = `${Pomodoro.getBreakTime()}m`
+                  }, 'timer-changed'),
+                ],
               }),
               Widget.Slider({
                 className: 'slider',
@@ -153,48 +219,6 @@ function TimeSelector(onManualChange, studyHours) {
                 self.value = Pomodoro.getBreakTime()
               }, 'timer-changed'),
             ],
-          }),
-          Widget.Label({
-            className: 'slider_value',
-            label: `${Pomodoro.getBreakTime()}m`,
-          }).hook(Pomodoro, (self) => {
-            self.label = `${Pomodoro.getBreakTime()}m`
-          }, 'timer-changed'),
-        ],
-      }),
-      Widget.Box({
-        className: 'slider_row',
-        spacing: 12,
-        children: [
-          Widget.Label({
-            className: 'slider_icon',
-            label: '',
-          }),
-          Widget.Box({
-            vertical: true,
-            spacing: 2,
-            children: [
-              Widget.Label({
-                className: 'slider_label',
-                label: 'Hours',
-                hpack: 'start',
-              }),
-              Widget.Slider({
-                className: 'slider',
-                drawValue: false,
-                min: 0,
-                max: 8,
-                step: 1,
-                value: studyHours.bind(),
-                onChange: ({ value }) => {
-                  studyHours.value = Math.round(value)
-                },
-              }),
-            ],
-          }),
-          Widget.Label({
-            className: 'slider_value',
-            label: studyHours.bind().as(v => v === 0 ? '--' : `${v}h`),
           }),
         ],
       }),
@@ -296,6 +320,56 @@ function StudyBlockControl(studyHours) {
         hpack: 'start',
       }),
       Widget.Box({
+        className: 'time_selector',
+        vertical: true,
+        spacing: 8,
+        children: [
+          Widget.Box({
+            className: 'slider_row',
+            spacing: 12,
+            children: [
+              Widget.Label({
+                className: 'slider_icon',
+                label: '',
+              }),
+              Widget.Box({
+                vertical: true,
+                spacing: 2,
+                hexpand: true,
+                children: [
+                  Widget.Box({
+                    spacing: 4,
+                    children: [
+                      Widget.Label({
+                        className: 'slider_label',
+                        label: 'Hours:',
+                        hpack: 'start',
+                      }),
+                      Widget.Label({
+                        className: 'slider_label',
+                        label: studyHours.bind().as(v => v === 0 ? '--' : `${v}h`),
+                        hpack: 'start',
+                      }),
+                    ],
+                  }),
+                  Widget.Slider({
+                    className: 'slider',
+                    drawValue: false,
+                    min: 0,
+                    max: 8,
+                    step: 1,
+                    value: studyHours.bind(),
+                    onChange: ({ value }) => {
+                      studyHours.value = Math.round(value)
+                    },
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+      Widget.Box({
         className: 'ratio_selector',
         spacing: 6,
         homogeneous: true,
@@ -321,6 +395,20 @@ function StudyBlockControl(studyHours) {
         label: pomodoroCount.bind().as(count => {
           const ratio = ratios[selectedRatio.value]
           return `${count} × (${ratio.work}min + ${ratio.break}min)`
+        }),
+        hpack: 'center',
+      }),
+      Widget.Label({
+        className: 'study_summary',
+        visible: isStudyMode.bind(),
+        label: studyHours.bind().as(hours => {
+          if (hours === 0) return ''
+          const now = new Date()
+          const totalMinutes = hours * 60
+          const finishTime = new Date(now.getTime() + totalMinutes * 60000)
+          const hoursStr = finishTime.getHours().toString().padStart(2, '0')
+          const minutesStr = finishTime.getMinutes().toString().padStart(2, '0')
+          return `Finish at ${hoursStr}:${minutesStr}`
         }),
         hpack: 'center',
       }),
