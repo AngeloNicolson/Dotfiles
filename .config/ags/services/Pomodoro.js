@@ -241,6 +241,24 @@ class PomodoroService extends Service {
     }
   }
 
+  #playSessionStarted() {
+    if (!this.#audioEnabled) return
+
+    const themePath = `${App.configDir}/assets/music-themes/${this.#currentTheme}/notifications`
+    const notificationPath = `${themePath}/session_started.mp3`
+
+    // Use target volume for notification
+    const notificationVolume = this.#targetVolume
+
+    try {
+      Utils.exec(`test -f ${notificationPath}`)
+      Utils.execAsync(['mpv', `--volume=${notificationVolume}`, '--no-video', notificationPath])
+        .catch(e => console.log('Session notification play failed:', e))
+    } catch (e) {
+      console.log(`No session notification found at: ${notificationPath}`)
+    }
+  }
+
   #fadeIn(isWorkMode = true) {
     if (!this.#audioEnabled) {
       console.log('Audio disabled, skipping fade in')
@@ -399,6 +417,7 @@ class PomodoroService extends Service {
 
   start() {
     const wasResuming = this.#state === 'paused'
+    const wasStartingFresh = this.#state === 'stopped'
 
     if (this.#state === 'stopped') {
       // Starting fresh
@@ -419,6 +438,11 @@ class PomodoroService extends Service {
     } else {
       // Fade in new music when timer starts
       this.#fadeIn(this.#mode === 'work')
+
+      // Play session started notification for single sessions (not study blocks)
+      if (wasStartingFresh && !this.#studyBlockActive) {
+        this.#playSessionStarted()
+      }
     }
 
     if (this.#interval) clearInterval(this.#interval)

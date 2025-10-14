@@ -28,6 +28,7 @@ A feature-rich pomodoro timer with music playback, theme support, and study bloc
 │   │   ├── relaxing2.mp3
 │   │   └── ...
 │   └── notifications/
+│       ├── session_started.mp3
 │       ├── study_block_started.mp3
 │       ├── session_end.mp3
 │       └── break_end.mp3
@@ -50,6 +51,7 @@ A feature-rich pomodoro timer with music playback, theme support, and study bloc
 - **Location**: `notifications/` folder within each theme
 - **Format**: `.mp3` files
 - **Required Names** (must be exact):
+  - `session_started.mp3` - Plays when starting a single session
   - `study_block_started.mp3` - Plays when starting a study block
   - `session_end.mp3` - Plays 5 seconds before work session ends
   - `break_end.mp3` - Plays 5 seconds before break ends
