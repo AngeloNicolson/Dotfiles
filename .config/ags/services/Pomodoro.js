@@ -127,19 +127,21 @@ class PomodoroService extends Service {
 
     // Load work playlist for current theme
     try {
-      const workPlaylistStr = Utils.exec(`ls ${themePath}/work/*.mp3 2>/dev/null`)
+      const workPlaylistStr = Utils.exec(`bash -c "ls ${themePath}/work/*.mp3 2>/dev/null"`)
       this.#workPlaylist = workPlaylistStr.trim().split('\n').filter(f => f)
+      console.log('Work playlist:', this.#workPlaylist)
     } catch (e) {
-      console.log(`No work music found for theme: ${this.#currentTheme}`)
+      console.log(`No work music found for theme: ${this.#currentTheme}`, e)
       this.#workPlaylist = []
     }
 
     // Load break playlist for current theme
     try {
-      const breakPlaylistStr = Utils.exec(`ls ${themePath}/break/*.mp3 2>/dev/null`)
+      const breakPlaylistStr = Utils.exec(`bash -c "ls ${themePath}/break/*.mp3 2>/dev/null"`)
       this.#breakPlaylist = breakPlaylistStr.trim().split('\n').filter(f => f)
+      console.log('Break playlist:', this.#breakPlaylist)
     } catch (e) {
-      console.log(`No break music found for theme: ${this.#currentTheme}`)
+      console.log(`No break music found for theme: ${this.#currentTheme}`, e)
       this.#breakPlaylist = []
     }
   }
