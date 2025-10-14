@@ -42,7 +42,10 @@ return {
 
 			-- Helper: launch external app
 			local function open_external(app, path)
-				vim.fn.jobstart({ app, path }, { detach = true })
+				vim.fn.jobstart(string.format("setsid -f %s %s", app, vim.fn.shellescape(path)), {
+					detach = true,
+					shell = true,
+				})
 			end
 
 			require("neo-tree").setup({
@@ -72,18 +75,23 @@ return {
 						local ext = path:match("^.+%.(.+)$")
 						local filename = path:match("^.+/(.+)$") or path
 
+						-- Debug: print extension
+						print("File extension: " .. (ext or "none"))
+
 						-- Check if extension has external handler
 						if ext then
 							ext = ext:lower()
 							local handler = external_handlers[ext]
+							print("Handler found: " .. (handler or "none"))
 							if handler then
-								print("Opened " .. filename .. " with " .. handler)
+								print("Opening " .. filename .. " with " .. handler)
 								open_external(handler, path)
 								return -- Don't open in neovim
 							end
 						end
 
 						-- Default: open in neovim and close tree
+						print("Opening in neovim buffer")
 						require("neo-tree.sources.filesystem.commands").open(state)
 						vim.schedule(function()
 							vim.cmd("Neotree close")
