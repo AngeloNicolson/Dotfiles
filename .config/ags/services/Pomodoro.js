@@ -44,7 +44,7 @@ class PomodoroService extends Service {
   #fadeInterval = null
   #FADE_DURATION = 7000 // 7 seconds for fade in/out
   #FADE_STEPS = 35
-  #targetVolume = 30 // Max volume (30%)
+  #targetVolume = 60 // Max volume (60%)
   #currentVolume = 0
   #workPlaylist = []
   #breakPlaylist = []
