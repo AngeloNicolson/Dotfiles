@@ -16,6 +16,9 @@ class PomodoroService extends Service {
         'study-block-active': ['boolean', 'r'],
         'study-block-completed': ['int', 'r'],
         'study-block-total': ['int', 'r'],
+        'current-theme': ['string', 'r'],
+        'available-themes': ['jsobject', 'r'],
+        'audio-enabled': ['boolean', 'r'],
       }
     )
   }
@@ -35,6 +38,21 @@ class PomodoroService extends Service {
   #studyBlockActive = false
   #studyBlockTotal = 0 // Total pomodoros in the block
   #studyBlockCompleted = 0 // Pomodoros completed in current block
+
+  // Audio playback
+  #mpvProcess = null
+  #fadeInterval = null
+  #FADE_DURATION = 2000 // 2 seconds for fade in/out
+  #FADE_STEPS = 20
+  #targetVolume = 30 // Max volume (30%)
+  #currentVolume = 0
+  #workPlaylist = []
+  #breakPlaylist = []
+  #currentTrackIndex = 0
+  #isWorkMusic = true
+  #currentTheme = 'default'
+  #availableThemes = []
+  #audioEnabled = true
 
   // Time options in minutes
   static WORK_OPTIONS = [25, 30, 45, 50, 60, 90]
@@ -64,8 +82,179 @@ class PomodoroService extends Service {
     return this.#studyBlockTotal
   }
 
+  get current_theme() {
+    return this.#currentTheme
+  }
+
+  get available_themes() {
+    return this.#availableThemes
+  }
+
+  get audio_enabled() {
+    return this.#audioEnabled
+  }
+
   constructor() {
     super()
+    this.#initAudio()
+  }
+
+  #initAudio() {
+    const configDir = App.configDir
+
+    // Discover available themes
+    try {
+      const themesStr = Utils.exec(`ls -d ${configDir}/assets/music-themes/*/ 2>/dev/null | xargs -n 1 basename`)
+      this.#availableThemes = themesStr.trim().split('\n').filter(f => f)
+    } catch (e) {
+      console.log('No music themes found')
+      this.#availableThemes = ['default']
+    }
+
+    // Load default theme or first available theme
+    if (this.#availableThemes.length > 0) {
+      this.#currentTheme = this.#availableThemes.includes('default') ? 'default' : this.#availableThemes[0]
+    }
+
+    this.#loadThemePlaylists()
+  }
+
+  #loadThemePlaylists() {
+    const configDir = App.configDir
+    const themePath = `${configDir}/assets/music-themes/${this.#currentTheme}`
+
+    // Load work playlist for current theme
+    try {
+      const workPlaylistStr = Utils.exec(`ls ${themePath}/work/*.mp3 2>/dev/null`)
+      this.#workPlaylist = workPlaylistStr.trim().split('\n').filter(f => f)
+    } catch (e) {
+      console.log(`No work music found for theme: ${this.#currentTheme}`)
+      this.#workPlaylist = []
+    }
+
+    // Load break playlist for current theme
+    try {
+      const breakPlaylistStr = Utils.exec(`ls ${themePath}/break/*.mp3 2>/dev/null`)
+      this.#breakPlaylist = breakPlaylistStr.trim().split('\n').filter(f => f)
+    } catch (e) {
+      console.log(`No break music found for theme: ${this.#currentTheme}`)
+      this.#breakPlaylist = []
+    }
+  }
+
+  #startPlayback() {
+    const playlist = this.#isWorkMusic ? this.#workPlaylist : this.#breakPlaylist
+
+    if (playlist.length === 0) return
+
+    // Stop any existing playback
+    if (this.#mpvProcess) {
+      Utils.execAsync(['bash', '-c', `pkill -f "mpv.*pomodoro-music"`]).catch(() => {})
+    }
+
+    // Start mpv with IPC socket for volume control
+    const socketPath = '/tmp/ags-pomodoro-mpv-socket'
+    const playlistArgs = playlist.join('\n')
+    Utils.execAsync(['bash', '-c', `echo "${playlistArgs}" | mpv --input-ipc-server=${socketPath} --playlist=- --loop-playlist --volume=${this.#currentVolume} --no-video --really-quiet --title=pomodoro-music 2>/dev/null &`])
+      .catch(e => console.log('MPV playback failed:', e))
+
+    this.#mpvProcess = true
+  }
+
+  #stopPlayback() {
+    if (this.#mpvProcess) {
+      Utils.execAsync(['bash', '-c', `pkill -f "mpv.*pomodoro-music"`]).catch(() => {})
+      this.#mpvProcess = null
+    }
+  }
+
+  #setVolume(volume) {
+    this.#currentVolume = Math.max(0, Math.min(100, volume))
+    if (this.#mpvProcess) {
+      const socketPath = '/tmp/ags-pomodoro-mpv-socket'
+      Utils.execAsync(['bash', '-c', `echo '{ "command": ["set_property", "volume", ${this.#currentVolume}] }' | socat - ${socketPath} 2>/dev/null`])
+        .catch(() => {})
+    }
+  }
+
+  #dimMusicAndPlayAlert() {
+    if (!this.#audioEnabled) return
+
+    // Reduce music volume to 50% of current
+    const dimmedVolume = this.#currentVolume * 0.5
+    this.#setVolume(dimmedVolume)
+
+    // Play alert sound over the dimmed music
+    const alertPath = `${App.configDir}/assets/alert.mp3`
+
+    try {
+      Utils.exec(`test -f ${alertPath}`)
+      Utils.execAsync(['mpv', '--volume=50', '--no-video', alertPath])
+        .catch(e => console.log('Alert play failed:', e))
+    } catch (e) {
+      console.log('No alert sound found at:', alertPath)
+    }
+  }
+
+  #fadeIn(isWorkMode = true) {
+    if (!this.#audioEnabled) return
+
+    const playlist = isWorkMode ? this.#workPlaylist : this.#breakPlaylist
+    if (playlist.length === 0) return
+
+    this.#isWorkMusic = isWorkMode
+
+    // Clear any existing fade
+    if (this.#fadeInterval) {
+      clearInterval(this.#fadeInterval)
+    }
+
+    const stepTime = this.#FADE_DURATION / this.#FADE_STEPS
+    const volumeStep = this.#targetVolume / this.#FADE_STEPS
+    let currentStep = 0
+
+    this.#currentVolume = 0
+    this.#startPlayback()
+
+    this.#fadeInterval = setInterval(() => {
+      currentStep++
+      const newVolume = Math.min(volumeStep * currentStep, this.#targetVolume)
+      this.#setVolume(newVolume)
+
+      if (currentStep >= this.#FADE_STEPS) {
+        clearInterval(this.#fadeInterval)
+        this.#fadeInterval = null
+      }
+    }, stepTime)
+  }
+
+  #fadeOut(onComplete) {
+    // Clear any existing fade
+    if (this.#fadeInterval) {
+      clearInterval(this.#fadeInterval)
+    }
+
+    if (!this.#mpvProcess) {
+      if (onComplete) onComplete()
+      return
+    }
+
+    const stepTime = this.#FADE_DURATION / this.#FADE_STEPS
+    const volumeStep = this.#currentVolume / this.#FADE_STEPS
+    let currentStep = 0
+
+    this.#fadeInterval = setInterval(() => {
+      currentStep++
+      const newVolume = Math.max(this.#currentVolume - volumeStep, 0)
+      this.#setVolume(newVolume)
+
+      if (currentStep >= this.#FADE_STEPS) {
+        clearInterval(this.#fadeInterval)
+        this.#fadeInterval = null
+        this.#stopPlayback()
+        if (onComplete) onComplete()
+      }
+    }, stepTime)
   }
 
   start() {
@@ -82,10 +271,18 @@ class PomodoroService extends Service {
     // Write state to cache file for sidebar script
     Utils.execAsync(['bash', '-c', `echo "running" > $HOME/.cache/pomodoro_state`])
 
+    // Fade in music when timer starts (work or break music depending on mode)
+    this.#fadeIn(this.#mode === 'work')
+
     if (this.#interval) clearInterval(this.#interval)
 
     this.#interval = setInterval(() => {
       this.#timeRemaining--
+
+      // Dim music and play alert 5 seconds before end
+      if (this.#timeRemaining === 5) {
+        this.#dimMusicAndPlayAlert()
+      }
 
       if (this.#timeRemaining <= 0) {
         this.#onTimerComplete()
@@ -106,6 +303,9 @@ class PomodoroService extends Service {
     // Write state to cache file for sidebar script
     Utils.execAsync(['bash', '-c', `echo "paused" > $HOME/.cache/pomodoro_state`])
 
+    // Fade out music when paused
+    this.#fadeOut()
+
     if (this.#interval) {
       clearInterval(this.#interval)
       this.#interval = null
@@ -117,6 +317,9 @@ class PomodoroService extends Service {
     this.#mode = 'work'
     this.#timeRemaining = this.#WORK_TIME
     this.#workSessionsCompleted = 0
+
+    // Fade out music when reset
+    this.#fadeOut()
 
     if (this.#interval) {
       clearInterval(this.#interval)
@@ -190,8 +393,57 @@ class PomodoroService extends Service {
     return this.#SHORT_BREAK / 60
   }
 
+  setTheme(themeName) {
+    if (!this.#availableThemes.includes(themeName)) {
+      console.log(`Theme not found: ${themeName}`)
+      return false
+    }
+
+    const wasPlaying = this.#state === 'running'
+    const currentMode = this.#mode
+
+    // Stop current playback
+    if (wasPlaying && this.#audioEnabled) {
+      this.#fadeOut()
+    }
+
+    // Load new theme
+    this.#currentTheme = themeName
+    this.#loadThemePlaylists()
+    this.notify('current-theme')
+    this.notify('available-themes')
+
+    // Resume playback if was playing
+    if (wasPlaying && this.#audioEnabled) {
+      setTimeout(() => {
+        this.#fadeIn(currentMode === 'work')
+      }, this.#FADE_DURATION)
+    }
+
+    return true
+  }
+
+  toggleAudio() {
+    this.#audioEnabled = !this.#audioEnabled
+    this.notify('audio-enabled')
+
+    // Stop playback if disabling audio
+    if (!this.#audioEnabled && this.#mpvProcess) {
+      this.#stopPlayback()
+    }
+    // Start playback if enabling audio and timer is running
+    else if (this.#audioEnabled && this.#state === 'running') {
+      this.#fadeIn(this.#mode === 'work')
+    }
+
+    return this.#audioEnabled
+  }
+
   #onTimerComplete() {
     const wasWorkMode = this.#mode === 'work'
+
+    // Stop music (alert already played at 5 seconds)
+    this.#stopPlayback()
 
     // Play notification sound or show notification
     Utils.execAsync(['notify-send', 'Pomodoro',
