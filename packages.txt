@@ -29,11 +29,11 @@ nerd-fonts-complete
 polkit-kde-agent
 
 # Audio/Media
-pipewire
-wireplumber
-pavucontrol
-mpv
-socat
+pipewire                    # Audio server
+wireplumber                 # PipeWire session manager
+pavucontrol                 # PulseAudio volume control GUI
+mpv                         # Media player for pomodoro music/notifications
+socat                       # Socket communication for mpv IPC control
 
 # System
 python
