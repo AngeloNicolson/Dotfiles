@@ -302,7 +302,97 @@ class PomodoroService extends Service {
     }, stepTime)
   }
 
+  #fadeOutFast(pauseOnly = false, onComplete) {
+    // Clear any existing fade
+    if (this.#fadeInterval) {
+      clearInterval(this.#fadeInterval)
+    }
+
+    if (!this.#mpvProcess) {
+      if (onComplete) onComplete()
+      return
+    }
+
+    const FAST_FADE_DURATION = 1000 // 1 second
+    const FAST_FADE_STEPS = 10
+    const stepTime = FAST_FADE_DURATION / FAST_FADE_STEPS
+    const volumeStep = this.#currentVolume / FAST_FADE_STEPS
+    let currentStep = 0
+
+    this.#fadeInterval = setInterval(() => {
+      currentStep++
+      const newVolume = Math.max(this.#currentVolume - volumeStep, 0)
+      this.#setVolume(newVolume)
+
+      if (currentStep >= FAST_FADE_STEPS) {
+        clearInterval(this.#fadeInterval)
+        this.#fadeInterval = null
+        if (pauseOnly) {
+          this.#pausePlayback()
+        } else {
+          this.#stopPlayback()
+        }
+        if (onComplete) onComplete()
+      }
+    }, stepTime)
+  }
+
+  #pausePlayback() {
+    if (this.#mpvProcess) {
+      const socketPath = '/tmp/ags-pomodoro-mpv-socket'
+      Utils.execAsync(['bash', '-c', `echo '{ "command": ["set_property", "pause", true] }' | socat - ${socketPath} 2>/dev/null`])
+        .catch(() => {})
+    }
+  }
+
+  #resumePlayback() {
+    if (this.#mpvProcess) {
+      const socketPath = '/tmp/ags-pomodoro-mpv-socket'
+      Utils.execAsync(['bash', '-c', `echo '{ "command": ["set_property", "pause", false] }' | socat - ${socketPath} 2>/dev/null`])
+        .catch(() => {})
+    }
+  }
+
+  #resumeAndFadeIn() {
+    if (!this.#audioEnabled) {
+      console.log('Audio disabled, skipping resume')
+      return
+    }
+
+    if (!this.#mpvProcess) {
+      console.log('No music to resume')
+      return
+    }
+
+    // Clear any existing fade
+    if (this.#fadeInterval) {
+      clearInterval(this.#fadeInterval)
+    }
+
+    const FAST_FADE_DURATION = 1000 // 1 second
+    const FAST_FADE_STEPS = 10
+    const stepTime = FAST_FADE_DURATION / FAST_FADE_STEPS
+    const volumeStep = this.#targetVolume / FAST_FADE_STEPS
+    let currentStep = 0
+
+    this.#currentVolume = 0
+    this.#resumePlayback()
+
+    this.#fadeInterval = setInterval(() => {
+      currentStep++
+      const newVolume = Math.min(volumeStep * currentStep, this.#targetVolume)
+      this.#setVolume(newVolume)
+
+      if (currentStep >= FAST_FADE_STEPS) {
+        clearInterval(this.#fadeInterval)
+        this.#fadeInterval = null
+      }
+    }, stepTime)
+  }
+
   start() {
+    const wasResuming = this.#state === 'paused'
+
     if (this.#state === 'stopped') {
       // Starting fresh
       this.#timeRemaining = this.#WORK_TIME
@@ -316,8 +406,13 @@ class PomodoroService extends Service {
     // Write state to cache file for sidebar script
     Utils.execAsync(['bash', '-c', `echo "running" > $HOME/.cache/pomodoro_state`])
 
-    // Fade in music when timer starts (work or break music depending on mode)
-    this.#fadeIn(this.#mode === 'work')
+    if (wasResuming) {
+      // Resume paused music and fade back in quickly
+      this.#resumeAndFadeIn()
+    } else {
+      // Fade in new music when timer starts
+      this.#fadeIn(this.#mode === 'work')
+    }
 
     if (this.#interval) clearInterval(this.#interval)
 
@@ -348,8 +443,8 @@ class PomodoroService extends Service {
     // Write state to cache file for sidebar script
     Utils.execAsync(['bash', '-c', `echo "paused" > $HOME/.cache/pomodoro_state`])
 
-    // Fade out music when paused
-    this.#fadeOut()
+    // Fade out music quickly and pause (don't stop)
+    this.#fadeOutFast(true)
 
     if (this.#interval) {
       clearInterval(this.#interval)
