@@ -464,11 +464,14 @@ function StudyBlockControl(studyHours) {
               selectedRatio.value = key
             },
             setup: (self) => {
+              self.sensitive = Pomodoro.state === 'stopped'
               self.hook(selectedRatio, () => {
                 self.toggleClassName('active', selectedRatio.value === key)
               })
             },
-          })
+          }).hook(Pomodoro, (self) => {
+            self.sensitive = Pomodoro.state === 'stopped'
+          }, 'state-changed')
         ),
       }),
       Widget.Box({
@@ -514,7 +517,12 @@ function StudyBlockControl(studyHours) {
                     onChange: ({ value }) => {
                       studyHours.value = Math.round(value)
                     },
-                  }),
+                    setup: (self) => {
+                      self.sensitive = Pomodoro.state === 'stopped'
+                    },
+                  }).hook(Pomodoro, (self) => {
+                    self.sensitive = Pomodoro.state === 'stopped'
+                  }, 'state-changed'),
                 ],
               }),
             ],

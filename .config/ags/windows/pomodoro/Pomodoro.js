@@ -12,16 +12,6 @@ function Header() {
         hexpand: true,
       }),
       Widget.Button({
-        className: 'audio_toggle',
-        child: Widget.Label({
-          label: Pomodoro.bind('audio_enabled').transform(enabled => enabled ? '󰕾' : '󰖁'),
-        }),
-        tooltipText: Pomodoro.bind('audio_enabled').transform(enabled => enabled ? 'Disable Audio' : 'Enable Audio'),
-        onClicked: () => {
-          Pomodoro.toggleAudio()
-        },
-      }),
-      Widget.Button({
         className: 'close_button',
         child: Widget.Label(''),
         tooltipText: 'Close (break continues in background)',
@@ -96,11 +86,26 @@ const showBreakPopup = Variable(false);
 export default Widget.Window({
   name: 'pomodoro',
   layer: 'overlay',
-  anchor: [],
+  anchor: ['top', 'bottom', 'left', 'right'],
   keymode: 'exclusive',
   visible: showBreakPopup.bind(),
-  child: PomodoroWidget(),
+  child: Widget.Overlay({
+    child: Widget.Box({
+      css: 'background-color: rgba(0, 0, 0, 0.5);',
+    }),
+    overlays: [
+      Widget.Box({
+        vpack: 'center',
+        hpack: 'center',
+        child: PomodoroWidget(),
+      }),
+    ],
+  }),
   setup: (self) => {
+    self.keybind('Escape', () => {
+      showBreakPopup.value = false
+    })
+
     // Auto-show on break start if break popup is enabled
     self.hook(Pomodoro, () => {
       if (breakPopupEnabled.value && Pomodoro.state === 'running') {

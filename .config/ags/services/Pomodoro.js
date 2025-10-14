@@ -45,7 +45,7 @@ class PomodoroService extends Service {
   #fadeInterval = null
   #FADE_DURATION = 7000 // 7 seconds for fade in/out
   #FADE_STEPS = 35
-  #targetVolume = 60 // Max volume (60%)
+  #targetVolume = 50 // Max volume (50%)
   #currentVolume = 0
   #workPlaylist = []
   #breakPlaylist = []
@@ -188,12 +188,36 @@ class PomodoroService extends Service {
     }
   }
 
-  #dimMusicAndPlayAlert() {
+  #dimMusic() {
     if (!this.#audioEnabled) return
 
-    // Reduce music volume to 50% of current
-    const dimmedVolume = this.#currentVolume * 0.5
-    this.#setVolume(dimmedVolume)
+    // Clear any existing fade
+    if (this.#fadeInterval) {
+      clearInterval(this.#fadeInterval)
+    }
+
+    const startVolume = this.#currentVolume
+    const targetVolume = this.#targetVolume * 0.4
+    const FADE_DURATION = 7000 // 7 seconds
+    const FADE_STEPS = 35
+    const stepTime = FADE_DURATION / FADE_STEPS
+    const volumeStep = (startVolume - targetVolume) / FADE_STEPS
+    let currentStep = 0
+
+    this.#fadeInterval = setInterval(() => {
+      currentStep++
+      const newVolume = Math.max(startVolume - volumeStep * currentStep, targetVolume)
+      this.#setVolume(newVolume)
+
+      if (currentStep >= FADE_STEPS) {
+        clearInterval(this.#fadeInterval)
+        this.#fadeInterval = null
+      }
+    }, stepTime)
+  }
+
+  #playAlert() {
+    if (!this.#audioEnabled) return
 
     // Determine which notification to play based on current mode
     const themePath = `${App.configDir}/assets/music-themes/${this.#currentTheme}/notifications`
@@ -450,9 +474,23 @@ class PomodoroService extends Service {
     this.#interval = setInterval(() => {
       this.#timeRemaining--
 
-      // Dim music and play alert 5 seconds before end
-      if (this.#timeRemaining === 5) {
-        this.#dimMusicAndPlayAlert()
+      // Different timing for work vs break
+      if (this.#mode === 'work') {
+        // Work: dim music at 5 seconds, play alert at 1 second
+        if (this.#timeRemaining === 5) {
+          this.#dimMusic()
+        }
+        if (this.#timeRemaining === 1) {
+          this.#playAlert()
+        }
+      } else {
+        // Break: dim music at 5 seconds, play alert at 1 second
+        if (this.#timeRemaining === 5) {
+          this.#dimMusic()
+        }
+        if (this.#timeRemaining === 1) {
+          this.#playAlert()
+        }
       }
 
       if (this.#timeRemaining <= 0) {

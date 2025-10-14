@@ -125,11 +125,20 @@ function Notifications() {
       spacing: 8,
       vertical: true,
       children: NotificationService.bind('notifications')
-        .transform(notifications =>
-          notifications.length > 0
-            ? notifications.map(Notification).reverse()
-            : [ NoNotification() ]
-        )
+        .transform(notifications => {
+          if (notifications.length === 0) {
+            return [ NoNotification() ]
+          }
+
+          // Close all notifications beyond the 4 most recent
+          if (notifications.length > 4) {
+            const toClose = notifications.slice(0, -4)
+            toClose.forEach(notif => notif.close())
+          }
+
+          // Show only the 4 most recent notifications
+          return notifications.slice(-4).map(Notification).reverse()
+        })
     })
   })
 }
