@@ -59,6 +59,31 @@ return {
 				})
 			end
 
+			-- Intercept ALL attempts to open media files in buffers
+			-- This ensures consistent behavior regardless of how the file is opened
+			vim.api.nvim_create_autocmd("BufReadCmd", {
+				pattern = { "*.pdf", "*.mp4", "*.mkv", "*.avi", "*.mov", "*.webm", "*.flv", "*.wmv", "*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a", "*.aac", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.webp", "*.svg" },
+				callback = function(args)
+					local path = vim.fn.fnamemodify(args.file, ":p")
+					local ext = path:match("^.+%.(.+)$")
+					if ext then
+						ext = ext:lower()
+						local handler = external_handlers[ext]
+						if handler then
+							-- Block buffer from being read - BufReadCmd prevents the default buffer loading
+							vim.bo[args.buf].buftype = "nofile"
+							vim.bo[args.buf].bufhidden = "wipe"
+							-- Open in external app with nvim tags for Hyprland
+							open_external(handler, path)
+							-- Close the empty buffer
+							vim.schedule(function()
+								vim.cmd("bwipeout! " .. args.buf)
+							end)
+						end
+					end
+				end,
+			})
+
 			require("neo-tree").setup({
 				close_if_last_window = false,
 				popup_border_style = "rounded",
