@@ -1,5 +1,5 @@
 import Pomodoro from '../../services/Pomodoro.js';
-import { breakPopupEnabled } from '../../shared/vars.js';
+import { breakPopupEnabled, breakPopupVisible, revealSideBar } from '../../shared/vars.js';
 
 function Header() {
   return Widget.Box({
@@ -16,7 +16,7 @@ function Header() {
         child: Widget.Label(''),
         tooltipText: 'Close (break continues in background)',
         onClicked: () => {
-          showBreakPopup.value = false
+          breakPopupVisible.value = false
         },
       }),
     ],
@@ -81,15 +81,13 @@ function PomodoroWidget() {
   });
 }
 
-const showBreakPopup = Variable(false);
-
 export default (monitor = 0) => Widget.Window({
   name: `pomodoro${monitor}`,
   monitor,
   layer: 'overlay',
   anchor: ['top', 'bottom', 'left', 'right'],
   keymode: monitor === 0 ? 'exclusive' : 'none',
-  visible: showBreakPopup.bind(),
+  visible: breakPopupVisible.bind(),
   child: Widget.Overlay({
     child: Widget.Box({
       css: 'background-color: rgba(0, 0, 0, 0.5);',
@@ -105,19 +103,23 @@ export default (monitor = 0) => Widget.Window({
   setup: (self) => {
     if (monitor === 0) {
       self.keybind('Escape', () => {
-        showBreakPopup.value = false
+        breakPopupVisible.value = false
       })
 
       // Auto-show on break start if break popup is enabled
       self.hook(Pomodoro, () => {
         if (breakPopupEnabled.value && Pomodoro.state === 'running') {
-          showBreakPopup.value = true
+          // Close sidebar before showing break popup
+          revealSideBar.value = false
+
+          // Show break popup
+          breakPopupVisible.value = true
         }
       }, 'break-started')
 
       // Auto-hide on break end
       self.hook(Pomodoro, () => {
-        showBreakPopup.value = false
+        breakPopupVisible.value = false
       }, 'break-ended')
     }
   },
