@@ -49,12 +49,72 @@ return {
 			end
 
 			require("neo-tree").setup({
+				close_if_last_window = false,
+				popup_border_style = "rounded",
+				enable_git_status = true,
+				enable_diagnostics = true,
+				default_component_configs = {
+					indent = {
+						indent_size = 2,
+						padding = 1,
+						with_markers = true,
+						indent_marker = "│",
+						last_indent_marker = "└",
+						highlight = "NeoTreeIndentMarker",
+					},
+					icon = {
+						folder_closed = "",
+						folder_open = "",
+						folder_empty = "",
+						default = "",
+					},
+					git_status = {
+						symbols = {
+							added = "✚",
+							modified = "",
+							deleted = "✖",
+							renamed = "➜",
+							untracked = "★",
+							ignored = "◌",
+							unstaged = "✗",
+							staged = "✓",
+							conflict = "",
+						},
+					},
+				},
+				window = {
+					position = "right",
+					width = 40,
+					mapping_options = {
+						noremap = true,
+						nowait = true,
+					},
+					mappings = {
+						["<CR>"] = "custom_open",
+						["l"] = "open",
+						["h"] = "close_node",
+						["H"] = "toggle_hidden",
+						["R"] = "refresh",
+						["/"] = "fuzzy_finder",
+						["f"] = "filter_on_submit",
+						["<C-x>"] = "clear_filter",
+					},
+				},
 				filesystem = {
 					filtered_items = {
 						visible = true,
 						hide_dotfiles = false,
 						hide_gitignored = false,
+						hide_by_name = {
+							".git",
+							".DS_Store",
+							"thumbs.db",
+						},
 					},
+					follow_current_file = {
+						enabled = true,
+					},
+					use_libuv_file_watcher = true,
 					window = {
 						mappings = {
 							["<CR>"] = "custom_open",
@@ -73,25 +133,19 @@ return {
 
 						local path = node:get_id()
 						local ext = path:match("^.+%.(.+)$")
-						local filename = path:match("^.+/(.+)$") or path
-
-						-- Debug: print extension
-						print("File extension: " .. (ext or "none"))
 
 						-- Check if extension has external handler
 						if ext then
 							ext = ext:lower()
 							local handler = external_handlers[ext]
-							print("Handler found: " .. (handler or "none"))
 							if handler then
-								print("Opening " .. filename .. " with " .. handler)
+								-- Open externally and KEEP tree open
 								open_external(handler, path)
-								return -- Don't open in neovim
+								return
 							end
 						end
 
-						-- Default: open in neovim and close tree
-						print("Opening in neovim buffer")
+						-- All other files: open in neovim and CLOSE tree
 						require("neo-tree.sources.filesystem.commands").open(state)
 						vim.schedule(function()
 							vim.cmd("Neotree close")

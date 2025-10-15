@@ -160,6 +160,11 @@ Custom layout management system with visual designer:
 - Layouts: `~/.config/hypr/layouts/`
 - Applications database: `~/.config/hypr/apps.conf`
 
+### Wacom Tablet
+
+- See [README_WACOM.md](README_WACOM.md) for Wacom tablet setup (Intuos Pro)
+- Uses OpenTabletDriver for best Wayland/Hyprland compatibility
+
 ## License
 
 MIT

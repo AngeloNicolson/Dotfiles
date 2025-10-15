@@ -54,6 +54,9 @@ swappy
 jq
 wl-color-picker
 
+# Input Devices
+opentabletdriver          # Wacom tablet driver (Intuos Pro, etc.)
+
 # Optional but recommended
 firefox
 kitty

@@ -1,12 +1,24 @@
 {
   "type": "container",
   "split": "horizontal",
-  "ratio": 0.23693042183586946,
+  "ratio": 0.23823704204492868,
   "children": [
     {
-      "type": "window",
-      "app": "foot",
-      "working_dir": "~/Documents/massey_mainframe"
+      "type": "container",
+      "split": "vertical",
+      "ratio": 0.6168317435991646,
+      "children": [
+        {
+          "type": "window",
+          "app": "foot",
+          "working_dir": "~/Documents/massey_mainframe"
+        },
+        {
+          "type": "window",
+          "app": "foot",
+          "working_dir": "~/Documents/massey_mainframe/"
+        }
+      ]
     },
     {
       "type": "window",
