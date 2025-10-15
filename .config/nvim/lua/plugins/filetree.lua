@@ -48,8 +48,9 @@ return {
 					-- Add --title flag so Hyprland can identify mpv launched from nvim
 					cmd = string.format("setsid -f %s --title=nvim-mpv %s", app, vim.fn.shellescape(path))
 				elseif app == "zathura" then
-					-- Add --class flag so Hyprland can identify zathura launched from nvim
-					cmd = string.format("setsid -f %s --class=nvim-zathura %s", app, vim.fn.shellescape(path))
+					-- Zathura doesn't support --class, just launch it normally
+					-- Hyprland will catch it with the default zathura class
+					cmd = string.format("setsid -f %s %s", app, vim.fn.shellescape(path))
 				else
 					cmd = string.format("setsid -f %s %s", app, vim.fn.shellescape(path))
 				end
@@ -66,14 +67,17 @@ return {
 				callback = function(args)
 					local path = vim.fn.fnamemodify(args.file, ":p")
 					local ext = path:match("^.+%.(.+)$")
+					print("BufReadCmd triggered for: " .. path .. " ext: " .. (ext or "nil"))
 					if ext then
 						ext = ext:lower()
 						local handler = external_handlers[ext]
+						print("Handler found: " .. (handler or "nil"))
 						if handler then
 							-- Block buffer from being read - BufReadCmd prevents the default buffer loading
 							vim.bo[args.buf].buftype = "nofile"
 							vim.bo[args.buf].bufhidden = "wipe"
 							-- Open in external app with nvim tags for Hyprland
+							print("Opening: " .. handler .. " " .. path)
 							open_external(handler, path)
 							-- Close the empty buffer
 							vim.schedule(function()
