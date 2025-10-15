@@ -42,11 +42,35 @@ return {
 
 			-- Helper: launch external app
 			-- Adds custom window identifiers for mpv/zathura so Hyprland can pin them
+			-- Helper: check if file extension is media (not PDF)
+			local function is_media(ext)
+				local media_exts = {
+					-- Videos
+					"mp4", "mkv", "avi", "mov", "webm", "flv", "wmv",
+					-- Audio
+					"mp3", "wav", "flac", "ogg", "m4a", "aac",
+					-- Images
+					"jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"
+				}
+				for _, media_ext in ipairs(media_exts) do
+					if ext == media_ext then
+						return true
+					end
+				end
+				return false
+			end
+
 			local function open_external(app, path)
 				local cmd
-				if app == "mpv" then
+				local ext = path:match("^.+%.(.+)$")
+				if ext then
+					ext = ext:lower()
+				end
+
+				if app == "mpv" and ext and is_media(ext) then
 					-- Add --title flag so Hyprland can identify mpv launched from nvim
-					cmd = string.format("setsid -f %s --title=nvim-mpv %s", app, vim.fn.shellescape(path))
+					-- Set geometry to 960x540 for 16:9 ratio (wide and short for videos)
+					cmd = string.format("setsid -f %s --title=nvim-mpv --geometry=960x540 %s", app, vim.fn.shellescape(path))
 				elseif app == "zathura" then
 					-- Zathura doesn't support --class, just launch it normally
 					-- Hyprland will catch it with the default zathura class
@@ -250,11 +274,10 @@ return {
 							ext = ext:lower()
 							local handler = external_handlers[ext]
 							if handler then
-								-- Open externally, KEEP tree open AND focused
+								-- Open externally and KEEP tree open AND focused
 								open_external(handler, path)
-								vim.schedule(function()
-									vim.cmd("Neotree focus")
-								end)
+								-- Keep focus on NeoTree after opening external app
+								vim.cmd("Neotree focus")
 								return
 							end
 						end
