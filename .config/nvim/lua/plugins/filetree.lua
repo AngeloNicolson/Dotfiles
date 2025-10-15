@@ -250,17 +250,18 @@ return {
 							ext = ext:lower()
 							local handler = external_handlers[ext]
 							if handler then
-								-- Open externally and KEEP tree open
+								-- Open externally, KEEP tree open AND focused
 								open_external(handler, path)
+								vim.schedule(function()
+									vim.cmd("Neotree focus")
+								end)
 								return
 							end
 						end
 
 						-- All other files: open in neovim and CLOSE tree
 						require("neo-tree.sources.filesystem.commands").open(state)
-						vim.schedule(function()
-							vim.cmd("Neotree close")
-						end)
+						vim.cmd("Neotree close")
 					end,
 				},
 			})
