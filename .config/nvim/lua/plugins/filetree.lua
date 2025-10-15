@@ -53,6 +53,75 @@ return {
 				popup_border_style = "rounded",
 				enable_git_status = true,
 				enable_diagnostics = true,
+				sort_case_insensitive = false,
+				-- Natural sorting: splits filenames into text/number segments and compares them properly
+				-- This ensures Week_1, Week_2, ..., Week_12 sort correctly instead of Week_1, Week_10, Week_11, Week_12, Week_2
+				sort_function = function(a, b)
+					if a.type == b.type then
+						-- Extract just the filename from the full path
+						local function get_filename(path)
+							return path:match("([^/]+)$") or path
+						end
+
+						local name_a = get_filename(a.path):lower()
+						local name_b = get_filename(b.path):lower()
+
+						-- Split filename into alternating text and number chunks
+						local function split_natural(str)
+							local chunks = {}
+							local pos = 1
+							while pos <= #str do
+								-- Try to match a number
+								local num_start, num_end = str:find("%d+", pos)
+								if num_start then
+									-- Add text before number (if any)
+									if num_start > pos then
+										table.insert(chunks, { type = "text", value = str:sub(pos, num_start - 1) })
+									end
+									-- Add number
+									table.insert(chunks, { type = "num", value = tonumber(str:sub(num_start, num_end)) })
+									pos = num_end + 1
+								else
+									-- No more numbers, add remaining text
+									table.insert(chunks, { type = "text", value = str:sub(pos) })
+									break
+								end
+							end
+							return chunks
+						end
+
+						local chunks_a = split_natural(name_a)
+						local chunks_b = split_natural(name_b)
+
+						-- Compare chunk by chunk
+						for i = 1, math.max(#chunks_a, #chunks_b) do
+							local chunk_a = chunks_a[i]
+							local chunk_b = chunks_b[i]
+
+							-- If one ran out of chunks, it comes first
+							if not chunk_a then
+								return true
+							end
+							if not chunk_b then
+								return false
+							end
+
+							-- Compare same type chunks
+							if chunk_a.type == chunk_b.type then
+								if chunk_a.value ~= chunk_b.value then
+									return chunk_a.value < chunk_b.value
+								end
+							else
+								-- Different types: text comes before numbers
+								return chunk_a.type == "text"
+							end
+						end
+
+						return false -- They're equal
+					else
+						return a.type < b.type
+					end
+				end,
 				default_component_configs = {
 					indent = {
 						indent_size = 2,
@@ -120,6 +189,8 @@ return {
 							["<CR>"] = "custom_open",
 						},
 					},
+					group_empty_dirs = false,
+					scan_mode = "deep",
 				},
 				commands = {
 					custom_open = function(state)
