@@ -41,8 +41,19 @@ return {
 			}
 
 			-- Helper: launch external app
+			-- Adds custom window identifiers for mpv/zathura so Hyprland can pin them
 			local function open_external(app, path)
-				vim.fn.jobstart(string.format("setsid -f %s %s", app, vim.fn.shellescape(path)), {
+				local cmd
+				if app == "mpv" then
+					-- Add --title flag so Hyprland can identify mpv launched from nvim
+					cmd = string.format("setsid -f %s --title=nvim-mpv %s", app, vim.fn.shellescape(path))
+				elseif app == "zathura" then
+					-- Add --class flag so Hyprland can identify zathura launched from nvim
+					cmd = string.format("setsid -f %s --class=nvim-zathura %s", app, vim.fn.shellescape(path))
+				else
+					cmd = string.format("setsid -f %s %s", app, vim.fn.shellescape(path))
+				end
+				vim.fn.jobstart(cmd, {
 					detach = true,
 					shell = true,
 				})
