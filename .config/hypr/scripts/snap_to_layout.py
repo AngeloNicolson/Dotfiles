@@ -78,11 +78,11 @@ def get_all_layout_windows():
 
     for client in clients:
         tags = client.get('tags', [])
-        workspace_id = client.get('workspace', {}).get('id')
 
         for tag in tags:
             layout_name = None
             position_index = None
+            tagged_workspace_id = None
 
             # New format: env_{env}_lay_{layout}_ws_{ws}_pos_{pos}
             if tag.startswith('env_') and '_lay_' in tag and '_ws_' in tag and '_pos_' in tag:
@@ -91,6 +91,7 @@ def get_all_layout_windows():
                     layout_and_rest = parts.split('_ws_')
                     layout_name = layout_and_rest[0]
                     ws_and_pos = layout_and_rest[1].split('_pos_')
+                    tagged_workspace_id = int(ws_and_pos[0])
                     position_index = int(ws_and_pos[1])
                 except:
                     pass
@@ -101,6 +102,7 @@ def get_all_layout_windows():
                     parts = tag.replace('lay_', '', 1).split('_ws_')
                     layout_name = parts[0]
                     ws_and_pos = parts[1].split('_pos_')
+                    tagged_workspace_id = int(ws_and_pos[0])
                     position_index = int(ws_and_pos[1])
                 except:
                     pass
@@ -111,14 +113,16 @@ def get_all_layout_windows():
                     parts = tag.split('_window_')
                     layout_name = parts[0].replace('project_', '')
                     position_index = int(parts[1])
+                    # Legacy tags don't have workspace in them, use current workspace
+                    tagged_workspace_id = client.get('workspace', {}).get('id')
                 except:
                     pass
 
-            if layout_name and position_index is not None:
+            if layout_name and position_index is not None and tagged_workspace_id is not None:
                 if layout_name not in layouts:
                     layouts[layout_name] = {}
-                # Use (workspace_id, position_index) as key for new format
-                layouts[layout_name][(workspace_id, position_index)] = client['address']
+                # Use (tagged_workspace_id, position_index) as key
+                layouts[layout_name][(tagged_workspace_id, position_index)] = client['address']
                 break
 
     return layouts
@@ -169,25 +173,27 @@ def snap_to_layout():
         print(f"No layout windows found", file=sys.stderr)
         return False
 
-    # Find the layout with the most windows on current workspace
+    # Find the layout with the most windows tagged for current workspace
+    # (windows can be anywhere, but their tags indicate they belong to this workspace)
     active_layout = None
-    max_windows_on_workspace = 0
+    max_windows_for_workspace = 0
     for layout_name, windows in layouts.items():
-        # Count windows on current workspace
+        # Count windows that are tagged for current workspace (regardless of where they currently are)
         ws_window_count = sum(1 for (ws, pos) in windows.keys() if ws == workspace_id)
-        if ws_window_count > max_windows_on_workspace:
-            max_windows_on_workspace = ws_window_count
+        if ws_window_count > max_windows_for_workspace:
+            max_windows_for_workspace = ws_window_count
             active_layout = layout_name
 
     if not active_layout:
-        print(f"No layout windows found on workspace {workspace_id}", file=sys.stderr)
+        print(f"No layout windows found for workspace {workspace_id}", file=sys.stderr)
         return False
 
-    # Get windows for this layout on current workspace
+    # Get ALL windows for this layout that are tagged for current workspace
+    # (they might be on different workspaces now, but we'll pull them back)
     all_windows = layouts[active_layout]
     workspace_windows = {pos: addr for (ws, pos), addr in all_windows.items() if ws == workspace_id}
 
-    print(f"Snapping {len(workspace_windows)} windows for layout '{active_layout}' on workspace {workspace_id}")
+    print(f"Snapping {len(workspace_windows)} windows for layout '{active_layout}' to workspace {workspace_id}")
 
     # Load layout file
     layouts_dir = Path.home() / '.config' / 'hypr' / 'layouts'
