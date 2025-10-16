@@ -1,5 +1,5 @@
 {
-  "name": "Main",
+  "environment": "Test",
   "workspaces": [
     {
       "id": 1,

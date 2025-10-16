@@ -1,0 +1,25 @@
+{
+  "environment": "Main",
+  "workspaces": [
+    {
+      "id": 1,
+      "monitor": "HDMI-A-1",
+      "layout": "/home/Angel/.config/hypr/layouts/Study-Code.json"
+    },
+    {
+      "id": 2,
+      "monitor": "eDP-1",
+      "layout": "/home/Angel/.config/hypr/layouts/WebBrowsing.json"
+    },
+    {
+      "id": 3,
+      "monitor": "HDMI-A-1",
+      "layout": "/home/Angel/.config/hypr/layouts/Math.json"
+    },
+    {
+      "id": 4,
+      "monitor": "DP-2",
+      "layout": "/home/Angel/.config/hypr/layouts/Pure-Reading.json"
+    }
+  ]
+}

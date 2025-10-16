@@ -1,0 +1,29 @@
+# Workspace & Project Management Plan
+
+## Current Implementation
+- Boot script loads default workspace layout (Main.json) which assigns workspaces to monitors
+- Boot script also loads projects onto each workspace from workspace_projects.json
+- Projects can be loaded independently onto any workspace
+
+## Workspace Layout Loading Logic (TO IMPLEMENT)
+
+When loading a workspace layout (e.g., Main.json):
+1. Check if there's a currently loaded workspace layout name stored somewhere (e.g., ~/.config/hypr/layouts/.current_workspace_layout)
+2. Compare the name in the layout being loaded with the stored current layout name
+3. If **different** (or no current layout exists):
+   - Close ALL windows on ALL workspaces
+   - Load the new workspace layout (assign workspaces to monitors)
+   - Update the stored current layout name
+   - Optionally: Load associated projects for each workspace
+4. If **same**:
+   - Do nothing (or just ensure workspaces are still on correct monitors)
+
+## Project Loading Logic (TO IMPLEMENT LATER)
+
+When loading a project onto a specific workspace:
+- Close all windows on that specific workspace only
+- Launch the project's windows on that workspace
+
+## Storage Needed
+- File to track currently loaded workspace layout name: `~/.config/hypr/layouts/.current_workspace_layout`
+- This allows comparison to know if we're switching layouts or reloading the same one

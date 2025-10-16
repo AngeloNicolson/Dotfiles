@@ -1,1 +1,0 @@
-/home/Angel/.config/hypr/layouts/workspace_configs/Main.json
