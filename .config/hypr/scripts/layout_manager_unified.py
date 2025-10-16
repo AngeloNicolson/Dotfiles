@@ -1617,11 +1617,11 @@ class LayoutManagerUnified(Gtk.Window):
         header.set_margin_bottom(10)
 
         title = Gtk.Label()
-        title.set_markup("<b>Saved Projects</b>")
+        title.set_markup("<b>Saved Layouts</b>")
         title.set_halign(Gtk.Align.START)
         header.append(title)
 
-        new_layout_btn = Gtk.Button(label="New Project")
+        new_layout_btn = Gtk.Button(label="New Layout")
         new_layout_btn.connect('clicked', self.on_new_layout_embedded)
         new_layout_btn.set_margin_top(5)
         header.append(new_layout_btn)
@@ -1655,7 +1655,7 @@ class LayoutManagerUnified(Gtk.Window):
         preview_header.set_margin_bottom(5)
 
         self.layout_preview_title = Gtk.Label()
-        self.layout_preview_title.set_markup("<b>Select a project</b>")
+        self.layout_preview_title.set_markup("<b>Select a layout</b>")
         self.layout_preview_title.set_hexpand(True)
         self.layout_preview_title.set_halign(Gtk.Align.START)
         preview_header.append(self.layout_preview_title)
@@ -2334,21 +2334,21 @@ class LayoutManagerUnified(Gtk.Window):
                 row.layout_path = layout_file
                 layout_list.append(row)
 
-                # Select current project if it matches
-                if current_project and Path(current_project) == project_file:
+                # Select current layout if it matches
+                if current_project and Path(current_project) == layout_file:
                     selected_index = idx
 
-            # Select the current project row
+            # Select the current layout row
             if selected_index >= 0:
-                project_list.select_row(project_list.get_row_at_index(selected_index))
+                layout_list.select_row(layout_list.get_row_at_index(selected_index))
 
             box.append(scrolled)
 
             def on_response(dlg, response):
                 if response == Gtk.ResponseType.OK:
-                    selected_row = project_list.get_selected_row()
+                    selected_row = layout_list.get_selected_row()
                     if selected_row:
-                        self.set_layout_for_workspace(ws_id, selected_row.project_path)
+                        self.set_layout_for_workspace(ws_id, selected_row.layout_path)
                         self.refresh_live_workspaces()
                 elif response == Gtk.ResponseType.REJECT:
                     # Remove assignment
@@ -2369,7 +2369,7 @@ class LayoutManagerUnified(Gtk.Window):
             self.workspaces_config_list.remove(child)
             child = next_child
 
-        # Get saved configs (separate from projects)
+        # Get saved configs (separate from layouts)
         saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'environment_configs'
         if not saved_dir.exists():
             return
@@ -2580,7 +2580,7 @@ class LayoutManagerUnified(Gtk.Window):
         drag_source.connect('drag-begin', on_drag_begin)
         button.add_controller(drag_source)
 
-        # Add right-click handler for project assignment
+        # Add right-click handler for layout assignment
         right_click = Gtk.GestureClick(button=3)
         right_click.connect('released', lambda gesture, n, x, y: self.on_workspace_card_right_click(ws_id, monitor_name))
         button.add_controller(right_click)
@@ -2671,21 +2671,21 @@ class LayoutManagerUnified(Gtk.Window):
                 row.layout_path = layout_file
                 layout_list.append(row)
 
-                # Select current project if it matches
-                if current_project and Path(current_project) == project_file:
+                # Select current layout if it matches
+                if current_project and Path(current_project) == layout_file:
                     selected_index = idx
 
-            # Select the current project row
+            # Select the current layout row
             if selected_index >= 0:
-                project_list.select_row(project_list.get_row_at_index(selected_index))
+                layout_list.select_row(layout_list.get_row_at_index(selected_index))
 
             box.append(scrolled)
 
             def on_response(dlg, response):
                 if response == Gtk.ResponseType.OK:
-                    selected_row = project_list.get_selected_row()
+                    selected_row = layout_list.get_selected_row()
                     if selected_row:
-                        self.set_layout_for_workspace(ws_id, selected_row.project_path)
+                        self.set_layout_for_workspace(ws_id, selected_row.layout_path)
                         self.refresh_editor_monitor_box(monitor_name)
                 elif response == Gtk.ResponseType.REJECT:
                     # Remove assignment
@@ -3515,7 +3515,7 @@ class LayoutManagerUnified(Gtk.Window):
         drop_target.connect('leave', on_drag_leave)
         button.add_controller(drop_target)
 
-        # Add right-click handler for project assignment
+        # Add right-click handler for layout assignment
         right_click = Gtk.GestureClick(button=3)
         right_click.connect('released', lambda gesture, n, x, y: self.show_layout_assignment_dialog(ws_id))
         button.add_controller(right_click)
@@ -3819,7 +3819,7 @@ class LayoutManagerUnified(Gtk.Window):
     def save_workspace_config_to_file(self, name, workspaces):
         """Save workspace configuration to a JSON file"""
         try:
-            # Create saved configs directory (separate from projects)
+            # Create saved configs directory (separate from layouts)
             saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'environment_configs'
             saved_dir.mkdir(parents=True, exist_ok=True)
 
@@ -3878,7 +3878,7 @@ class LayoutManagerUnified(Gtk.Window):
     def on_load_workspace_config(self, widget):
         """Show list of saved configurations to load"""
         try:
-            # Get list of saved configs (separate from projects)
+            # Get list of saved configs (separate from layouts)
             saved_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'environment_configs'
 
             if not saved_dir.exists():
@@ -4005,15 +4005,20 @@ class LayoutManagerUnified(Gtk.Window):
             if not workspaces:
                 return
 
+            # Get environment name from config
+            environment_name = config.get('name', Path(config_file).stem)
+
             # Get current live workspaces
             live_workspaces = self.get_workspaces()
             live_ws_dict = {ws.get('id'): ws for ws in live_workspaces}
 
-            # Apply saved assignments
+            # Apply saved assignments and layouts
             moved_count = 0
+            layouts_applied = 0
             for saved_ws in workspaces:
                 ws_id = saved_ws.get('id')
                 target_monitor = saved_ws.get('monitor')
+                layout_path = saved_ws.get('layout')
 
                 # Check if workspace exists and is on wrong monitor
                 if ws_id in live_ws_dict:
@@ -4030,16 +4035,34 @@ class LayoutManagerUnified(Gtk.Window):
                         moved_count += 1
                         time.sleep(0.05)  # Small delay between moves
 
+                # Apply layout if specified
+                if layout_path and os.path.exists(layout_path):
+                    apply_script = os.path.join(self.scripts_dir, 'apply_layout.py')
+                    # Apply with environment name to create env_{env}_lay_{layout}_ws_{ws}_pos_{pos} tags
+                    subprocess.Popen([
+                        apply_script,
+                        layout_path,
+                        str(ws_id),
+                        '--environment',
+                        environment_name
+                    ])
+                    layouts_applied += 1
+                    time.sleep(0.5)  # Allow time for windows to spawn
+
             # Show confirmation
-            config_name = config.get('name', config_file.stem)
+            config_name = config.get('name', Path(config_file).stem)
             dialog = Gtk.MessageDialog(
                 transient_for=self,
                 modal=True,
                 message_type=Gtk.MessageType.INFO,
                 buttons=Gtk.ButtonsType.OK,
-                text="Configuration Loaded"
+                text="Environment Applied"
             )
-            dialog.set_secondary_text(f"Loaded '{config_name}' ({moved_count} workspaces moved)")
+            dialog.set_secondary_text(
+                f"Environment '{config_name}' applied:\n"
+                f"• {moved_count} workspaces moved\n"
+                f"• {layouts_applied} layouts applied"
+            )
             dialog.connect('response', lambda d, r: d.close())
             dialog.present()
 

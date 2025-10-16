@@ -5,25 +5,26 @@ Keybind: Mod+R
 
 HOW IT WORKS:
 1. Get current workspace ID
-2. Find all windows with tags: project_{name}_window_{index}
-3. Group windows by project name
-4. Determine active project (the one with most windows)
-5. Load layout file: ~/.config/hypr/layouts/saved/{project}.json
+2. Find all windows with new or legacy tags
+3. Group windows by layout name and workspace
+4. Determine active layout (the one with most windows on current workspace)
+5. Load layout file: ~/.config/hypr/layouts/saved/{layout}.json
 6. Calculate positions from BSP tree (based on monitor size and gaps)
-7. For each tagged window:
-   a. Move window to current workspace (if on different workspace)
-   b. Resize window to exact dimensions
-   c. Move window to exact position
+7. For each tagged window on current workspace:
+   a. Resize window to exact dimensions
+   b. Move window to exact position
 
 FEATURES:
-- Works across workspaces (gathers windows from anywhere)
+- Workspace-aware: Only snaps windows on current workspace
 - Handles missing windows gracefully (empty slots remain)
 - Uses tags (not titles) so works after terminal title changes
 - Works for all app types (terminals, Firefox, etc.)
+- Backward compatible with legacy project_{name}_window_{index} tags
 
 WINDOW IDENTIFICATION:
 - Uses tags created by apply_layout.py
-- Format: project_{project_name}_window_{index}
+- New format: lay_{layout}_ws_{ws}_pos_{pos} or env_{env}_lay_{layout}_ws_{ws}_pos_{pos}
+- Legacy format: project_{project_name}_window_{index}
 - Each window keeps its original slot index even if others are closed
 
 See LAYOUT_SYSTEM.txt for full architecture documentation.
@@ -60,10 +61,12 @@ def get_active_workspace():
     return None
 
 
-def get_all_project_windows():
-    """Get all windows across all workspaces grouped by project
-    Uses tags in format: project_{name}_window_{index}
-    Returns: {project_name: {window_index: address, ...}, ...}
+def get_all_layout_windows():
+    """Get all windows across all workspaces grouped by layout
+    Recognizes both new and legacy tag formats:
+    - New: lay_{layout}_ws_{ws}_pos_{pos} or env_{env}_lay_{layout}_ws_{ws}_pos_{pos}
+    - Legacy: project_{name}_window_{index}
+    Returns: {layout_name: {(workspace_id, position_index): address, ...}, ...}
     """
     result = subprocess.run(['hyprctl', '-j', 'clients'],
                            capture_output=True, text=True, check=False)
@@ -71,25 +74,54 @@ def get_all_project_windows():
         return {}
 
     clients = json.loads(result.stdout)
-    projects = {}
+    layouts = {}
 
     for client in clients:
         tags = client.get('tags', [])
-        # Look for tags in format: project_{name}_window_{index}
-        for tag in tags:
-            if tag.startswith('project_') and '_window_' in tag:
-                try:
-                    parts = tag.split('_window_')
-                    project_name = parts[0].replace('project_', '')
-                    window_index = int(parts[1])
+        workspace_id = client.get('workspace', {}).get('id')
 
-                    if project_name not in projects:
-                        projects[project_name] = {}
-                    projects[project_name][window_index] = client['address']
+        for tag in tags:
+            layout_name = None
+            position_index = None
+
+            # New format: env_{env}_lay_{layout}_ws_{ws}_pos_{pos}
+            if tag.startswith('env_') and '_lay_' in tag and '_ws_' in tag and '_pos_' in tag:
+                try:
+                    parts = tag.split('_lay_')[1]  # Get everything after _lay_
+                    layout_and_rest = parts.split('_ws_')
+                    layout_name = layout_and_rest[0]
+                    ws_and_pos = layout_and_rest[1].split('_pos_')
+                    position_index = int(ws_and_pos[1])
                 except:
                     pass
 
-    return projects
+            # New format: lay_{layout}_ws_{ws}_pos_{pos}
+            elif tag.startswith('lay_') and '_ws_' in tag and '_pos_' in tag:
+                try:
+                    parts = tag.replace('lay_', '', 1).split('_ws_')
+                    layout_name = parts[0]
+                    ws_and_pos = parts[1].split('_pos_')
+                    position_index = int(ws_and_pos[1])
+                except:
+                    pass
+
+            # Legacy format: project_{name}_window_{index}
+            elif tag.startswith('project_') and '_window_' in tag:
+                try:
+                    parts = tag.split('_window_')
+                    layout_name = parts[0].replace('project_', '')
+                    position_index = int(parts[1])
+                except:
+                    pass
+
+            if layout_name and position_index is not None:
+                if layout_name not in layouts:
+                    layouts[layout_name] = {}
+                # Use (workspace_id, position_index) as key for new format
+                layouts[layout_name][(workspace_id, position_index)] = client['address']
+                break
+
+    return layouts
 
 
 def calculate_positions(layout_node, x, y, width, height, gaps_in, positions, index):
@@ -130,22 +162,36 @@ def snap_to_layout():
         print("Error: Could not get active workspace", file=sys.stderr)
         return False
 
-    # Get all windows grouped by project (across all workspaces)
-    projects = get_all_project_windows()
+    # Get all windows grouped by layout (across all workspaces)
+    layouts = get_all_layout_windows()
 
-    if not projects:
+    if not layouts:
         print(f"No layout windows found", file=sys.stderr)
         return False
 
-    # Find the project with the most windows (assume that's the active project)
-    active_project = max(projects.keys(), key=lambda p: len(projects[p]))
-    windows = projects[active_project]
+    # Find the layout with the most windows on current workspace
+    active_layout = None
+    max_windows_on_workspace = 0
+    for layout_name, windows in layouts.items():
+        # Count windows on current workspace
+        ws_window_count = sum(1 for (ws, pos) in windows.keys() if ws == workspace_id)
+        if ws_window_count > max_windows_on_workspace:
+            max_windows_on_workspace = ws_window_count
+            active_layout = layout_name
 
-    print(f"Snapping {len(windows)} windows for project '{active_project}' to workspace {workspace_id}")
+    if not active_layout:
+        print(f"No layout windows found on workspace {workspace_id}", file=sys.stderr)
+        return False
+
+    # Get windows for this layout on current workspace
+    all_windows = layouts[active_layout]
+    workspace_windows = {pos: addr for (ws, pos), addr in all_windows.items() if ws == workspace_id}
+
+    print(f"Snapping {len(workspace_windows)} windows for layout '{active_layout}' on workspace {workspace_id}")
 
     # Load layout file
     layouts_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
-    layout_file = layouts_dir / f'{active_project}.json'
+    layout_file = layouts_dir / f'{active_layout}.json'
 
     if not layout_file.exists():
         print(f"Layout file not found: {layout_file}", file=sys.stderr)
@@ -189,7 +235,7 @@ def snap_to_layout():
 
     # Move windows to current workspace and reposition
     repositioned = 0
-    for window_index, address in windows.items():
+    for window_index, address in workspace_windows.items():
         if window_index in positions:
             pos = positions[window_index]
             # Move to current workspace silently, then resize and reposition
@@ -201,7 +247,7 @@ def snap_to_layout():
             subprocess.run(batch_cmd, shell=True, capture_output=True, check=False)
             repositioned += 1
 
-    print(f"Repositioned {repositioned} windows to layout '{active_project}'")
+    print(f"Repositioned {repositioned} windows to layout '{active_layout}'")
     return True
 
 
