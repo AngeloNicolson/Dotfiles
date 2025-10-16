@@ -190,7 +190,7 @@ def snap_to_layout():
     print(f"Snapping {len(workspace_windows)} windows for layout '{active_layout}' on workspace {workspace_id}")
 
     # Load layout file
-    layouts_dir = Path.home() / '.config' / 'hypr' / 'layouts' / 'saved'
+    layouts_dir = Path.home() / '.config' / 'hypr' / 'layouts'
     layout_file = layouts_dir / f'{active_layout}.json'
 
     if not layout_file.exists():
