@@ -54,6 +54,7 @@ class PomodoroService extends Service {
   #currentTheme = 'default'
   #availableThemes = []
   #audioEnabled = true
+  #pendingTheme = null
 
   // Time options in minutes
   static WORK_OPTIONS = [25, 30, 45, 50, 60, 90]
@@ -447,6 +448,16 @@ class PomodoroService extends Service {
       // Starting fresh
       this.#timeRemaining = this.#WORK_TIME
       this.#mode = 'work'
+
+      // Apply pending theme change if starting fresh
+      if (this.#pendingTheme) {
+        console.log(`Applying pending theme change on start: ${this.#pendingTheme}`)
+        this.#currentTheme = this.#pendingTheme
+        this.#pendingTheme = null
+        this.#loadThemePlaylists()
+        this.notify('current-theme')
+        this.notify('available-themes')
+      }
     }
 
     this.#state = 'running'
@@ -611,21 +622,31 @@ class PomodoroService extends Service {
       return false
     }
 
-    const wasPlaying = this.#state === 'running'
+    // If timer is running, defer the theme change until next session
+    if (this.#state === 'running') {
+      this.#pendingTheme = themeName
+      console.log(`Theme change deferred to next session: ${themeName}`)
+      Utils.execAsync(['notify-send', 'Pomodoro', `Theme will change to "${themeName}" at next session`])
+      return true
+    }
+
+    // If stopped or paused, switch immediately
+    const wasPlaying = this.#state === 'paused'
     const currentMode = this.#mode
 
-    // Stop current playback
+    // Stop current playback if paused
     if (wasPlaying && this.#audioEnabled) {
       this.#fadeOut()
     }
 
     // Load new theme
     this.#currentTheme = themeName
+    this.#pendingTheme = null
     this.#loadThemePlaylists()
     this.notify('current-theme')
     this.notify('available-themes')
 
-    // Resume playback if was playing
+    // Resume playback if was paused
     if (wasPlaying && this.#audioEnabled) {
       setTimeout(() => {
         this.#fadeIn(currentMode === 'work')
@@ -671,6 +692,16 @@ class PomodoroService extends Service {
 
     // Stop music (alert already played at 5 seconds)
     this.#stopPlayback()
+
+    // Apply pending theme change if there is one
+    if (this.#pendingTheme) {
+      console.log(`Applying pending theme change: ${this.#pendingTheme}`)
+      this.#currentTheme = this.#pendingTheme
+      this.#pendingTheme = null
+      this.#loadThemePlaylists()
+      this.notify('current-theme')
+      this.notify('available-themes')
+    }
 
     // Play notification sound or show notification
     Utils.execAsync(['notify-send', 'Pomodoro',

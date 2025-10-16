@@ -77,7 +77,12 @@ return {
 			on_attach = function(client, bufnr)
 				if client.server_capabilities.documentFormattingProvider then
 					vim.api.nvim_buf_create_user_command(bufnr, "Wf", function()
-						vim.lsp.buf.format({ async = false })
+						vim.lsp.buf.format({
+							async = false,
+							filter = function(c)
+								return c.name == "null-ls"
+							end,
+						})
 						vim.api.nvim_buf_call(bufnr, function()
 							vim.cmd("write")
 						end)

@@ -223,6 +223,45 @@
         }
       }
     }
+
+    & .theme_selector {
+      & .theme_nav_button {
+        all: unset;
+        background-color: $bg1;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 16px;
+        min-width: 50px;
+        min-height: 40px;
+        transition: all 200ms ease;
+        cursor: pointer;
+
+        & * {
+          pointer-events: none;
+        }
+
+        &:hover {
+          background-color: $bg2;
+        }
+
+        &:disabled {
+          opacity: 0.3;
+          cursor: default;
+        }
+      }
+
+      & .theme_label {
+        font-size: 12px;
+        font-weight: 500;
+        color: $fg;
+        padding: 0 8px;
+      }
+    }
+  }
+
+  & .audio_theme_container {
+    max-height: 120px;
+    overflow-y: auto;
   }
 
   & .timer_display {

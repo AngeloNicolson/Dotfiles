@@ -91,22 +91,17 @@ return {
 				callback = function(args)
 					local path = vim.fn.fnamemodify(args.file, ":p")
 					local ext = path:match("^.+%.(.+)$")
-					print("BufReadCmd triggered for: " .. path .. " ext: " .. (ext or "nil"))
 					if ext then
 						ext = ext:lower()
 						local handler = external_handlers[ext]
-						print("Handler found: " .. (handler or "nil"))
 						if handler then
 							-- Block buffer from being read - BufReadCmd prevents the default buffer loading
 							vim.bo[args.buf].buftype = "nofile"
-							vim.bo[args.buf].bufhidden = "wipe"
-							-- Open in external app with nvim tags for Hyprland
-							print("Opening: " .. handler .. " " .. path)
+							vim.bo[args.buf].bufhidden = "hide"
+							vim.bo[args.buf].swapfile = false
+							-- Open in external app
 							open_external(handler, path)
-							-- Close the empty buffer
-							vim.schedule(function()
-								vim.cmd("bwipeout! " .. args.buf)
-							end)
+							-- Don't wipe buffer - just leave it empty
 						end
 					end
 				end,
@@ -224,7 +219,7 @@ return {
 					},
 					mappings = {
 						["<CR>"] = "custom_open",
-						["l"] = "open",
+						["l"] = "custom_open",
 						["h"] = "close_node",
 						["H"] = "toggle_hidden",
 						["R"] = "refresh",
@@ -248,11 +243,6 @@ return {
 						enabled = true,
 					},
 					use_libuv_file_watcher = true,
-					window = {
-						mappings = {
-							["<CR>"] = "custom_open",
-						},
-					},
 					group_empty_dirs = false,
 					scan_mode = "deep",
 				},
@@ -274,17 +264,17 @@ return {
 							ext = ext:lower()
 							local handler = external_handlers[ext]
 							if handler then
-								-- Open externally and KEEP tree open AND focused
+								-- Open externally and DON'T open in buffer at all
 								open_external(handler, path)
-								-- Keep focus on NeoTree after opening external app
-								vim.cmd("Neotree focus")
 								return
 							end
 						end
 
-						-- All other files: open in neovim and CLOSE tree
-						require("neo-tree.sources.filesystem.commands").open(state)
-						vim.cmd("Neotree close")
+						-- All other files: close tree THEN open in neovim
+						vim.schedule(function()
+							require("neo-tree.sources.manager").close_all()
+							vim.cmd("edit " .. vim.fn.fnameescape(path))
+						end)
 					end,
 				},
 			})

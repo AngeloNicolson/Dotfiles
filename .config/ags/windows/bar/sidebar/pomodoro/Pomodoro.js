@@ -345,58 +345,147 @@ function SessionInfo() {
         ],
       }),
       Widget.Box({
-        className: 'time_selector',
+        className: 'audio_theme_container',
         vertical: true,
         spacing: 8,
         children: [
           Widget.Box({
-            className: 'slider_row',
-            spacing: 12,
+            className: 'time_selector',
+            vertical: true,
+            spacing: 8,
             children: [
-              Widget.Label({
-                className: 'slider_icon',
-                label: '󰕾',
-              }),
               Widget.Box({
-                vertical: true,
-                spacing: 2,
-                hexpand: true,
+                className: 'slider_row',
+                spacing: 12,
                 children: [
+                  Widget.Label({
+                    className: 'slider_icon',
+                    label: '󰕾',
+                  }),
                   Widget.Box({
-                    spacing: 4,
+                    vertical: true,
+                    spacing: 2,
+                    hexpand: true,
                     children: [
-                      Widget.Label({
-                        className: 'slider_label',
-                        label: 'Volume:',
-                        hpack: 'start',
+                      Widget.Box({
+                        spacing: 4,
+                        children: [
+                          Widget.Label({
+                            className: 'slider_label',
+                            label: 'Volume:',
+                            hpack: 'start',
+                          }),
+                          Widget.Label({
+                            className: 'slider_label',
+                            setup: (self) => {
+                              self.label = `${Pomodoro.getTargetVolume()}%`
+                              self.hook(Pomodoro, () => {
+                                self.label = `${Pomodoro.getTargetVolume()}%`
+                              }, 'notify::target-volume')
+                            },
+                            hpack: 'start',
+                          }),
+                        ],
                       }),
-                      Widget.Label({
-                        className: 'slider_label',
+                      Widget.Slider({
+                        className: 'slider',
+                        drawValue: false,
+                        min: 0,
+                        max: 100,
+                        step: 5,
+                        value: Pomodoro.getTargetVolume(),
+                        onChange: ({ value }) => {
+                          Pomodoro.setTargetVolume(Math.round(value))
+                        },
                         setup: (self) => {
-                          self.label = `${Pomodoro.getTargetVolume()}%`
                           self.hook(Pomodoro, () => {
-                            self.label = `${Pomodoro.getTargetVolume()}%`
+                            self.value = Pomodoro.getTargetVolume()
                           }, 'notify::target-volume')
                         },
-                        hpack: 'start',
                       }),
                     ],
                   }),
-                  Widget.Slider({
-                    className: 'slider',
-                    drawValue: false,
-                    min: 0,
-                    max: 100,
-                    step: 5,
-                    value: Pomodoro.getTargetVolume(),
-                    onChange: ({ value }) => {
-                      Pomodoro.setTargetVolume(Math.round(value))
-                    },
-                    setup: (self) => {
-                      self.hook(Pomodoro, () => {
-                        self.value = Pomodoro.getTargetVolume()
-                      }, 'notify::target-volume')
-                    },
+                ],
+              }),
+            ],
+          }),
+          Widget.Box({
+            className: 'time_selector',
+            vertical: true,
+            spacing: 8,
+            children: [
+              Widget.Box({
+                className: 'slider_row',
+                spacing: 12,
+                children: [
+                  Widget.Label({
+                    className: 'slider_icon',
+                    label: '',
+                  }),
+                  Widget.Box({
+                    vertical: true,
+                    spacing: 2,
+                    hexpand: true,
+                    children: [
+                      Widget.Box({
+                        className: 'theme_selector',
+                        spacing: 8,
+                        children: [
+                          Widget.Button({
+                            className: 'theme_nav_button',
+                            child: Widget.Box({
+                              hpack: 'center',
+                              vpack: 'center',
+                              child: Widget.Label('◀'),
+                            }),
+                            onClicked: () => {
+                              const themes = Pomodoro.available_themes
+                              const currentTheme = Pomodoro.current_theme
+                              const currentIndex = themes.indexOf(currentTheme)
+                              const prevIndex = (currentIndex - 1 + themes.length) % themes.length
+                              Pomodoro.setTheme(themes[prevIndex])
+                            },
+                            setup: (self) => {
+                              self.sensitive = Pomodoro.available_themes.length > 1
+                              self.hook(Pomodoro, () => {
+                                self.sensitive = Pomodoro.available_themes.length > 1
+                              }, 'notify::available-themes')
+                            },
+                          }),
+                          Widget.Label({
+                            className: 'theme_label',
+                            hexpand: true,
+                            setup: (self) => {
+                              self.label = Pomodoro.current_theme || 'No themes'
+                              self.hook(Pomodoro, () => {
+                                self.label = Pomodoro.current_theme || 'No themes'
+                              }, 'notify::current-theme')
+                            },
+                          }),
+                          Widget.Button({
+                            className: 'theme_nav_button',
+                            child: Widget.Box({
+                              hpack: 'center',
+                              vpack: 'center',
+                              child: Widget.Label('▶'),
+                            }),
+                            onClicked: () => {
+                              const themes = Pomodoro.available_themes
+                              const currentTheme = Pomodoro.current_theme
+                              const currentIndex = themes.indexOf(currentTheme)
+                              const nextIndex = (currentIndex + 1) % themes.length
+                              Pomodoro.setTheme(themes[nextIndex])
+                            },
+                            setup: (self) => {
+                              self.sensitive = Pomodoro.available_themes.length > 1
+                              self.hook(Pomodoro, () => {
+                                self.sensitive = Pomodoro.available_themes.length > 1
+                              }, 'notify::available-themes')
+                            },
+                          }),
+                        ],
+                      }),
+                    ],
                   }),
                 ],
               }),
