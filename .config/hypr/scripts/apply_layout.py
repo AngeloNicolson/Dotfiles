@@ -186,13 +186,22 @@ def create_window_rule(window_title, x, y, width, height, app_class=None, worksp
                 f'move {int(x)} {int(y)},title:^{window_title}$'
             ]
         else:
-            # For GUI apps: use class+workspace rules (they don't respect --title)
-            if app_class and workspace_id:
-                rules = [
-                    f'float,class:({app_class}),workspace:{workspace_id}',
-                    f'size {int(width)} {int(height)},class:({app_class}),workspace:{workspace_id}',
-                    f'move {int(x)} {int(y)},class:({app_class}),workspace:{workspace_id}'
-                ]
+            # For GUI apps: use class-based rules (they don't respect --title)
+            if app_class:
+                if workspace_id:
+                    # With workspace: scope rules to specific workspace
+                    rules = [
+                        f'float,class:({app_class}),workspace:{workspace_id}',
+                        f'size {int(width)} {int(height)},class:({app_class}),workspace:{workspace_id}',
+                        f'move {int(x)} {int(y)},class:({app_class}),workspace:{workspace_id}'
+                    ]
+                else:
+                    # Without workspace: use class-only rules
+                    rules = [
+                        f'float,class:({app_class})',
+                        f'size {int(width)} {int(height)},class:({app_class})',
+                        f'move {int(x)} {int(y)},class:({app_class})'
+                    ]
 
         for rule in rules:
             subprocess.run(

@@ -20,67 +20,40 @@ fi
 # Small delay to let Hyprland fully initialize
 sleep 2
 
-# Function to recursively launch windows from a layout
-launch_layout() {
-    local json="$1"
-    local workspace="$2"
-    local type=$(echo "$json" | jq -r '.type')
-
-    if [ "$type" = "window" ]; then
-        local app=$(echo "$json" | jq -r '.app')
-        local working_dir=$(echo "$json" | jq -r '.working_dir // empty')
-
-        if [ -n "$working_dir" ]; then
-            # Expand tilde in working_dir
-            working_dir="${working_dir/#\~/$HOME}"
-
-            if [ "$app" = "foot" ]; then
-                foot -D "$working_dir" &
-            else
-                (cd "$working_dir" && $app &)
-            fi
-        else
-            $app &
-        fi
-
-        # Wait for window to open and move it to the correct workspace
-        sleep 0.5
-        if [ -n "$workspace" ]; then
-            hyprctl dispatch movetoworkspacesilent "$workspace" 2>/dev/null
-        fi
-    elif [ "$type" = "container" ]; then
-        local children=$(echo "$json" | jq -c '.children[]?')
-        while IFS= read -r child; do
-            launch_layout "$child" "$workspace"
-        done <<< "$children"
-    fi
+# Get environment name from config file
+get_environment_name() {
+    local config_file="$1"
+    jq -r '.name // empty' "$config_file" 2>/dev/null
 }
 
-# Parse JSON and create workspaces on monitors
+# Bind workspaces to monitors using workspace rules (hot-applied)
 jq -r '.workspaces[]? | "\(.id) \(.monitor)"' "$CONFIG_FILE" 2>/dev/null | while read -r ws_id monitor; do
     if [ -n "$ws_id" ] && [ -n "$monitor" ]; then
-        # Create workspace by switching to it
-        hyprctl dispatch workspace "$ws_id" 2>/dev/null
-        sleep 0.1
-
-        # Move workspace to the designated monitor
-        hyprctl dispatch moveworkspacetomonitor "$ws_id" "$monitor" 2>/dev/null
-        sleep 0.05
+        # Set workspace rule to bind workspace to monitor
+        hyprctl keyword workspace "$ws_id,monitor:$monitor" 2>/dev/null
     fi
 done
 
-# Launch environment layouts from workspace definitions
+# Small delay to ensure workspace rules are applied
+sleep 0.3
+
+# Get environment name from config
+ENVIRONMENT_NAME=$(get_environment_name "$CONFIG_FILE")
+
+# Launch environment layouts from workspace definitions using apply_layout.py
 jq -r '.workspaces[]? | select(.layout != null) | "\(.id) \(.layout)"' "$CONFIG_FILE" 2>/dev/null | while read -r ws_id layout_file; do
     if [ -n "$ws_id" ] && [ -n "$layout_file" ] && [ -f "$layout_file" ]; then
         echo "Launching layout for workspace $ws_id: $layout_file"
 
-        # Switch to workspace
-        hyprctl dispatch workspace "$ws_id" 2>/dev/null
-        sleep 0.3
+        # Use apply_layout.py with environment name for proper window rules and tagging
+        if [ -n "$ENVIRONMENT_NAME" ]; then
+            "$HOME/.config/hypr/scripts/apply_layout.py" "$layout_file" "$ws_id" --environment "$ENVIRONMENT_NAME" 2>/dev/null
+        else
+            "$HOME/.config/hypr/scripts/apply_layout.py" "$layout_file" "$ws_id" 2>/dev/null
+        fi
 
-        # Read environment layout and launch
-        environment_layout=$(cat "$layout_file")
-        launch_layout "$environment_layout" "$ws_id"
+        # Brief delay between workspace launches
+        sleep 0.5
     fi
 done
 
