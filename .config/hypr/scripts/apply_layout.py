@@ -222,6 +222,9 @@ def tag_window(address, layout_name, workspace_id, position_index, environment_n
         workspace_id: Workspace ID where window is placed
         position_index: Position index in the layout
         environment_name: Optional environment name (if created from environment)
+
+    Returns:
+        str: The tag that was applied, or None if failed
     """
     try:
         if environment_name:
@@ -236,12 +239,53 @@ def tag_window(address, layout_name, workspace_id, position_index, environment_n
             capture_output=True,
             check=False
         )
+        return tag
     except Exception:
-        pass
+        return None
 
 
-def launch_app(app_command, terminal_command=None, working_dir=None, window_title=None, workspace_id=None):
-    """Launch an application, with optional terminal command, working directory, window title, and workspace"""
+def verify_tag(address, expected_tag, max_retries=3):
+    """Verify that a tag was successfully applied to a window
+
+    Args:
+        address: Window address
+        expected_tag: The tag that should be on the window
+        max_retries: Number of times to retry if tag not found
+
+    Returns:
+        bool: True if tag verified, False otherwise
+    """
+    for attempt in range(max_retries):
+        try:
+            result = subprocess.run(
+                ['hyprctl', '-j', 'clients'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.stdout:
+                clients = json.loads(result.stdout)
+                for client in clients:
+                    if client.get('address') == address:
+                        tags = client.get('tags', [])
+                        if expected_tag in tags:
+                            return True
+                        # Tag not found, retry after short delay
+                        time.sleep(0.1)
+                        # Re-apply tag
+                        subprocess.run(
+                            ['hyprctl', 'dispatch', 'tagwindow', f'+{expected_tag}', f'address:{address}'],
+                            capture_output=True,
+                            check=False
+                        )
+        except Exception:
+            pass
+
+    return False
+
+
+def launch_app(app_command, terminal_command=None, working_dir=None, window_title=None, workspace_id=None, x=None, y=None, width=None, height=None):
+    """Launch an application, with optional terminal command, working directory, window title, workspace, and position"""
     try:
         # Determine if this is a terminal app
         terminal_apps = ['foot', 'kitty', 'alacritty', 'wezterm', 'terminator', 'gnome-terminal', 'konsole']
@@ -287,9 +331,16 @@ def launch_app(app_command, terminal_command=None, working_dir=None, window_titl
         else:
             # For non-terminal apps, use hyprctl dispatch with workspace spec if workspace is specified
             if workspace_id:
-                # Use hyprctl dispatch to launch on specific workspace with silent flag
+                # Build exec spec with workspace, float, size, and position
+                spec_parts = [f'workspace {workspace_id} silent', 'float']
+                if width is not None and height is not None:
+                    spec_parts.append(f'size {int(width)} {int(height)}')
+                if x is not None and y is not None:
+                    spec_parts.append(f'move {int(x)} {int(y)}')
+                exec_spec = ';'.join(spec_parts)
+
                 subprocess.run(
-                    ['hyprctl', 'dispatch', 'exec', f'[workspace {workspace_id} silent] {app_command}'],
+                    ['hyprctl', 'dispatch', 'exec', f'[{exec_spec}] {app_command}'],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL
                 )
@@ -321,7 +372,9 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
             if existing_windows and current_index in existing_windows:
                 existing_address = existing_windows[current_index]['address']
                 # Re-tag and re-position the existing window (don't toggle float - already floating)
-                tag_window(existing_address, layout_name, workspace_id, current_index, environment_name)
+                applied_tag = tag_window(existing_address, layout_name, workspace_id, current_index, environment_name)
+                if applied_tag:
+                    verify_tag(existing_address, applied_tag)
                 batch_cmd = (
                     f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address} && '
                     f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{existing_address}'
@@ -340,20 +393,16 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 # Extract executable name for GUI apps (for class-based rules)
                 app_executable = app.split()[0] if app else app
 
-                # Create window rules to pre-position before window fully renders
-                # Also add rule to spawn on specific workspace
-                create_window_rule(window_title, x, y, width, height, app_executable, workspace_id, is_terminal)
-                if workspace_id and is_terminal:
-                    subprocess.run(
-                        ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},title:^{window_title}$'],
-                        capture_output=True, check=False
-                    )
-                elif workspace_id and not is_terminal:
-                    # For GUI apps, use class-based workspace rule
-                    subprocess.run(
-                        ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},class:({app_executable})'],
-                        capture_output=True, check=False
-                    )
+                # Create window rules only for terminals (GUI apps use exec spec instead)
+                if is_terminal:
+                    create_window_rule(window_title, x, y, width, height, app_executable, workspace_id, is_terminal)
+                    if workspace_id:
+                        subprocess.run(
+                            ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},title:^{window_title}$'],
+                            capture_output=True, check=False
+                        )
+                # Note: GUI apps use exec spec [workspace X;float;size W H;move X Y] instead of
+                # window rules to avoid conflicts with multiple instances of the same class
 
                 # Get current windows before launching
                 previous_addresses = get_all_window_addresses()
@@ -361,16 +410,26 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 # Launch with descriptive title
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
-                launch_app(app, terminal_command, working_dir, window_title, workspace_id)
+                launch_app(app, terminal_command, working_dir, window_title, workspace_id, x, y, width, height)
 
-                # Wait for NEW window to appear
-                new_address = wait_for_new_window(previous_addresses, timeout=2.0)
+                # Wait for NEW window to appear (longer timeout for GUI apps)
+                timeout = 5.0 if not is_terminal else 2.0
+                new_address = wait_for_new_window(previous_addresses, timeout=timeout)
                 if new_address:
                     existing_address = new_address
                     # Tag the window for snap functionality
-                    tag_window(existing_address, layout_name, workspace_id, current_index, environment_name)
+                    applied_tag = tag_window(existing_address, layout_name, workspace_id, current_index, environment_name)
+
+                    # Verify tag was applied before continuing
+                    if applied_tag:
+                        tag_verified = verify_tag(existing_address, applied_tag)
+                        if not tag_verified:
+                            print(f"Warning: Failed to verify tag '{applied_tag}' on window {app} at position {current_index}", file=sys.stderr)
+
                     # Brief pause before spawning next window
                     time.sleep(0.2)
+                else:
+                    print(f"Warning: Failed to detect new window for {app} at position {current_index}", file=sys.stderr)
 
             # Collect for mapping
             if existing_address:
@@ -417,7 +476,15 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
         with open(layout_file, 'r') as f:
             layout = json.load(f)
 
-        # Get monitor info
+        # Switch to workspace FIRST if specified (so we get correct monitor geometry)
+        if workspace:
+            subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)])
+            time.sleep(0.2)
+            workspace_id = workspace
+        else:
+            workspace_id = None
+
+        # NOW get monitor info after workspace switch
         monitors = run_hyprctl('monitors')
         if not monitors:
             print("Error: Could not get monitor information", file=sys.stderr)
@@ -428,6 +495,10 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
         if not active_workspace:
             print("Error: Could not get active workspace", file=sys.stderr)
             return False
+
+        # Set workspace_id if not already set
+        if workspace_id is None:
+            workspace_id = active_workspace.get('id')
 
         # Find the monitor that contains the active workspace
         active_ws_id = active_workspace.get('id')
@@ -447,6 +518,7 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
         # Final fallback to first monitor
         if not monitor:
             monitor = monitors[0]
+
         mon_x = monitor['x']
         mon_y = monitor['y']
         mon_width = monitor['width']
@@ -469,16 +541,6 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
         usable_y = mon_y + reserved_top + gaps_out
         usable_width = mon_width - reserved_left - reserved_right - (gaps_out * 2)
         usable_height = mon_height - reserved_top - reserved_bottom - (gaps_out * 2)
-
-        # Determine workspace to use
-        if workspace:
-            # Switch to specified workspace
-            subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)])
-            time.sleep(0.2)
-            workspace_id = workspace
-        else:
-            # Use active workspace (already retrieved above)
-            workspace_id = active_workspace.get('id')
 
         # Generate layout name from layout filename
         layout_name = os.path.splitext(os.path.basename(layout_file))[0]
