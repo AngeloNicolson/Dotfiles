@@ -28,32 +28,34 @@ HOW IT WORKS
 2. PRE-POSITIONING (During Spawn)
 
    Terminals (foot, kitty, etc.):
-   - Launched with --title flag: "project - Window N - app"
+   - Launched with --title flag: "layout - Window N - app"
    - Window rules match by title: float, size, move, workspace
-   - Title-based rules ensure correct workspace placement
    - Appear at correct position from first frame
+   - Custom title matches permanent float rule
 
    GUI Apps (firefox, chrome, etc.):
-   - Don't respect --title flag
-   - Window rules match by class+workspace for positioning
-   - Additional workspace rule by class ensures correct workspace
-   - Multiple instances with same class get same rules (overlap)
-   - Solution: Rules are temporary, windows spawn quickly
+   - Don't respect --title flag (use default titles)
+   - Launched with exec specs: [workspace X silent;float;size W H;move X Y]
+   - NO window rules (avoids conflicts with multiple instances)
+   - Exec specs ensure correct workspace, floating, size, position
+   - More reliable than window rules for duplicate apps
 
 3. WINDOW TAGGING (After Spawn)
    - Get list of all windows BEFORE launching
    - Launch app
    - Poll for NEW window (address not in previous list)
-   - Tag new window with project_{name}_window_{index}
+   - Tag new window: lay_{layout}_ws_{ws}_pos_{pos} or env_{env}_lay_{layout}_ws_{ws}_pos_{pos}
+   - VERIFY tag was applied (retries up to 3 times if needed)
+   - Only proceed to next window after successful tag verification
    - This ensures EVERY window gets tagged, even duplicates
 
 4. SNAP FUNCTIONALITY (Mod+R)
    - Get current workspace
-   - Find all windows with tags matching project_*_window_*
-   - Determine active project (most windows)
-   - Load layout file: ~/.config/hypr/layouts/saved/{project}.json
-   - Calculate positions from BSP tree
-   - Move windows from ANY workspace to current workspace
+   - Find all windows with layout tags (lay_* or env_*)
+   - Determine active layout (most windows for current workspace)
+   - Load layout file: ~/.config/hypr/layouts/{layout}.json
+   - Calculate positions from BSP tree and current monitor geometry
+   - Move windows from ANY workspace to their tagged workspace
    - Reposition each window to its slot by index
 
 5. LAYOUT FILE FORMAT
@@ -81,15 +83,18 @@ WINDOW RULES
 ------------
 Permanent (in custom/rules.conf):
 - windowrulev2 = float, initialTitle:^.+ - Window \d+ - .+$
-  Makes all layout-managed windows float
+  Makes all layout-managed terminals float (matches custom title format)
 
 Dynamic (created during spawn, auto-removed after):
-- Terminals:
-  * float/size/move rules by title
+- Terminals ONLY:
+  * float/size/move rules by unique title
   * workspace assignment by title
+  * Title format: "layoutname - Window N - app"
+
 - GUI apps:
-  * float/size/move rules by class+workspace
-  * workspace assignment by class
+  * NO window rules (use exec specs instead)
+  * Exec spec: [workspace X silent;float;size W H;move X Y]
+  * Avoids conflicts with multiple instances of same app
 
 WORKFLOW
 --------

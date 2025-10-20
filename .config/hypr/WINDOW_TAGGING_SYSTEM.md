@@ -155,9 +155,17 @@ The window tagging system provides a comprehensive way to track, organize, and m
 - Tags format depends on whether environment flag is provided
 
 **Key Functions**:
-- `tag_window()` - Applies tags to windows using hyprctl
+- `tag_window()` - Applies tags to windows using hyprctl, returns tag string
+- `verify_tag()` - Verifies tag was applied, retries up to 3 times if needed
 - `get_windows_by_layout_tag()` - Finds existing tagged windows
-- `apply_node()` - Recursively processes layout BSP tree
+- `apply_node()` - Recursively processes layout BSP tree, verifies each tag before continuing
+
+**Tag Verification**:
+- After spawning each window, tag is applied
+- Script queries Hyprland to verify tag exists on window
+- Retries up to 3 times with 0.1s delays if tag missing
+- Only proceeds to next window after successful verification
+- Prevents tag confusion with multiple instances of same app
 
 ### snap_to_layout.py
 **Role**: Repositions tagged windows back to their layout positions

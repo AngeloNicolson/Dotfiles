@@ -37,10 +37,11 @@ Environment configs are stored in `~/.config/hypr/layouts/environment_configs/` 
 
 1. **Bind workspaces to monitors** using workspace rules
 2. **Wait** for rules to apply (0.3s)
-3. **Launch windows** silently on designated workspaces using layout files
-   - Each window gets workspace assignment rules:
-     * Terminals: workspace rule by title
-     * GUI apps: workspace rule by class
+3. **Launch windows** using `apply_layout.py` for each workspace
+   - Calls: `apply_layout.py <layout.json> <workspace_id> --environment <env_name>`
+   - Windows spawn with proper positioning, floating, and tags
+   - Each window tag verified before spawning next
+   - Terminals get custom titles, GUI apps use exec specs
 4. **Return to workspace 1**
 
 ## Usage
@@ -74,17 +75,26 @@ Workspace rules solve this by:
 
 ## Window Workspace Assignment
 
-Each window launched by the environment loader gets additional workspace assignment rules to ensure it opens on the correct workspace:
+Each window launched by the environment loader is positioned differently based on type:
 
 - **Terminals** (foot, kitty, alacritty, etc.):
-  - Rule: `windowrulev2 = workspace {workspace_id},title:^{window_title}$`
-  - Matches by unique window title set via `--title` flag
+  - Launched with custom title: `"layoutname - Window N - app"`
+  - Window rules by title: `float,title:^...`, `size/move/workspace by title`
+  - Title is unique per window, no conflicts
 
 - **GUI Applications** (firefox, rnote, etc.):
-  - Rule: `windowrulev2 = workspace {workspace_id},class:({app_class})`
-  - Matches by application class
-  - Note: Multiple instances of same app get same rule (last one wins)
+  - Launched with exec spec: `[workspace X silent;float;size W H;move X Y]`
+  - NO window rules (avoids conflicts with multiple instances)
+  - Exec spec directly tells Hyprland: workspace, float, size, position
+  - More reliable for duplicate apps (e.g., 2 firefox windows)
 
-These rules complement the workspace-to-monitor bindings to ensure windows open both:
-1. On the correct workspace (via workspace rule)
+**Why Different Approaches?**
+- Terminals respect `--title` flag → unique titles → window rules work
+- GUI apps ignore `--title` flag → exec specs more reliable
+- Exec specs prevent conflicts when multiple instances of same app
+
+These complement the workspace-to-monitor bindings to ensure windows open:
+1. On the correct workspace (via workspace rule or exec spec)
 2. On the correct monitor (via workspace-to-monitor binding)
+3. In floating mode with correct size and position
+4. With proper tags for Mod+R magnetizing
