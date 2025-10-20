@@ -9,12 +9,15 @@ HOW IT WORKS:
 3. For each window in the layout:
    a. Create window rules for pre-positioning (float, size, move)
       - Terminals: Use title-based rules (they respect --title flag)
-      - GUI apps: Use class+workspace rules
-   b. Get snapshot of current windows before launching
-   c. Launch app with custom title (terminals) or default (GUI apps)
-   d. Poll for NEW window (compare before/after window lists)
-   e. Tag window with project_{name}_window_{index}
-   f. Window appears at correct position due to pre-positioning rules
+      - GUI apps: Use class+workspace rules for positioning
+   b. Create workspace assignment rules
+      - Terminals: workspace rule by title
+      - GUI apps: workspace rule by class
+   c. Get snapshot of current windows before launching
+   d. Launch app with custom title (terminals) or default (GUI apps)
+   e. Poll for NEW window (compare before/after window lists)
+   f. Tag window with appropriate tag format
+   g. Window appears at correct position and workspace due to pre-positioning rules
 
 WINDOW TAGGING:
 - Tags persist across title changes
@@ -228,8 +231,8 @@ def tag_window(address, layout_name, workspace_id, position_index, environment_n
         pass
 
 
-def launch_app(app_command, terminal_command=None, working_dir=None, window_title=None):
-    """Launch an application, with optional terminal command, working directory, and window title"""
+def launch_app(app_command, terminal_command=None, working_dir=None, window_title=None, workspace_id=None):
+    """Launch an application, with optional terminal command, working directory, window title, and workspace"""
     try:
         # Determine if this is a terminal app
         terminal_apps = ['foot', 'kitty', 'alacritty', 'wezterm', 'terminator', 'gnome-terminal', 'konsole']
@@ -273,13 +276,22 @@ def launch_app(app_command, terminal_command=None, working_dir=None, window_titl
                 stderr=subprocess.DEVNULL
             )
         else:
-            # For non-terminal apps, use shell
-            subprocess.Popen(
-                app_command,
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
+            # For non-terminal apps, use hyprctl dispatch with workspace spec if workspace is specified
+            if workspace_id:
+                # Use hyprctl dispatch to launch on specific workspace with silent flag
+                subprocess.run(
+                    ['hyprctl', 'dispatch', 'exec', f'[workspace {workspace_id} silent] {app_command}'],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            else:
+                # Launch directly without workspace spec
+                subprocess.Popen(
+                    app_command,
+                    shell=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
 
         time.sleep(0.3)  # Shorter wait since window will be pre-positioned
     except Exception as e:
@@ -316,12 +328,21 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 terminal_apps = ['foot', 'kitty', 'alacritty', 'wezterm', 'terminator', 'gnome-terminal', 'konsole']
                 is_terminal = any(term in app.lower() for term in terminal_apps)
 
+                # Extract executable name for GUI apps (for class-based rules)
+                app_executable = app.split()[0] if app else app
+
                 # Create window rules to pre-position before window fully renders
                 # Also add rule to spawn on specific workspace
-                create_window_rule(window_title, x, y, width, height, app, workspace_id, is_terminal)
+                create_window_rule(window_title, x, y, width, height, app_executable, workspace_id, is_terminal)
                 if workspace_id and is_terminal:
                     subprocess.run(
                         ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},title:^{window_title}$'],
+                        capture_output=True, check=False
+                    )
+                elif workspace_id and not is_terminal:
+                    # For GUI apps, use class-based workspace rule
+                    subprocess.run(
+                        ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},class:({app_executable})'],
                         capture_output=True, check=False
                     )
 
@@ -331,7 +352,7 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 # Launch with descriptive title
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
-                launch_app(app, terminal_command, working_dir, window_title)
+                launch_app(app, terminal_command, working_dir, window_title, workspace_id)
 
                 # Wait for NEW window to appear
                 new_address = wait_for_new_window(previous_addresses, timeout=2.0)
@@ -393,14 +414,28 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
             print("Error: Could not get monitor information", file=sys.stderr)
             return False
 
-        # Find the focused/active monitor
+        # Get current workspace to determine which monitor to use
+        active_workspace = run_hyprctl('activeworkspace')
+        if not active_workspace:
+            print("Error: Could not get active workspace", file=sys.stderr)
+            return False
+
+        # Find the monitor that contains the active workspace
+        active_ws_id = active_workspace.get('id')
         monitor = None
         for mon in monitors:
-            if mon.get('focused', False):
+            if mon.get('activeWorkspace', {}).get('id') == active_ws_id:
                 monitor = mon
                 break
 
-        # Fallback to first monitor if none focused
+        # Fallback to focused monitor if workspace not found
+        if not monitor:
+            for mon in monitors:
+                if mon.get('focused', False):
+                    monitor = mon
+                    break
+
+        # Final fallback to first monitor
         if not monitor:
             monitor = monitors[0]
         mon_x = monitor['x']
@@ -426,18 +461,15 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
         usable_width = mon_width - reserved_left - reserved_right - (gaps_out * 2)
         usable_height = mon_height - reserved_top - reserved_bottom - (gaps_out * 2)
 
-        # Get current workspace
-        active_workspace = run_hyprctl('activeworkspace')
-        if not active_workspace:
-            print("Error: Could not get active workspace", file=sys.stderr)
-            return False
-        workspace_id = active_workspace.get('id')
-
-        # Switch to workspace if specified
+        # Determine workspace to use
         if workspace:
+            # Switch to specified workspace
             subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)])
             time.sleep(0.2)
             workspace_id = workspace
+        else:
+            # Use active workspace (already retrieved above)
+            workspace_id = active_workspace.get('id')
 
         # Generate layout name from layout filename
         layout_name = os.path.splitext(os.path.basename(layout_file))[0]

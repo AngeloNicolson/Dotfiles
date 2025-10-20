@@ -30,11 +30,13 @@ HOW IT WORKS
    Terminals (foot, kitty, etc.):
    - Launched with --title flag: "project - Window N - app"
    - Window rules match by title: float, size, move, workspace
+   - Title-based rules ensure correct workspace placement
    - Appear at correct position from first frame
 
    GUI Apps (firefox, chrome, etc.):
    - Don't respect --title flag
-   - Window rules match by class+workspace
+   - Window rules match by class+workspace for positioning
+   - Additional workspace rule by class ensures correct workspace
    - Multiple instances with same class get same rules (overlap)
    - Solution: Rules are temporary, windows spawn quickly
 
@@ -81,9 +83,13 @@ Permanent (in custom/rules.conf):
 - windowrulev2 = float, initialTitle:^.+ - Window \d+ - .+$
   Makes all layout-managed windows float
 
-Dynamic (created during spawn, removed after):
-- Terminals: float/size/move by title
-- GUI apps: float/size/move by class+workspace
+Dynamic (created during spawn, auto-removed after):
+- Terminals:
+  * float/size/move rules by title
+  * workspace assignment by title
+- GUI apps:
+  * float/size/move rules by class+workspace
+  * workspace assignment by class
 
 WORKFLOW
 --------

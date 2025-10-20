@@ -212,12 +212,21 @@ def snap_to_layout():
         print("Error: Could not get monitor information", file=sys.stderr)
         return False
 
-    # Find focused monitor
+    # Find the monitor that contains the active workspace
     monitor = None
     for mon in monitors:
-        if mon.get('focused', False):
+        if mon.get('activeWorkspace', {}).get('id') == workspace_id:
             monitor = mon
             break
+
+    # Fallback to focused monitor if workspace not found
+    if not monitor:
+        for mon in monitors:
+            if mon.get('focused', False):
+                monitor = mon
+                break
+
+    # Final fallback to first monitor
     if not monitor:
         monitor = monitors[0]
 

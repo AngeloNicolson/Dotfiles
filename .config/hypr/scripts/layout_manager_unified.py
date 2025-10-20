@@ -4008,6 +4008,23 @@ class LayoutManagerUnified(Gtk.Window):
             # Get environment name from config
             environment_name = config.get('name', Path(config_file).stem)
 
+            # First, bind workspaces to monitors using workspace rules
+            for saved_ws in workspaces:
+                ws_id = saved_ws.get('id')
+                target_monitor = saved_ws.get('monitor')
+
+                if ws_id and target_monitor:
+                    # Set workspace rule to bind workspace to monitor
+                    subprocess.run([
+                        'hyprctl',
+                        'keyword',
+                        'workspace',
+                        f'{ws_id},monitor:{target_monitor}'
+                    ], capture_output=True, check=False)
+
+            # Wait for workspace rules to apply
+            time.sleep(0.3)
+
             # Get current live workspaces
             live_workspaces = self.get_workspaces()
             live_ws_dict = {ws.get('id'): ws for ws in live_workspaces}
