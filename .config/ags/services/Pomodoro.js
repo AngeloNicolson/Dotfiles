@@ -625,6 +625,8 @@ class PomodoroService extends Service {
     // If timer is running, defer the theme change until next session
     if (this.#state === 'running') {
       this.#pendingTheme = themeName
+      this.#currentTheme = themeName  // Update UI immediately
+      this.notify('current-theme')
       console.log(`Theme change deferred to next session: ${themeName}`)
       Utils.execAsync(['notify-send', 'Pomodoro', `Theme will change to "${themeName}" at next session`])
       return true

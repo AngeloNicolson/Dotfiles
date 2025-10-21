@@ -2335,7 +2335,7 @@ class LayoutManagerUnified(Gtk.Window):
                 layout_list.append(row)
 
                 # Select current layout if it matches
-                if current_project and Path(current_project) == layout_file:
+                if current_layout and Path(current_layout) == layout_file:
                     selected_index = idx
 
             # Select the current layout row
@@ -2672,7 +2672,7 @@ class LayoutManagerUnified(Gtk.Window):
                 layout_list.append(row)
 
                 # Select current layout if it matches
-                if current_project and Path(current_project) == layout_file:
+                if current_layout and Path(current_layout) == layout_file:
                     selected_index = idx
 
             # Select the current layout row
@@ -4005,6 +4005,9 @@ class LayoutManagerUnified(Gtk.Window):
             if not workspaces:
                 return
 
+            # Sort workspaces by ID to process in order
+            workspaces = sorted(workspaces, key=lambda ws: ws.get('id', 0))
+
             # Get environment name from config
             environment_name = config.get('name', Path(config_file).stem)
 
@@ -4056,15 +4059,28 @@ class LayoutManagerUnified(Gtk.Window):
                 if layout_path and os.path.exists(layout_path):
                     apply_script = os.path.join(self.scripts_dir, 'apply_layout.py')
                     # Apply with environment name to create env_{env}_lay_{layout}_ws_{ws}_pos_{pos} tags
-                    subprocess.Popen([
+                    # Use Popen and wait sequentially with small delays between workspaces
+                    process = subprocess.Popen([
                         apply_script,
                         layout_path,
                         str(ws_id),
                         '--environment',
                         environment_name
-                    ])
+                    ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+                    # Wait for this workspace to complete before starting next
+                    # This prevents concurrent workspace switching chaos
+                    try:
+                        stdout, stderr = process.communicate(timeout=30)
+                        if stderr:
+                            print(f"Layout apply stderr for workspace {ws_id}:")
+                            print(stderr)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        print(f"Warning: Layout application timed out for workspace {ws_id}", file=sys.stderr)
+
                     layouts_applied += 1
-                    time.sleep(0.5)  # Allow time for windows to spawn
+                    time.sleep(0.5)  # Brief delay between workspaces
 
             # Show confirmation
             config_name = config.get('name', Path(config_file).stem)

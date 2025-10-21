@@ -5,11 +5,13 @@
   "children": [
     {
       "type": "window",
-      "app": "app"
+      "app": "foot",
+      "working_dir": "~/Documents/insert_disk2_to_continue/Personal-projects/WildCore_Engine/"
     },
     {
       "type": "window",
-      "app": "app"
+      "app": "foot",
+      "working_dir": "~/Documents/insert_disk2_to_continue/Personal-projects/WildCore_Engine/"
     }
   ]
 }

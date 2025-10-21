@@ -6,7 +6,7 @@
 
   & .header {
     background-color: $bg2;
-    border-radius: 8px;
+    border-radius: 3px;
     padding: 8px;
 
     & .icon {
@@ -17,7 +17,7 @@
     & .input_container {
       & .input {
         border: solid $gray 1px;
-        border-radius: 8px;
+        border-radius: 3px;
         font-size: 16px;
         padding: 4px 8px;
       }
@@ -34,7 +34,7 @@
   & .apps {
     & .app {
       background-color: $bg1;
-      border-radius: 8px;
+      border-radius: 3px;
       padding: 8px;
 
       &:hover {

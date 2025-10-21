@@ -72,20 +72,54 @@ def get_all_window_addresses():
         return set()
 
 
-def wait_for_new_window(previous_addresses, timeout=2.0, poll_interval=0.1):
-    """Wait for a new window to appear and return its address"""
+def wait_for_new_window(previous_addresses, timeout=2.0, poll_interval=0.05, expected_workspace=None):
+    """Wait for a new window to appear and return its address
+
+    Args:
+        previous_addresses: Set of window addresses before launching
+        timeout: Maximum time to wait
+        poll_interval: Time between checks
+        expected_workspace: If specified, only return window on this workspace
+    """
     start_time = time.time()
+    checked_addresses = set()  # Track addresses we've already checked and rejected
 
     while time.time() - start_time < timeout:
-        current_addresses = get_all_window_addresses()
-        new_addresses = current_addresses - previous_addresses
+        # Get all current window addresses
+        result = subprocess.run(['hyprctl', '-j', 'clients'],
+                              capture_output=True, text=True, check=False)
+        if not result.stdout:
+            time.sleep(poll_interval)
+            continue
 
-        if new_addresses:
-            # Return the first new window address
-            return new_addresses.pop()
+        clients = json.loads(result.stdout)
+        current_count = len(clients)
+
+        # Look for new windows
+        new_found = 0
+        for client in clients:
+            addr = client['address']
+
+            # Skip if we've seen this window before or already checked it
+            if addr in previous_addresses or addr in checked_addresses:
+                continue
+
+            new_found += 1
+            # Found a new window
+            if expected_workspace is not None:
+                # Check if it's on the correct workspace
+                workspace_id = client.get('workspace', {}).get('id')
+                # Compare as integers
+                if int(workspace_id) == int(expected_workspace):
+                    return addr
+                else:
+                    # Wrong workspace, mark as checked and keep looking
+                    checked_addresses.add(addr)
+            else:
+                # No workspace filtering, return it
+                return addr
 
         time.sleep(poll_interval)
-
     return None
 
 
@@ -280,12 +314,15 @@ def verify_tag(address, expected_tag, max_retries=3):
                         )
         except Exception:
             pass
-
     return False
 
 
-def launch_app(app_command, terminal_command=None, working_dir=None, window_title=None, workspace_id=None, x=None, y=None, width=None, height=None):
-    """Launch an application, with optional terminal command, working directory, window title, workspace, and position"""
+def launch_app(app_command, terminal_command=None, working_dir=None, window_title=None, workspace_id=None, x=None, y=None, width=None, height=None, force_float=False):
+    """Launch an application, with optional terminal command, working directory, window title, workspace, and position
+
+    Args:
+        force_float: If True, add 'float' tag to exec spec to ensure window floats
+    """
     try:
         # Determine if this is a terminal app
         terminal_apps = ['foot', 'kitty', 'alacritty', 'wezterm', 'terminator', 'gnome-terminal', 'konsole']
@@ -330,16 +367,20 @@ def launch_app(app_command, terminal_command=None, working_dir=None, window_titl
             )
         else:
             # For non-terminal apps, use hyprctl dispatch with workspace spec if workspace is specified
-            if workspace_id:
+            if workspace_id or force_float:
                 # Build exec spec with workspace, float, size, and position
-                spec_parts = [f'workspace {workspace_id} silent', 'float']
+                spec_parts = []
+                if workspace_id:
+                    spec_parts.append(f'workspace {workspace_id} silent')
+                if force_float:
+                    spec_parts.append('float')
                 if width is not None and height is not None:
                     spec_parts.append(f'size {int(width)} {int(height)}')
                 if x is not None and y is not None:
                     spec_parts.append(f'move {int(x)} {int(y)}')
                 exec_spec = ';'.join(spec_parts)
 
-                subprocess.run(
+                subprocess.Popen(
                     ['hyprctl', 'dispatch', 'exec', f'[{exec_spec}] {app_command}'],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL
@@ -353,12 +394,12 @@ def launch_app(app_command, terminal_command=None, working_dir=None, window_titl
                     stderr=subprocess.DEVNULL
                 )
 
-        time.sleep(0.3)  # Shorter wait since window will be pre-positioned
+        time.sleep(0.1)  # Shorter wait since window will be pre-positioned
     except Exception as e:
         print(f"Error launching app {app_command}: {e}", file=sys.stderr)
 
 
-def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None, existing_windows=None, window_counter=None, layout_name=None, reposition_only=False, workspace_id=None, environment_name=None):
+def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=None, existing_windows=None, window_counter=None, layout_name=None, reposition_only=False, workspace_id=None, environment_name=None, failed_tags=None):
     """Recursively apply a layout node"""
     if node['type'] == 'window':
         # Launch the application
@@ -374,7 +415,16 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 # Re-tag and re-position the existing window (don't toggle float - already floating)
                 applied_tag = tag_window(existing_address, layout_name, workspace_id, current_index, environment_name)
                 if applied_tag:
-                    verify_tag(existing_address, applied_tag)
+                    tag_verified = verify_tag(existing_address, applied_tag)
+                    if not tag_verified:
+                        # Defer this window for retry at the end
+                        if failed_tags is not None:
+                            failed_tags.append({
+                                'address': existing_address,
+                                'tag': applied_tag,
+                                'app': app,
+                                'position': current_index
+                            })
                 batch_cmd = (
                     f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address} && '
                     f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{existing_address}'
@@ -407,16 +457,45 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 # Get current windows before launching
                 previous_addresses = get_all_window_addresses()
 
-                # Launch with descriptive title
+                # Launch with descriptive title and float tag
                 terminal_command = node.get('terminal_command')
                 working_dir = node.get('working_dir')
-                launch_app(app, terminal_command, working_dir, window_title, workspace_id, x, y, width, height)
+                launch_app(app, terminal_command, working_dir, window_title, workspace_id, x, y, width, height, force_float=True)
 
-                # Wait for NEW window to appear (longer timeout for GUI apps)
-                timeout = 5.0 if not is_terminal else 2.0
-                new_address = wait_for_new_window(previous_addresses, timeout=timeout)
+                # Wait for NEW window to appear (shorter timeouts since we're on correct workspace)
+                timeout = 3.0 if not is_terminal else 1.0
+                new_address = wait_for_new_window(previous_addresses, timeout=timeout, expected_workspace=workspace_id)
                 if new_address:
                     existing_address = new_address
+
+                    # Ensure window is floating and positioned correctly
+                    result = subprocess.run(['hyprctl', '-j', 'clients'], capture_output=True, text=True, check=False)
+                    if result.stdout:
+                        clients = json.loads(result.stdout)
+                        for client in clients:
+                            if client['address'] == existing_address:
+                                if not client.get('floating', False):
+                                    # Window is tiled, make it float
+                                    subprocess.run(
+                                        ['hyprctl', 'dispatch', 'togglefloating', f'address:{existing_address}'],
+                                        capture_output=True,
+                                        check=False
+                                    )
+
+                                # Brief delay for window to be ready for resize/move
+                                time.sleep(0.1)
+
+                                # Apply size and position using batch command (more reliable)
+                                batch_cmd = []
+                                if width is not None and height is not None:
+                                    batch_cmd.append(f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address}')
+                                if x is not None and y is not None:
+                                    batch_cmd.append(f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{existing_address}')
+
+                                if batch_cmd:
+                                    subprocess.run(' && '.join(batch_cmd), shell=True, capture_output=True, check=False)
+                                break
+
                     # Tag the window for snap functionality
                     applied_tag = tag_window(existing_address, layout_name, workspace_id, current_index, environment_name)
 
@@ -424,10 +503,18 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                     if applied_tag:
                         tag_verified = verify_tag(existing_address, applied_tag)
                         if not tag_verified:
-                            print(f"Warning: Failed to verify tag '{applied_tag}' on window {app} at position {current_index}", file=sys.stderr)
+                            # Defer this window for retry at the end
+                            if failed_tags is not None:
+                                failed_tags.append({
+                                    'address': existing_address,
+                                    'tag': applied_tag,
+                                    'app': app,
+                                    'position': current_index
+                                })
+                            print(f"Warning: Failed to verify tag '{applied_tag}' on window {app} at position {current_index}, will retry later", file=sys.stderr)
 
                     # Brief pause before spawning next window
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                 else:
                     print(f"Warning: Failed to detect new window for {app} at position {current_index}", file=sys.stderr)
 
@@ -450,16 +537,16 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 split_w2 = (width - gaps_in) * (1 - ratio)
                 split_x = x + split_w1 + gaps_in
 
-                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name)
-                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name)
+                apply_node(children[0], x, y, split_w1, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name, failed_tags)
+                apply_node(children[1], split_x, y, split_w2, height, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name, failed_tags)
             else:  # vertical
                 # Account for gap between windows
                 split_h1 = (height - gaps_in) * ratio
                 split_h2 = (height - gaps_in) * (1 - ratio)
                 split_y = y + split_h1 + gaps_in
 
-                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name)
-                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name)
+                apply_node(children[0], x, y, width, split_h1, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name, failed_tags)
+                apply_node(children[1], x, split_y, width, split_h2, monitor_info, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name, failed_tags)
 
 
 def apply_layout(layout_file, workspace=None, reposition_only=False, environment_name=None):
@@ -476,39 +563,44 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
         with open(layout_file, 'r') as f:
             layout = json.load(f)
 
-        # Switch to workspace FIRST if specified (so we get correct monitor geometry)
+        # Switch to workspace if specified (ensures it's on correct monitor and ready for spawning)
         if workspace:
-            subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)])
-            time.sleep(0.2)
+            subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)], check=False)
+            time.sleep(0.1)  # Let workspace switch complete
             workspace_id = workspace
         else:
             workspace_id = None
 
-        # NOW get monitor info after workspace switch
+        # Get monitor info
         monitors = run_hyprctl('monitors')
         if not monitors:
             print("Error: Could not get monitor information", file=sys.stderr)
             return False
 
-        # Get current workspace to determine which monitor to use
-        active_workspace = run_hyprctl('activeworkspace')
-        if not active_workspace:
-            print("Error: Could not get active workspace", file=sys.stderr)
-            return False
-
-        # Set workspace_id if not already set
+        # If no workspace specified, use current workspace
         if workspace_id is None:
-            workspace_id = active_workspace.get('id')
+            active_workspace = run_hyprctl('activeworkspace')
+            if active_workspace:
+                workspace_id = active_workspace.get('id')
 
-        # Find the monitor that contains the active workspace
-        active_ws_id = active_workspace.get('id')
+        # Find the monitor for this workspace
+        # First, check if workspace is currently on a monitor
         monitor = None
-        for mon in monitors:
-            if mon.get('activeWorkspace', {}).get('id') == active_ws_id:
-                monitor = mon
-                break
+        if workspace_id:
+            for mon in monitors:
+                # Check if this monitor has our workspace active
+                if mon.get('activeWorkspace', {}).get('id') == workspace_id:
+                    monitor = mon
+                    break
+                # Check if workspace is in this monitor's workspace list
+                for ws in mon.get('workspaces', []):
+                    if ws == workspace_id:
+                        monitor = mon
+                        break
+                if monitor:
+                    break
 
-        # Fallback to focused monitor if workspace not found
+        # Fallback to focused monitor
         if not monitor:
             for mon in monitors:
                 if mon.get('focused', False):
@@ -551,7 +643,42 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
         # Spawn and position windows immediately (no two-pass system)
         windows_list = []
         window_counter = [0]  # Use list for mutability in recursion
-        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name)
+        failed_tags = []  # Track windows that failed tag verification
+        apply_node(layout, usable_x, usable_y, usable_width, usable_height, monitor, gaps_in, windows_list, existing_windows, window_counter, layout_name, reposition_only, workspace_id, environment_name, failed_tags)
+
+        # Retry failed tags (apps may need more time to be ready)
+        if failed_tags:
+            print(f"Retrying {len(failed_tags)} failed tag(s)...", file=sys.stderr)
+            time.sleep(0.5)  # Give apps more time to initialize
+
+            for attempt in range(3):  # Up to 3 retry attempts
+                if not failed_tags:
+                    break
+
+                still_failed = []
+                for item in failed_tags:
+                    # Re-apply tag
+                    subprocess.run(
+                        ['hyprctl', 'dispatch', 'tagwindow', f'+{item["tag"]}', f'address:{item["address"]}'],
+                        capture_output=True,
+                        check=False
+                    )
+
+                    # Verify again
+                    if verify_tag(item['address'], item['tag'], max_retries=1):
+                        print(f"Successfully tagged {item['app']} at position {item['position']} on retry {attempt + 1}", file=sys.stderr)
+                    else:
+                        still_failed.append(item)
+
+                failed_tags = still_failed
+                if failed_tags and attempt < 2:  # Don't sleep after last attempt
+                    time.sleep(0.5)
+
+            # Report any remaining failures
+            if failed_tags:
+                print(f"Warning: {len(failed_tags)} window(s) still failed tagging after retries:", file=sys.stderr)
+                for item in failed_tags:
+                    print(f"  - {item['app']} at position {item['position']}", file=sys.stderr)
 
         print(f"Layout from {layout_file} applied successfully")
         return True

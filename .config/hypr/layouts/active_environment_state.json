@@ -1,0 +1,78 @@
+{
+  "current_environment": "Main",
+  "workspaces": {
+    "1": {
+      "layout": "Study-Code",
+      "windows": [
+        {
+          "pid": 78570,
+          "class": "com.hyprland.layoutmanager",
+          "title": "Hyprland Layout Manager",
+          "address": "0x59a31bd713b0",
+          "tags": []
+        },
+        {
+          "pid": 78701,
+          "class": "foot",
+          "title": "~/D/massey_mainframe",
+          "address": "0x59a31c180da0",
+          "tags": [
+            "env_Main_ws_1_pos_0"
+          ]
+        },
+        {
+          "pid": 78774,
+          "class": "foot",
+          "title": "~/D/m/",
+          "address": "0x59a31c25c690",
+          "tags": [
+            "env_Main_ws_1_pos_1"
+          ]
+        },
+        {
+          "pid": 78847,
+          "class": "foot",
+          "title": "~/D/massey_mainframe",
+          "address": "0x59a31c2d36d0",
+          "tags": [
+            "env_Main_ws_1_pos_2"
+          ]
+        }
+      ]
+    },
+    "3": {
+      "layout": "Math",
+      "windows": [
+        {
+          "pid": 67723,
+          "class": "firefox",
+          "title": "Skyrim Relaxing Music and Ambience \u2014 Mozilla Firefox",
+          "address": "0x59a31c2dc550"
+        },
+        {
+          "pid": 74157,
+          "class": "com.github.flxzt.rnote",
+          "title": "New Document - Rnote",
+          "address": "0x59a31c302da0"
+        }
+      ]
+    },
+    "4": {
+      "layout": "Pure-Reading",
+      "windows": [
+        {
+          "pid": 1855,
+          "class": "xdg-desktop-portal-gtk",
+          "title": "",
+          "address": "0x59a31c3d9820"
+        },
+        {
+          "pid": 74226,
+          "class": "hyprland-dialog",
+          "title": "Application Not Responding",
+          "address": "0x59a31c2e5d40"
+        }
+      ]
+    }
+  }
+}

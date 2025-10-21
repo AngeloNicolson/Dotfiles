@@ -1,12 +1,12 @@
 * {
   all: unset;
   font-family: "JetBrainsMono Nerd Font";
-  color: #94202C; }
+  color: #FFA726; }
 
 .bar {
   background-color: #2A2520;
-  border-top-right-radius: 3px;
-  border-bottom-right-radius: 3px;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
   padding: 8px 4px; }
   .bar .divider {
     background-color: #D4C5B0;
@@ -19,7 +19,7 @@
     min-height: 32px; }
   .bar .sections .start .search_button {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 4px 8px; }
     .bar .sections .start .search_button:hover {
       background-color: #E8DCC8; }
@@ -28,7 +28,7 @@
       padding-right: 4px; }
   .bar .sections .start .wallpaper_button {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 4px 8px; }
     .bar .sections .start .wallpaper_button:hover {
       background-color: #E8DCC8; }
@@ -37,7 +37,7 @@
       padding-right: 6px; }
   .bar .sections .start .pomodoro_button {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 4px 8px; }
     .bar .sections .start .pomodoro_button:hover {
       background-color: #E8DCC8; }
@@ -50,23 +50,23 @@
     font-size: 21px; }
   .bar .sections .center .workspace_indicator {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 4px 8px;
     padding: 1rem 0; }
     .bar .sections .center .workspace_indicator .workspace {
-      background-color: #94202C;
-      border-radius: 3px;
+      background-color: #FFA726;
+      border-radius: 8px;
       min-width: 10px;
       min-height: 24px;
       transition: min-height 100ms cubic-bezier(1, 0, 0, 1); }
       .bar .sections .center .workspace_indicator .workspace.active {
-        background-color: #94202C;
+        background-color: #FFA726;
         min-height: 42px; }
       .bar .sections .center .workspace_indicator .workspace:hover {
         background-color: #8B7355; }
   .bar .sections .end .controls {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 4px 8px; }
     .bar .sections .end .controls .audio_control_button {
       font-size: 20px;
@@ -85,7 +85,7 @@
         color: #8B7355; }
   .bar .sections .end .time_indicator {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 4px 8px;
     font-size: 14px;
     font-weight: 500; }
@@ -94,26 +94,26 @@
 
 .systray_menu {
   background-color: #D4C5B0;
-  border-radius: 3px;
+  border-radius: 8px;
   padding: 1rem; }
   .systray_menu menuitem {
-    border-radius: 2px;
+    border-radius: 4px;
     padding: 4px 8px; }
     .systray_menu menuitem:hover {
       background-color: #E8DCC8; }
 
 .menu {
   background-color: #D4C5B0;
-  border-radius: 3px;
+  border-radius: 8px;
   margin: 0 0 8px 8px; }
   .menu.audio_controls {
     min-height: 200px;
     padding: 1rem; }
     .menu.audio_controls .slider_container .slider trough {
       background-color: #E8DCC8;
-      border-radius: 3px; }
+      border-radius: 8px; }
     .menu.audio_controls .slider_container .slider highlight {
-      border-radius: 3px;
+      border-radius: 8px;
       min-width: 10px; }
     .menu.audio_controls .slider_container.global_volume {
       padding-right: 2px; }
@@ -139,22 +139,22 @@
     padding: 1rem; }
     .menu.system_controls .slider_container .slider trough {
       background-color: #E8DCC8;
-      border-radius: 3px; }
+      border-radius: 8px; }
     .menu.system_controls .slider_container .slider highlight {
-      border-radius: 3px;
+      border-radius: 8px;
       min-width: 10px; }
     .menu.system_controls .slider_container.brightness .slider highlight {
-      background-color: #94202C; }
+      background-color: #FFA726; }
     .menu.system_controls .slider_container.brightness .icon {
       font-size: 15px;
       padding-right: 4px; }
     .menu.system_controls .theme_button {
       background-color: #E8DCC8;
-      border-radius: 3px;
+      border-radius: 8px;
       padding: 12px;
       transition: all 200ms ease; }
       .menu.system_controls .theme_button:hover {
-        background-color: #94202C; }
+        background-color: #FFA726; }
         .menu.system_controls .theme_button:hover .icon, .menu.system_controls .theme_button:hover .label {
           color: #2A2520; }
       .menu.system_controls .theme_button .icon {
@@ -174,7 +174,7 @@
   min-width: 300px; }
   .home .user_box {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 8px; }
     .home .user_box .face {
       background-size: cover;
@@ -185,29 +185,29 @@
     .home .user_box .details .username {
       font-weight: 900;
       font-size: 16px;
-      color: #94202C; }
+      color: #FF8C00; }
     .home .user_box .details .wm {
       font-weight: 900;
       font-size: 10px;
       letter-spacing: 2px;
-      color: #94202C; }
+      color: #FFA726; }
     .home .user_box .shutdown_button {
       background-color: #2A2520;
       border-radius: 999px;
       font-size: 24px;
       padding: 4px 13px; }
       .home .user_box .shutdown_button label {
-        color: #94202C;
+        color: #D32F2F;
         padding-right: 1px; }
   .home .desktop_controls {
-    border-radius: 3px;
+    border-radius: 8px;
     margin-top: 10px;
     padding: 8px; }
     .home .desktop_controls .buttons .icon {
-      background-color: #94202C;
+      background-color: #FFA726;
       border-radius: 999px;
       padding: 10px;
-      color: #94202C; }
+      color: #FFA726; }
       .home .desktop_controls .buttons .icon.inactive {
         background-color: #8B7355; }
     .home .desktop_controls .buttons .name {
@@ -218,18 +218,18 @@
       font-size: 20px; }
     .home .desktop_controls .sliders scale trough {
       background-color: #E8DCC8;
-      border-radius: 3px; }
+      border-radius: 8px; }
     .home .desktop_controls .sliders scale highlight {
       background-color: #6B8E9D;
-      border-radius: 3px;
+      border-radius: 8px;
       min-height: 16px; }
   .home .music_player {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 8px; }
     .home .music_player .thumbnail {
       background-size: cover;
-      border-radius: 3px;
+      border-radius: 8px;
       min-width: 150px;
       min-height: 150px; }
     .home .music_player .right {
@@ -238,10 +238,10 @@
         font-size: 20px;
         font-weight: 900; }
       .home .music_player .right .meta .artist {
-        color: #94202C;
+        color: #FFA726;
         font-weight: 900; }
       .home .music_player .right .controls .control {
-        border-radius: 3px;
+        border-radius: 8px;
         font-size: 28px;
         padding: 0 8px; }
       .home .music_player .right .position {
@@ -250,17 +250,17 @@
           min-width: 20px; }
           .home .music_player .right .position .progress trough {
             background-color: #E8DCC8;
-            border-radius: 3px; }
+            border-radius: 8px; }
             .home .music_player .right .position .progress trough progress {
-              background-color: #94202C;
-              border-radius: 3px; }
+              background-color: #FFA726;
+              border-radius: 8px; }
         .home .music_player .right .position .meta {
           font-size: 10px; }
           .home .music_player .right .position .meta .current_progress, .home .music_player .right .position .meta .length {
             color: #8B7355; }
   .home .notification_center {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     margin-top: 1rem;
     padding: 8px; }
     .home .notification_center .header .title {
@@ -284,12 +284,12 @@
         color: #8B7355; }
     .home .notification_center .notifications .notification {
       background-color: #E8DCC8;
-      border-radius: 3px;
+      border-radius: 8px;
       padding: 8px; }
       .home .notification_center .notifications .notification .image {
         background-size: cover;
         background-repeat: no-repeat;
-        border-radius: 3px;
+        border-radius: 8px;
         min-width: 80px;
         min-height: 80px; }
       .home .notification_center .notifications .notification .meta {
@@ -298,7 +298,7 @@
           letter-spacing: 2px;
           font-weight: 900;
           font-size: 9px;
-          color: #94202C; }
+          color: #FFA726; }
         .home .notification_center .notifications .notification .meta .summary {
           color: #8B7355; }
     .home .notification_center .remove_notif_button {
@@ -318,14 +318,14 @@
   min-width: 300px; }
   .app_launcher .header {
     background-color: #E8DCC8;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 8px; }
     .app_launcher .header .icon {
       font-size: 20px;
       font-weight: 200; }
     .app_launcher .header .input_container .input {
       border: solid #8B7355 1px;
-      border-radius: 3px;
+      border-radius: 8px;
       font-size: 16px;
       padding: 4px 8px; }
     .app_launcher .header .input_container .placeholder {
@@ -335,7 +335,7 @@
       padding-left: 8px; }
   .app_launcher .apps .app {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 8px; }
     .app_launcher .apps .app:hover {
       background-color: #E8DCC8; }
@@ -350,7 +350,7 @@
   padding: 8px;
   min-width: 300px; }
   .wallpapers .list .wallpaper .overlay box {
-    border-radius: 3px;
+    border-radius: 8px;
     min-height: 150px; }
 
 .pomodoro {
@@ -374,7 +374,7 @@
       margin-top: 4px; }
       .pomodoro .study_block_progress .progress_bar_container .progress_segment {
         background-color: #E8DCC8;
-        border-radius: 2px;
+        border-radius: 4px;
         min-width: 24px;
         min-height: 16px;
         margin-top: 4px;
@@ -382,7 +382,7 @@
         .pomodoro .study_block_progress .progress_bar_container .progress_segment.completed {
           background-color: #4CAF50; }
         .pomodoro .study_block_progress .progress_bar_container .progress_segment.active {
-          background-color: #94202C; }
+          background-color: #FFA726; }
   .pomodoro .study_block_control .study_label {
     font-size: 14px;
     font-weight: 600;
@@ -391,7 +391,7 @@
     margin-top: 8px; }
     .pomodoro .study_block_control .ratio_selector .ratio_button {
       background-color: #D4C5B0;
-      border-radius: 2px;
+      border-radius: 6px;
       padding: 6px 8px;
       font-size: 11px;
       font-weight: 500;
@@ -448,14 +448,14 @@
     color: #8B7355; }
   .pomodoro .session_info .popup_toggle switch {
     background-color: #E8DCC8;
-    border-radius: 4px; }
+    border-radius: 12px; }
     .pomodoro .session_info .popup_toggle switch slider {
-      background-color: #94202C;
+      background-color: #FFA726;
       border-radius: 50%; }
     .pomodoro .session_info .popup_toggle switch:checked {
       background-color: #6B8E9D; }
       .pomodoro .session_info .popup_toggle switch:checked slider {
-        background-color: #94202C; }
+        background-color: #FF8C00; }
   .pomodoro .time_selector .slider_row .slider_icon {
     font-size: 20px; }
   .pomodoro .time_selector .slider_row .slider_label {
@@ -470,11 +470,11 @@
     min-width: 100px; }
     .pomodoro .time_selector .slider_row scale trough {
       background-color: #E8DCC8;
-      border-radius: 3px;
+      border-radius: 8px;
       min-height: 16px; }
     .pomodoro .time_selector .slider_row scale highlight {
       background-color: #6B8E9D;
-      border-radius: 3px;
+      border-radius: 8px;
       min-width: 16px;
       min-height: 16px; }
     .pomodoro .time_selector .slider_row scale slider {
@@ -490,23 +490,28 @@
   .pomodoro .time_selector .theme_selector .theme_nav_button {
     all: unset;
     background-color: #D4C5B0;
-    border-radius: 2px;
+    border-radius: 6px;
     padding: 12px 16px;
     font-size: 16px;
     min-width: 50px;
     min-height: 40px;
-    transition: all 200ms ease; }
+    transition: all 200ms ease;
+    cursor: pointer; }
+    .pomodoro .time_selector .theme_selector .theme_nav_button * {
+      pointer-events: none; }
     .pomodoro .time_selector .theme_selector .theme_nav_button:hover {
       background-color: #E8DCC8; }
     .pomodoro .time_selector .theme_selector .theme_nav_button:disabled {
-      opacity: 0.3; }
+      opacity: 0.3;
+      cursor: default; }
   .pomodoro .time_selector .theme_selector .theme_label {
     font-size: 12px;
     font-weight: 500;
-    color: #94202C;
+    color: #FFA726;
     padding: 0 8px; }
   .pomodoro .audio_theme_container {
-    min-height: 120px; }
+    max-height: 120px;
+    overflow-y: auto; }
   .pomodoro .timer_display {
     padding: 3rem 0 2rem 0; }
     .pomodoro .timer_display .timer_text {
@@ -521,7 +526,7 @@
       .pomodoro .timer_display .mode_text.work {
         color: #4CAF50; }
       .pomodoro .timer_display .mode_text.break {
-        color: #94202C; }
+        color: #FFA726; }
   .pomodoro .controls .control_button {
     background-color: #D4C5B0;
     border-radius: 8px;
@@ -534,20 +539,20 @@
     .pomodoro .controls .control_button.start_pause {
       color: #4CAF50; }
     .pomodoro .controls .control_button.reset {
-      color: #94202C; }
+      color: #D32F2F; }
 
 .notification_popups {
   padding: 8px; }
   .notification_popups .notification {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     min-width: 300px;
     padding: 12px; }
     .notification_popups .notification .icon {
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      border-radius: 3px;
+      border-radius: 8px;
       min-width: 80px;
       min-height: 80px; }
   .notification_popups .meta {
@@ -556,13 +561,13 @@
       letter-spacing: 2px;
       font-weight: 900;
       font-size: 9px;
-      color: #94202C; }
+      color: #FFA726; }
     .notification_popups .meta .summary {
       color: #8B7355; }
 
 .pomodoro_window {
   background-color: #2A2520;
-  border-radius: 4px;
+  border-radius: 12px;
   border: 1px solid #E8DCC8;
   padding: 2rem;
   min-width: 400px;
@@ -572,10 +577,10 @@
     .pomodoro_window .header .title {
       font-size: 24px;
       font-weight: 700;
-      color: #94202C; }
+      color: #FFA726; }
     .pomodoro_window .header .audio_toggle {
       background-color: #D4C5B0;
-      border-radius: 2px;
+      border-radius: 6px;
       padding: 6px 10px;
       font-size: 16px;
       margin-right: 8px;
@@ -584,12 +589,12 @@
         background-color: #E8DCC8; }
     .pomodoro_window .header .close_button {
       background-color: #D4C5B0;
-      border-radius: 2px;
+      border-radius: 6px;
       padding: 6px 10px;
       font-size: 16px;
       transition: background-color 200ms ease; }
       .pomodoro_window .header .close_button:hover {
-        background-color: #94202C;
+        background-color: #D32F2F;
         color: #2A2520; }
   .pomodoro_window .session_info .info_label {
     font-size: 16px;
@@ -603,14 +608,14 @@
       font-size: 72px;
       font-weight: 700;
       font-family: "JetBrainsMono Nerd Font";
-      color: #94202C; }
+      color: #FFA726; }
   .pomodoro_window .break_message {
     font-size: 16px;
     color: #8B7355;
     margin-top: 1rem; }
   .pomodoro_window .controls .control_button {
     background-color: #D4C5B0;
-    border-radius: 3px;
+    border-radius: 8px;
     padding: 12px 20px;
     font-size: 14px;
     font-weight: 500;
@@ -620,4 +625,4 @@
     .pomodoro_window .controls .control_button.start_pause {
       color: #4CAF50; }
     .pomodoro_window .controls .control_button.reset {
-      color: #94202C; }
+      color: #D32F2F; }

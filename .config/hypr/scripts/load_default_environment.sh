@@ -27,7 +27,8 @@ get_environment_name() {
 }
 
 # Bind workspaces to monitors using workspace rules (hot-applied)
-jq -r '.workspaces[]? | "\(.id) \(.monitor)"' "$CONFIG_FILE" 2>/dev/null | while read -r ws_id monitor; do
+# Sort by workspace ID to process in order
+jq -r '.workspaces[]? | "\(.id) \(.monitor)"' "$CONFIG_FILE" 2>/dev/null | sort -n | while read -r ws_id monitor; do
     if [ -n "$ws_id" ] && [ -n "$monitor" ]; then
         # Set workspace rule to bind workspace to monitor
         hyprctl keyword workspace "$ws_id,monitor:$monitor" 2>/dev/null
@@ -41,19 +42,20 @@ sleep 0.3
 ENVIRONMENT_NAME=$(get_environment_name "$CONFIG_FILE")
 
 # Launch environment layouts from workspace definitions using apply_layout.py
-jq -r '.workspaces[]? | select(.layout != null) | "\(.id) \(.layout)"' "$CONFIG_FILE" 2>/dev/null | while read -r ws_id layout_file; do
+# Sort by workspace ID to process in order (workspace 1, 2, 3...)
+jq -r '.workspaces[]? | select(.layout != null) | "\(.id) \(.layout)"' "$CONFIG_FILE" 2>/dev/null | sort -n | while read -r ws_id layout_file; do
     if [ -n "$ws_id" ] && [ -n "$layout_file" ] && [ -f "$layout_file" ]; then
         echo "Launching layout for workspace $ws_id: $layout_file"
 
         # Use apply_layout.py with environment name for proper window rules and tagging
         if [ -n "$ENVIRONMENT_NAME" ]; then
-            "$HOME/.config/hypr/scripts/apply_layout.py" "$layout_file" "$ws_id" --environment "$ENVIRONMENT_NAME" 2>/dev/null
+            "$HOME/.config/hypr/scripts/apply_layout.py" "$layout_file" "$ws_id" --environment "$ENVIRONMENT_NAME"
         else
-            "$HOME/.config/hypr/scripts/apply_layout.py" "$layout_file" "$ws_id" 2>/dev/null
+            "$HOME/.config/hypr/scripts/apply_layout.py" "$layout_file" "$ws_id"
         fi
 
         # Brief delay between workspace launches
-        sleep 0.5
+        sleep 0.2
     fi
 done
 

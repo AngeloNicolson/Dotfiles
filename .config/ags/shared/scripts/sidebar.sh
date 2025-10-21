@@ -48,12 +48,16 @@ case $1 in
       exit 0
     fi
 
-    if [[ `cat $STATES_PATH | jq -r '.sidebar_shown'` == "applauncher" ]]; then
-      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
+    SIDEBAR_REVEALED=$(cat $STATES_PATH | jq -r '.reveal_sidebar' 2>/dev/null)
+    CURRENT_PANE=$(cat $STATES_PATH | jq -r '.sidebar_shown' 2>/dev/null)
 
+    # If sidebar is currently revealed and showing applauncher, close to home
+    if [[ "$SIDEBAR_REVEALED" == "true" && "$CURRENT_PANE" == "applauncher" ]]; then
+      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
       exit 0
     fi
 
+    # Otherwise, open sidebar to applauncher
     echo `cat $STATES_PATH | jq '.sidebar_shown = "applauncher" | .reveal_sidebar = true'` > $STATES_PATH
   ;;
 
@@ -64,12 +68,16 @@ case $1 in
       exit 0
     fi
 
-    if [[ `cat $STATES_PATH | jq -r '.sidebar_shown'` == "wallpapers" ]]; then
-      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
+    SIDEBAR_REVEALED=$(cat $STATES_PATH | jq -r '.reveal_sidebar' 2>/dev/null)
+    CURRENT_PANE=$(cat $STATES_PATH | jq -r '.sidebar_shown' 2>/dev/null)
 
+    # If sidebar is currently revealed and showing wallpapers, close to home
+    if [[ "$SIDEBAR_REVEALED" == "true" && "$CURRENT_PANE" == "wallpapers" ]]; then
+      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
       exit 0
     fi
 
+    # Otherwise, open sidebar to wallpapers
     echo `cat $STATES_PATH | jq '.sidebar_shown = "wallpapers" | .reveal_sidebar = true'` > $STATES_PATH
   ;;
 
@@ -80,12 +88,16 @@ case $1 in
       exit 0
     fi
 
-    if [[ `cat $STATES_PATH | jq -r '.sidebar_shown'` == "pomodoro" ]]; then
-      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
+    SIDEBAR_REVEALED=$(cat $STATES_PATH | jq -r '.reveal_sidebar' 2>/dev/null)
+    CURRENT_PANE=$(cat $STATES_PATH | jq -r '.sidebar_shown' 2>/dev/null)
 
+    # If sidebar is currently revealed and showing pomodoro, close to home
+    if [[ "$SIDEBAR_REVEALED" == "true" && "$CURRENT_PANE" == "pomodoro" ]]; then
+      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
       exit 0
     fi
 
+    # Otherwise, open sidebar to pomodoro
     echo `cat $STATES_PATH | jq '.sidebar_shown = "pomodoro" | .reveal_sidebar = true'` > $STATES_PATH
   ;;
 

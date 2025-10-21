@@ -3,7 +3,7 @@
 
   & .notification {
     background-color: $bg1;
-    border-radius: 8px;
+    border-radius: 3px;
     min-width: 300px;
     padding: 12px;
 
@@ -11,7 +11,7 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      border-radius: 8px;
+      border-radius: 3px;
       min-width: 80px;
       min-height: 80px;
     }
