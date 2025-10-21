@@ -212,24 +212,27 @@ function Bar() {
       SideBar(),
       Widget.Box({
         className: "bar",
+        css: "min-width: 1px; background: transparent; opacity: 0;",
         child: Widget.CenterBox({
           className: "sections",
           vertical: true,
-          startWidget: StartSection(),
-          centerWidget: CenterSection(),
-          endWidget: EndSection(),
+          startWidget: Widget.Box({}),
+          centerWidget: Widget.Box({}),
+          endWidget: Widget.Box({}),
         }),
       }),
     ],
   });
 }
 
+const HyprlandMonitor = await Service.import("hyprland");
+
 // Settings for the bar display
 export default Widget.Window({
   name: "bar",
   layer: "top",
-  exclusivity: "exclusive",
-  monitor: 0,
+  exclusivity: "normal",
+  monitor: HyprlandMonitor.active.monitor.bind("id"),
   keymode: sidebarShown
     .bind()
     .transform((shown) => (shown === "applauncher" ? "exclusive" : "none")),
