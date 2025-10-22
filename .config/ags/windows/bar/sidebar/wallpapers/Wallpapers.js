@@ -86,6 +86,7 @@ export default function() {
   const keyboardEntry = Widget.Entry({
     visible: false,
     canFocus: true,
+    css: 'opacity: 0; min-height: 0px; min-width: 0px; margin: 0; padding: 0; caret-color: transparent;',
     setup: (self) => {
       // Hook on pane changes
       self.hook(sidebarShown, () => {
