@@ -803,7 +803,7 @@ function ModeSelector(currentMode, selectedIndex) {
 export default function() {
   const studyHours = Variable(0)
   const currentMode = Variable('single')
-  const selectedIndex = Variable(0)
+  const selectedIndex = Variable(-1)
   const selectedRatio = Variable('50-10')
 
   // Store widget references for navigation
@@ -821,7 +821,7 @@ export default function() {
       // Hook on pane changes
       self.hook(sidebarShown, () => {
         if (sidebarShown.value === 'pomodoro') {
-          selectedIndex.value = 0
+          selectedIndex.value = -1
           Utils.timeout(50, () => self.grab_focus())
         }
       })
@@ -829,7 +829,7 @@ export default function() {
       // Also hook on sidebar reveal to handle reopening
       self.hook(revealSideBar, () => {
         if (revealSideBar.value && sidebarShown.value === 'pomodoro') {
-          selectedIndex.value = 0
+          selectedIndex.value = -1
           Utils.timeout(50, () => self.grab_focus())
         }
       })
@@ -847,12 +847,21 @@ export default function() {
           } else {
             maxIndex = state === 'stopped' ? 9 : 10
           }
-          selectedIndex.value = Math.min(maxIndex, selectedIndex.value + 1)
+          // If nothing selected, start at 0
+          if (selectedIndex.value === -1) {
+            selectedIndex.value = 0
+          } else {
+            selectedIndex.value = Math.min(maxIndex, selectedIndex.value + 1)
+          }
           return true
         }
 
         // k - Move up
         if (keyval === 107) {
+          // If nothing selected, stay unselected
+          if (selectedIndex.value === -1) {
+            return true
+          }
           selectedIndex.value = Math.max(0, selectedIndex.value - 1)
           return true
         }
@@ -860,6 +869,11 @@ export default function() {
         // Enter - Activate selected control
         if (keyval === 65293) {
           const idx = selectedIndex.value
+
+          // Nothing selected, do nothing
+          if (idx === -1) {
+            return true
+          }
 
           // Break Popup switch (0)
           if (idx === 0) {
@@ -998,6 +1012,11 @@ export default function() {
         if (keyval === 104) {
           const idx = selectedIndex.value
 
+          // Nothing selected, do nothing
+          if (idx === -1) {
+            return true
+          }
+
           // Volume slider (2)
           if (idx === 2) {
             Pomodoro.setTargetVolume(Math.max(0, Pomodoro.getTargetVolume() - 5))
@@ -1028,6 +1047,11 @@ export default function() {
         // l - Increase slider values
         if (keyval === 108) {
           const idx = selectedIndex.value
+
+          // Nothing selected, do nothing
+          if (idx === -1) {
+            return true
+          }
 
           // Volume slider (2)
           if (idx === 2) {
