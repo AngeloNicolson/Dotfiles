@@ -41,6 +41,14 @@ sleep 0.3
 # Get environment name from config
 ENVIRONMENT_NAME=$(get_environment_name "$CONFIG_FILE")
 
+# Show loading modal
+if [ -n "$ENVIRONMENT_NAME" ]; then
+    ags -r "showModal('Loading Environment', 'Loading $ENVIRONMENT_NAME Environment...', true)" 2>/dev/null
+fi
+
+# Ensure modal is hidden on script exit (even if script fails)
+trap 'ags -r "hideModal()" 2>/dev/null' EXIT
+
 # Launch environment layouts from workspace definitions using apply_layout.py
 # Sort by workspace ID to process in order (workspace 1, 2, 3...)
 jq -r '.workspaces[]? | select(.layout != null) | "\(.id) \(.layout)"' "$CONFIG_FILE" 2>/dev/null | sort -n | while read -r ws_id layout_file; do
