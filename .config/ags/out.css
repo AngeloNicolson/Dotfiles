@@ -533,6 +533,9 @@
   background-color: #458588;
   color: #282828;
 }
+.pomodoro .study_block_control .ratio_selector .ratio_button.selected {
+  box-shadow: 0 0 0 2px #d79921;
+}
 .pomodoro .study_block_control .study_summary {
   font-size: 11px;
   color: #bdae93;
@@ -577,6 +580,9 @@
   background-color: #458588;
   color: #282828;
 }
+.pomodoro .mode_selector .mode_button.selected {
+  box-shadow: 0 0 0 2px #d79921;
+}
 .pomodoro .mode_content_container {
   min-height: 110px;
 }
@@ -605,6 +611,15 @@
 }
 .pomodoro .session_info .popup_toggle switch:checked slider {
   background-color: #fbf1c7;
+}
+.pomodoro .time_selector .slider_row {
+  border-radius: 4px;
+  padding: 4px;
+  margin: -4px;
+  transition: all 200ms ease;
+}
+.pomodoro .time_selector .slider_row.selected {
+  box-shadow: 0 0 0 2px #d79921;
 }
 .pomodoro .time_selector .slider_row .slider_icon {
   font-size: 20px;
@@ -709,11 +724,17 @@
 .pomodoro .controls .control_button.start_pause:hover {
   box-shadow: 0 0 0 2px #98971a;
 }
+.pomodoro .controls .control_button.start_pause.selected {
+  box-shadow: 0 0 0 2px #d79921;
+}
 .pomodoro .controls .control_button.reset {
   color: #cc241d;
 }
 .pomodoro .controls .control_button.reset:hover {
   box-shadow: 0 0 0 2px #cc241d;
+}
+.pomodoro .controls .control_button.reset.selected {
+  box-shadow: 0 0 0 2px #d79921;
 }
 .pomodoro .mode_selector .mode_button:hover:not(.active) {
   box-shadow: 0 0 0 2px #d79921;

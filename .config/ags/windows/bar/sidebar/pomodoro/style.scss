@@ -69,6 +69,10 @@
           background-color: $blue;
           color: $bg;
         }
+
+        &.selected {
+          box-shadow: 0 0 0 2px $accent;
+        }
       }
     }
 
@@ -126,6 +130,10 @@
         background-color: $blue;
         color: $bg;
       }
+
+      &.selected {
+        box-shadow: 0 0 0 2px $accent;
+      }
     }
   }
 
@@ -172,6 +180,15 @@
 
   & .time_selector {
     & .slider_row {
+      border-radius: 4px;
+      padding: 4px;
+      margin: -4px;
+      transition: all 200ms ease;
+
+      &.selected {
+        box-shadow: 0 0 0 2px $accent;
+      }
+
       & .slider_icon {
         font-size: 20px;
       }
@@ -301,6 +318,10 @@
         &:hover {
           box-shadow: 0 0 0 2px $green;
         }
+
+        &.selected {
+          box-shadow: 0 0 0 2px $accent;
+        }
       }
 
       &.reset {
@@ -308,6 +329,10 @@
 
         &:hover {
           box-shadow: 0 0 0 2px $red;
+        }
+
+        &.selected {
+          box-shadow: 0 0 0 2px $accent;
         }
       }
     }
