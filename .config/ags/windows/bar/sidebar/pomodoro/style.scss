@@ -297,10 +297,38 @@
 
       &.start_pause {
         color: $green;
+
+        &:hover {
+          box-shadow: 0 0 0 2px $green;
+        }
       }
 
       &.reset {
         color: $red;
+
+        &:hover {
+          box-shadow: 0 0 0 2px $red;
+        }
+      }
+    }
+  }
+
+  & .mode_selector {
+    & .mode_button {
+      &:hover:not(.active) {
+        box-shadow: 0 0 0 2px $accent;
+      }
+    }
+  }
+
+  & .time_selector {
+    & .slider_row {
+      & scale {
+        &:focus {
+          & highlight {
+            box-shadow: 0 0 4px $accent;
+          }
+        }
       }
     }
   }

@@ -706,8 +706,20 @@
 .pomodoro .controls .control_button.start_pause {
   color: #98971a;
 }
+.pomodoro .controls .control_button.start_pause:hover {
+  box-shadow: 0 0 0 2px #98971a;
+}
 .pomodoro .controls .control_button.reset {
   color: #cc241d;
+}
+.pomodoro .controls .control_button.reset:hover {
+  box-shadow: 0 0 0 2px #cc241d;
+}
+.pomodoro .mode_selector .mode_button:hover:not(.active) {
+  box-shadow: 0 0 0 2px #d79921;
+}
+.pomodoro .time_selector .slider_row scale:focus highlight {
+  box-shadow: 0 0 4px #d79921;
 }
 
 .notification_popups {
