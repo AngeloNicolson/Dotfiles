@@ -85,8 +85,8 @@ function Controls(studyHours, currentMode, selectedIndex) {
         const blockActive = Pomodoro.study_block_active
         const hours = studyHours.value
         const mode = currentMode.value
-        const startIdx = mode === 'block' ? 6 : 2
-        const resetIdx = mode === 'block' ? 7 : 3
+        const startIdx = mode === 'block' ? 11 : 9
+        const resetIdx = mode === 'block' ? 12 : 10
 
         if (state === 'stopped') {
           // Show single Start button
@@ -204,7 +204,7 @@ function Controls(studyHours, currentMode, selectedIndex) {
   })
 }
 
-function TimeSelector(onManualChange, studyHours) {
+function TimeSelector(onManualChange, studyHours, selectedIndex) {
   return Widget.Box({
     className: 'time_selector',
     vertical: true,
@@ -213,6 +213,11 @@ function TimeSelector(onManualChange, studyHours) {
       Widget.Box({
         className: 'slider_row',
         spacing: 12,
+        setup: (self) => {
+          self.hook(selectedIndex, () => {
+            self.toggleClassName('selected', selectedIndex.value === 7)
+          })
+        },
         children: [
           Widget.Label({
             className: 'slider_icon',
@@ -267,6 +272,11 @@ function TimeSelector(onManualChange, studyHours) {
       Widget.Box({
         className: 'slider_row',
         spacing: 12,
+        setup: (self) => {
+          self.hook(selectedIndex, () => {
+            self.toggleClassName('selected', selectedIndex.value === 8)
+          })
+        },
         children: [
           Widget.Label({
             className: 'slider_icon',
@@ -322,7 +332,7 @@ function TimeSelector(onManualChange, studyHours) {
   })
 }
 
-function SessionInfo() {
+function SessionInfo(selectedIndex) {
   return Widget.Box({
     className: 'session_info',
     vertical: true,
@@ -337,6 +347,11 @@ function SessionInfo() {
         className: 'popup_toggle',
         spacing: 8,
         hpack: 'center',
+        setup: (self) => {
+          self.hook(selectedIndex, () => {
+            self.toggleClassName('selected', selectedIndex.value === 0)
+          })
+        },
         children: [
           Widget.Switch({
             active: breakPopupEnabled.bind(),
@@ -354,6 +369,11 @@ function SessionInfo() {
         className: 'popup_toggle',
         spacing: 8,
         hpack: 'center',
+        setup: (self) => {
+          self.hook(selectedIndex, () => {
+            self.toggleClassName('selected', selectedIndex.value === 1)
+          })
+        },
         children: [
           Widget.Switch({
             setup: (self) => {
@@ -385,6 +405,11 @@ function SessionInfo() {
               Widget.Box({
                 className: 'slider_row',
                 spacing: 12,
+                setup: (self) => {
+                  self.hook(selectedIndex, () => {
+                    self.toggleClassName('selected', selectedIndex.value === 2)
+                  })
+                },
                 children: [
                   Widget.Label({
                     className: 'slider_icon',
@@ -478,6 +503,9 @@ function SessionInfo() {
                               self.hook(Pomodoro, () => {
                                 self.sensitive = Pomodoro.available_themes.length > 1
                               }, 'notify::available-themes')
+                              self.hook(selectedIndex, () => {
+                                self.toggleClassName('selected', selectedIndex.value === 3)
+                              })
                             },
                           }),
                           Widget.Label({
@@ -509,6 +537,9 @@ function SessionInfo() {
                               self.hook(Pomodoro, () => {
                                 self.sensitive = Pomodoro.available_themes.length > 1
                               }, 'notify::available-themes')
+                              self.hook(selectedIndex, () => {
+                                self.toggleClassName('selected', selectedIndex.value === 4)
+                              })
                             },
                           }),
                         ],
@@ -591,7 +622,7 @@ function StudyBlockControl(studyHours, selectedIndex, selectedRatio) {
                 self.toggleClassName('active', selectedRatio.value === key)
               })
               self.hook(selectedIndex, () => {
-                self.toggleClassName('selected', selectedIndex.value === index + 2)
+                self.toggleClassName('selected', selectedIndex.value === index + 7)
               })
             },
           }).hook(Pomodoro, (self) => {
@@ -609,7 +640,7 @@ function StudyBlockControl(studyHours, selectedIndex, selectedRatio) {
             spacing: 12,
             setup: (self) => {
               self.hook(selectedIndex, () => {
-                self.toggleClassName('selected', selectedIndex.value === 5)
+                self.toggleClassName('selected', selectedIndex.value === 10)
               })
             },
             children: [
@@ -746,7 +777,7 @@ function ModeSelector(currentMode, selectedIndex) {
             self.toggleClassName('active', currentMode.value === 'single')
           })
           self.hook(selectedIndex, () => {
-            self.toggleClassName('selected', selectedIndex.value === 0)
+            self.toggleClassName('selected', selectedIndex.value === 5)
           })
         },
       }),
@@ -761,7 +792,7 @@ function ModeSelector(currentMode, selectedIndex) {
             self.toggleClassName('active', currentMode.value === 'block')
           })
           self.hook(selectedIndex, () => {
-            self.toggleClassName('selected', selectedIndex.value === 1)
+            self.toggleClassName('selected', selectedIndex.value === 6)
           })
         },
       }),
@@ -810,7 +841,12 @@ export default function() {
 
         // j - Move down
         if (keyval === 106) {
-          const maxIndex = currentMode.value === 'block' ? 6 : 2
+          let maxIndex = 0
+          if (currentMode.value === 'block') {
+            maxIndex = state === 'stopped' ? 11 : 12
+          } else {
+            maxIndex = state === 'stopped' ? 9 : 10
+          }
           selectedIndex.value = Math.min(maxIndex, selectedIndex.value + 1)
           return true
         }
@@ -825,78 +861,198 @@ export default function() {
         if (keyval === 65293) {
           const idx = selectedIndex.value
 
-          // Mode buttons (0-1)
-          if (idx <= 1 && state === 'stopped') {
-            currentMode.value = idx === 0 ? 'single' : 'block'
+          // Break Popup switch (0)
+          if (idx === 0) {
+            breakPopupEnabled.value = !breakPopupEnabled.value
             return true
           }
 
-          // Ratio buttons (2-4) - block mode only
-          if (idx >= 2 && idx <= 4 && currentMode.value === 'block' && state === 'stopped') {
-            const ratios = ['25-5', '50-10', '45-15']
-            selectedRatio.value = ratios[idx - 2]
+          // Audio switch (1)
+          if (idx === 1) {
+            Pomodoro.toggleAudio()
             return true
           }
 
-          // Hours slider (5) - use h/l to adjust
-          if (idx === 5 && currentMode.value === 'block') {
-            // Just highlight, use h/l to adjust
+          // Volume slider (2) - use h/l to adjust
+          if (idx === 2) {
             return true
           }
 
-          // Start/Pause button (6 in block, 2 in single)
-          const startIdx = currentMode.value === 'block' ? 6 : 2
-          if (idx === startIdx) {
-            if (state === 'stopped') {
-              if (currentMode.value === 'block' && studyHours.value > 0) {
-                const ratioMap = {
-                  '25-5': { work: 25, break: 5 },
-                  '50-10': { work: 50, break: 10 },
-                  '45-15': { work: 45, break: 15 }
-                }
-                const ratio = ratioMap[selectedRatio.value]
-                const totalMinutes = studyHours.value * 60
-                const cycleTime = ratio.work + ratio.break
-                const totalPomodoros = Math.floor(totalMinutes / cycleTime)
-                Pomodoro.startStudyBlock(totalPomodoros)
-              } else {
+          // Theme nav previous (3)
+          if (idx === 3) {
+            const themes = Pomodoro.available_themes
+            if (themes.length > 1) {
+              const currentTheme = Pomodoro.current_theme
+              const currentIndex = themes.indexOf(currentTheme)
+              const prevIndex = (currentIndex - 1 + themes.length) % themes.length
+              Pomodoro.setTheme(themes[prevIndex])
+            }
+            return true
+          }
+
+          // Theme nav next (4)
+          if (idx === 4) {
+            const themes = Pomodoro.available_themes
+            if (themes.length > 1) {
+              const currentTheme = Pomodoro.current_theme
+              const currentIndex = themes.indexOf(currentTheme)
+              const nextIndex = (currentIndex + 1) % themes.length
+              Pomodoro.setTheme(themes[nextIndex])
+            }
+            return true
+          }
+
+          // Mode buttons (5-6)
+          if (idx === 5 && state === 'stopped') {
+            currentMode.value = 'single'
+            return true
+          }
+          if (idx === 6 && state === 'stopped') {
+            currentMode.value = 'block'
+            return true
+          }
+
+          // Single mode controls (7-10)
+          if (currentMode.value === 'single') {
+            // Work time slider (7) - use h/l to adjust
+            if (idx === 7) {
+              return true
+            }
+
+            // Break time slider (8) - use h/l to adjust
+            if (idx === 8) {
+              return true
+            }
+
+            // Start/Pause button (9)
+            if (idx === 9) {
+              if (state === 'stopped') {
                 Pomodoro.start()
+              } else if (state === 'paused') {
+                Pomodoro.start()
+              } else if (state === 'running') {
+                Pomodoro.pause()
               }
-            } else if (state === 'paused') {
-              Pomodoro.start()
-            } else if (state === 'running') {
-              Pomodoro.pause()
+              return true
             }
-            return true
-          }
 
-          // Reset button (7 in block, 3 in single) - only when running/paused
-          const resetIdx = currentMode.value === 'block' ? 7 : 3
-          if (idx === resetIdx && state !== 'stopped') {
-            if (Pomodoro.study_block_active) {
-              Pomodoro.stopStudyBlock()
-            } else {
+            // Reset button (10) - only when running/paused
+            if (idx === 10 && state !== 'stopped') {
               Pomodoro.reset()
+              return true
             }
+          }
+
+          // Block mode controls (7-12)
+          if (currentMode.value === 'block') {
+            // Ratio buttons (7-9)
+            if (idx >= 7 && idx <= 9 && state === 'stopped') {
+              const ratios = ['25-5', '50-10', '45-15']
+              selectedRatio.value = ratios[idx - 7]
+              return true
+            }
+
+            // Hours slider (10) - use h/l to adjust
+            if (idx === 10) {
+              return true
+            }
+
+            // Start/Pause button (11)
+            if (idx === 11) {
+              if (state === 'stopped') {
+                if (studyHours.value > 0) {
+                  const ratioMap = {
+                    '25-5': { work: 25, break: 5 },
+                    '50-10': { work: 50, break: 10 },
+                    '45-15': { work: 45, break: 15 }
+                  }
+                  const ratio = ratioMap[selectedRatio.value]
+                  const totalMinutes = studyHours.value * 60
+                  const cycleTime = ratio.work + ratio.break
+                  const totalPomodoros = Math.floor(totalMinutes / cycleTime)
+                  Pomodoro.startStudyBlock(totalPomodoros)
+                }
+              } else if (state === 'paused') {
+                Pomodoro.start()
+              } else if (state === 'running') {
+                Pomodoro.pause()
+              }
+              return true
+            }
+
+            // Reset button (12) - only when running/paused
+            if (idx === 12 && state !== 'stopped') {
+              if (Pomodoro.study_block_active) {
+                Pomodoro.stopStudyBlock()
+              } else {
+                Pomodoro.reset()
+              }
+              return true
+            }
+          }
+
+          return true
+        }
+
+        // h - Decrease slider values
+        if (keyval === 104) {
+          const idx = selectedIndex.value
+
+          // Volume slider (2)
+          if (idx === 2) {
+            Pomodoro.setTargetVolume(Math.max(0, Pomodoro.getTargetVolume() - 5))
+            return true
+          }
+
+          // Work time slider (7) - single mode
+          if (idx === 7 && currentMode.value === 'single' && state === 'stopped') {
+            Pomodoro.setWorkTime(Math.max(0, Pomodoro.getWorkTime() - 1))
+            return true
+          }
+
+          // Break time slider (8) - single mode
+          if (idx === 8 && currentMode.value === 'single' && state === 'stopped') {
+            Pomodoro.setBreakTime(Math.max(0, Pomodoro.getBreakTime() - 1))
+            return true
+          }
+
+          // Hours slider (10) - block mode
+          if (idx === 10 && currentMode.value === 'block' && state === 'stopped') {
+            studyHours.value = Math.max(0, studyHours.value - 1)
             return true
           }
 
           return true
         }
 
-        // h - Decrease hours (when hours slider is selected)
-        if (keyval === 104) {
-          if (selectedIndex.value === 5 && currentMode.value === 'block' && state === 'stopped') {
-            studyHours.value = Math.max(0, studyHours.value - 1)
-          }
-          return true
-        }
-
-        // l - Increase hours (when hours slider is selected)
+        // l - Increase slider values
         if (keyval === 108) {
-          if (selectedIndex.value === 5 && currentMode.value === 'block' && state === 'stopped') {
-            studyHours.value = Math.min(8, studyHours.value + 1)
+          const idx = selectedIndex.value
+
+          // Volume slider (2)
+          if (idx === 2) {
+            Pomodoro.setTargetVolume(Math.min(100, Pomodoro.getTargetVolume() + 5))
+            return true
           }
+
+          // Work time slider (7) - single mode
+          if (idx === 7 && currentMode.value === 'single' && state === 'stopped') {
+            Pomodoro.setWorkTime(Math.min(90, Pomodoro.getWorkTime() + 1))
+            return true
+          }
+
+          // Break time slider (8) - single mode
+          if (idx === 8 && currentMode.value === 'single' && state === 'stopped') {
+            Pomodoro.setBreakTime(Math.min(30, Pomodoro.getBreakTime() + 1))
+            return true
+          }
+
+          // Hours slider (10) - block mode
+          if (idx === 10 && currentMode.value === 'block' && state === 'stopped') {
+            studyHours.value = Math.min(8, studyHours.value + 1)
+            return true
+          }
+
           return true
         }
 
@@ -910,7 +1066,7 @@ export default function() {
     vertical: true,
     children: [
       keyboardEntry,
-      SessionInfo(),
+      SessionInfo(selectedIndex),
       TimerDisplay(),
       Widget.Box({
         vexpand: true,
@@ -933,7 +1089,7 @@ export default function() {
                       self.children = [
                         TimeSelector(() => {
                           studyHours.value = 0
-                        }, studyHours),
+                        }, studyHours, selectedIndex),
                       ]
                     } else {
                       self.children = [

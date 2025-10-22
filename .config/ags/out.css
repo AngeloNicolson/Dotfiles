@@ -594,6 +594,15 @@
   font-size: 12px;
   color: #bdae93;
 }
+.pomodoro .session_info .popup_toggle {
+  border-radius: 4px;
+  padding: 4px;
+  margin: -4px;
+  transition: all 200ms ease;
+}
+.pomodoro .session_info .popup_toggle.selected {
+  box-shadow: 0 0 0 2px #d79921;
+}
 .pomodoro .session_info .popup_toggle .toggle_label {
   font-size: 12px;
   color: #bdae93;
@@ -677,6 +686,9 @@
 }
 .pomodoro .time_selector .theme_selector .theme_nav_button:disabled {
   opacity: 0.3;
+}
+.pomodoro .time_selector .theme_selector .theme_nav_button.selected {
+  box-shadow: 0 0 0 2px #d79921;
 }
 .pomodoro .time_selector .theme_selector .theme_label {
   font-size: 12px;
