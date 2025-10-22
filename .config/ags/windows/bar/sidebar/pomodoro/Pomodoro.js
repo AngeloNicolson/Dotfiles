@@ -332,7 +332,12 @@ function TimeSelector(onManualChange, studyHours, selectedIndex) {
   })
 }
 
-function SessionInfo(selectedIndex) {
+function SessionInfo(selectedIndex, audioEnabled) {
+  // Keep it in sync with the service
+  const syncAudio = () => {
+    audioEnabled.value = Pomodoro.audio_enabled
+  }
+
   return Widget.Box({
     className: 'session_info',
     vertical: true,
@@ -373,17 +378,14 @@ function SessionInfo(selectedIndex) {
           self.hook(selectedIndex, () => {
             self.toggleClassName('selected', selectedIndex.value === 1)
           })
+          // Sync when service changes
+          self.hook(Pomodoro, syncAudio, 'notify::audio-enabled')
         },
         children: [
           Widget.Switch({
-            setup: (self) => {
-              self.active = Pomodoro.audio_enabled
-              self.hook(Pomodoro, () => {
-                self.active = Pomodoro.audio_enabled
-              }, 'notify::audio-enabled')
-            },
+            active: audioEnabled.bind(),
             onActivate: ({ active }) => {
-              Pomodoro.toggleAudio()
+              audioEnabled.value = active
             },
           }),
           Widget.Label({
@@ -805,6 +807,14 @@ export default function() {
   const currentMode = Variable('single')
   const selectedIndex = Variable(-1)
   const selectedRatio = Variable('50-10')
+  const audioEnabled = Variable(Pomodoro.audio_enabled)
+
+  // Watch audioEnabled and sync with service
+  audioEnabled.connect('changed', ({ value }) => {
+    if (value !== Pomodoro.audio_enabled) {
+      Pomodoro.toggleAudio()
+    }
+  })
 
   // Store widget references for navigation
   const controlRefs = {
@@ -883,7 +893,7 @@ export default function() {
 
           // Audio switch (1)
           if (idx === 1) {
-            Pomodoro.toggleAudio()
+            audioEnabled.value = !audioEnabled.value
             return true
           }
 
@@ -1090,7 +1100,7 @@ export default function() {
     vertical: true,
     children: [
       keyboardEntry,
-      SessionInfo(selectedIndex),
+      SessionInfo(selectedIndex, audioEnabled),
       TimerDisplay(),
       Widget.Box({
         vexpand: true,
