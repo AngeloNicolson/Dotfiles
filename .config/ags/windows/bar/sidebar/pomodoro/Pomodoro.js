@@ -1,5 +1,5 @@
 import Pomodoro from '../../../../services/Pomodoro.js'
-import { breakPopupEnabled } from '../../../../shared/vars.js'
+import { breakPopupEnabled, sidebarShown, revealSideBar } from '../../../../shared/vars.js'
 
 function TimerDisplay() {
   return Widget.Box({
@@ -730,10 +730,103 @@ export default function() {
   const studyHours = Variable(0)
   const currentMode = Variable('single')
 
+  // Hidden entry to capture keyboard input
+  const keyboardEntry = Widget.Entry({
+    visible: false,
+    canFocus: true,
+    setup: (self) => {
+      // Hook on pane changes
+      self.hook(sidebarShown, () => {
+        if (sidebarShown.value === 'pomodoro') {
+          Utils.timeout(50, () => self.grab_focus())
+        }
+      })
+
+      // Also hook on sidebar reveal to handle reopening
+      self.hook(revealSideBar, () => {
+        if (revealSideBar.value && sidebarShown.value === 'pomodoro') {
+          Utils.timeout(50, () => self.grab_focus())
+        }
+      })
+
+      // Vim-style keyboard shortcuts
+      self.on('key-press-event', (widget, event) => {
+        const keyval = event.get_keyval()[1]
+        const state = Pomodoro.state
+
+        // s - Start/Resume
+        if (keyval === 115) { // 's'
+          if (state === 'stopped') {
+            if (currentMode.value === 'block' && studyHours.value > 0) {
+              const ratio = { work: 50, break: 10 }
+              const totalMinutes = studyHours.value * 60
+              const cycleTime = ratio.work + ratio.break
+              const totalPomodoros = Math.floor(totalMinutes / cycleTime)
+              Pomodoro.startStudyBlock(totalPomodoros)
+            } else {
+              Pomodoro.start()
+            }
+          } else if (state === 'paused') {
+            Pomodoro.start()
+          }
+          return true
+        }
+
+        // p - Pause
+        if (keyval === 112) { // 'p'
+          if (state === 'running') {
+            Pomodoro.pause()
+          }
+          return true
+        }
+
+        // r - Reset/Stop
+        if (keyval === 114) { // 'r'
+          if (state !== 'stopped') {
+            if (Pomodoro.study_block_active) {
+              Pomodoro.stopStudyBlock()
+            } else {
+              Pomodoro.reset()
+            }
+          }
+          return true
+        }
+
+        // t - Toggle mode (single/block)
+        if (keyval === 116) { // 't'
+          if (state === 'stopped') {
+            currentMode.value = currentMode.value === 'single' ? 'block' : 'single'
+          }
+          return true
+        }
+
+        // h - Decrease hours (block mode)
+        if (keyval === 104) { // 'h'
+          if (currentMode.value === 'block' && state === 'stopped') {
+            studyHours.value = Math.max(0, studyHours.value - 1)
+          }
+          return true
+        }
+
+        // l - Increase hours (block mode)
+        if (keyval === 108) { // 'l'
+          if (currentMode.value === 'block' && state === 'stopped') {
+            studyHours.value = Math.min(8, studyHours.value + 1)
+          }
+          return true
+        }
+
+        // Block other keys
+        return true
+      })
+    }
+  })
+
   return Widget.Box({
     className: 'pomodoro',
     vertical: true,
     children: [
+      keyboardEntry,
       SessionInfo(),
       TimerDisplay(),
       Widget.Box({

@@ -3,7 +3,7 @@ import Gdk from "gi://Gdk";
 import SideBar from "./sidebar/SideBar.js";
 import Menu from "./menu/Menu.js";
 
-import { sidebarShown } from "../../shared/vars.js";
+import { sidebarShown, revealSideBar } from "../../shared/vars.js";
 
 const HyprlandService = await Service.import("hyprland");
 const SystemTrayService = await Service.import("systemtray");
@@ -233,9 +233,16 @@ export default Widget.Window({
   layer: "top",
   exclusivity: "normal",
   monitor: HyprlandMonitor.active.monitor.bind("id"),
-  keymode: sidebarShown
-    .bind()
-    .transform((shown) => (shown === "applauncher" ? "exclusive" : "none")),
+  keymode: Utils.merge(
+    [revealSideBar.bind(), sidebarShown.bind()],
+    (revealed, shown) => {
+      // Enable keyboard capture for applauncher, wallpapers, and pomodoro
+      if (revealed && (shown === "applauncher" || shown === "wallpapers" || shown === "pomodoro")) {
+        return "exclusive"
+      }
+      return "none"
+    }
+  ),
   anchor: ["left", "top", "bottom"],
   child: Bar(),
 });

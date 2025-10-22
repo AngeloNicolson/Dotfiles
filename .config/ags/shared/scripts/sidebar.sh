@@ -12,15 +12,77 @@ case $1 in
       exit 0
     fi
 
-    # Check if pomodoro is running by reading the state from a temp file
-    # If running, open to pomodoro pane, otherwise default to home
-    POMODORO_STATE=$(cat $HOME/.cache/pomodoro_state 2>/dev/null || echo "stopped")
+    # Toggle sidebar open/close
+    echo `cat $STATES_PATH | jq '.reveal_sidebar |= not'` > $STATES_PATH
 
-    if [[ "$POMODORO_STATE" == "running" || "$POMODORO_STATE" == "paused" ]]; then
-      echo `cat $STATES_PATH | jq '.reveal_sidebar |= not | .sidebar_shown = "pomodoro"'` > $STATES_PATH
-    else
-      echo `cat $STATES_PATH | jq '.reveal_sidebar |= not | .sidebar_shown = "home"'` > $STATES_PATH
+    # Focus bar window when opening
+    NEW_SIDEBAR=$(cat $STATES_PATH | jq -r '.reveal_sidebar' 2>/dev/null)
+    if [[ "$NEW_SIDEBAR" == "true" ]]; then
+      sleep 0.1
+      hyprctl dispatch focuswindow bar
     fi
+  ;;
+
+  cycle)
+    # Don't open sidebar if break popup is visible
+    BREAK_POPUP_VISIBLE=$(cat $STATES_PATH | jq -r '.break_popup_visible' 2>/dev/null)
+    if [[ "$BREAK_POPUP_VISIBLE" == "true" ]]; then
+      exit 0
+    fi
+
+    CURRENT_PANE=$(cat $STATES_PATH | jq -r '.sidebar_shown' 2>/dev/null)
+
+    # Cycle through panes (forward)
+    case "$CURRENT_PANE" in
+      "home")
+        NEXT_PANE="applauncher"
+        ;;
+      "applauncher")
+        NEXT_PANE="wallpapers"
+        ;;
+      "wallpapers")
+        NEXT_PANE="pomodoro"
+        ;;
+      "pomodoro")
+        NEXT_PANE="home"
+        ;;
+      *)
+        NEXT_PANE="home"
+        ;;
+    esac
+
+    echo `cat $STATES_PATH | jq ".sidebar_shown = \"$NEXT_PANE\" | .reveal_sidebar = true"` > $STATES_PATH
+  ;;
+
+  cycle-back)
+    # Don't open sidebar if break popup is visible
+    BREAK_POPUP_VISIBLE=$(cat $STATES_PATH | jq -r '.break_popup_visible' 2>/dev/null)
+    if [[ "$BREAK_POPUP_VISIBLE" == "true" ]]; then
+      exit 0
+    fi
+
+    CURRENT_PANE=$(cat $STATES_PATH | jq -r '.sidebar_shown' 2>/dev/null)
+
+    # Cycle through panes (backward)
+    case "$CURRENT_PANE" in
+      "home")
+        NEXT_PANE="pomodoro"
+        ;;
+      "applauncher")
+        NEXT_PANE="home"
+        ;;
+      "wallpapers")
+        NEXT_PANE="applauncher"
+        ;;
+      "pomodoro")
+        NEXT_PANE="wallpapers"
+        ;;
+      *)
+        NEXT_PANE="home"
+        ;;
+    esac
+
+    echo `cat $STATES_PATH | jq ".sidebar_shown = \"$NEXT_PANE\" | .reveal_sidebar = true"` > $STATES_PATH
   ;;
 
   open)
@@ -41,6 +103,38 @@ case $1 in
     echo `cat $STATES_PATH | jq '.reveal_sidebar = false'` > $STATES_PATH
   ;;
 
+  cycle-panes)
+    # Don't open sidebar if break popup is visible
+    BREAK_POPUP_VISIBLE=$(cat $STATES_PATH | jq -r '.break_popup_visible' 2>/dev/null)
+    if [[ "$BREAK_POPUP_VISIBLE" == "true" ]]; then
+      exit 0
+    fi
+
+    SIDEBAR_REVEALED=$(cat $STATES_PATH | jq -r '.reveal_sidebar' 2>/dev/null)
+    CURRENT_PANE=$(cat $STATES_PATH | jq -r '.sidebar_shown' 2>/dev/null)
+
+    # Cycle through panes: home -> applauncher -> wallpapers -> pomodoro -> home
+    case "$CURRENT_PANE" in
+      "home")
+        NEXT_PANE="applauncher"
+        ;;
+      "applauncher")
+        NEXT_PANE="wallpapers"
+        ;;
+      "wallpapers")
+        NEXT_PANE="pomodoro"
+        ;;
+      "pomodoro")
+        NEXT_PANE="home"
+        ;;
+      *)
+        NEXT_PANE="home"
+        ;;
+    esac
+
+    echo `cat $STATES_PATH | jq ".sidebar_shown = \"$NEXT_PANE\" | .reveal_sidebar = true"` > $STATES_PATH
+  ;;
+
   toggle-applauncher)
     # Don't open sidebar if break popup is visible
     BREAK_POPUP_VISIBLE=$(cat $STATES_PATH | jq -r '.break_popup_visible' 2>/dev/null)
@@ -59,6 +153,10 @@ case $1 in
 
     # Otherwise, open sidebar to applauncher
     echo `cat $STATES_PATH | jq '.sidebar_shown = "applauncher" | .reveal_sidebar = true'` > $STATES_PATH
+
+    # Focus bar window for vim keybinds
+    sleep 0.1
+    hyprctl dispatch focuswindow bar
   ;;
 
   toggle-wallpapers)
