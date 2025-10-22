@@ -21,6 +21,7 @@ function Header() {
     hexpand: true,
     child: Widget.Entry({
       className: 'input',
+      css: 'caret-color: transparent;',
       onChange: ({ text }) => {
         query.value = text
         selectedIndex.value = 0
@@ -32,6 +33,15 @@ function Header() {
         }
       },
       setup: (self) => {
+        // Update cursor visibility based on search mode
+        self.hook(searchMode, () => {
+          if (searchMode.value) {
+            self.css = 'caret-color: inherit;'
+          } else {
+            self.css = 'caret-color: transparent;'
+          }
+        })
+
         // Hook on pane changes
         self.hook(sidebarShown, () => {
           if (sidebarShown.value === 'applauncher') {
