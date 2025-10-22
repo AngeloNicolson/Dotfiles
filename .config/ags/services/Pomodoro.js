@@ -123,13 +123,13 @@ class PomodoroService extends Service {
     this.#loadThemePlaylists()
   }
 
-  #loadThemePlaylists() {
+  async #loadThemePlaylists() {
     const configDir = App.configDir
     const themePath = `${configDir}/assets/music-themes/${this.#currentTheme}`
 
     // Load work playlist for current theme
     try {
-      const workPlaylistStr = Utils.exec(`bash -c "ls ${themePath}/work/*.mp3 2>/dev/null"`)
+      const workPlaylistStr = await Utils.execAsync(`bash -c "ls ${themePath}/work/*.mp3 2>/dev/null"`)
       this.#workPlaylist = workPlaylistStr.trim().split('\n').filter(f => f)
       console.log('Work playlist:', this.#workPlaylist)
     } catch (e) {
@@ -139,7 +139,7 @@ class PomodoroService extends Service {
 
     // Load break playlist for current theme
     try {
-      const breakPlaylistStr = Utils.exec(`bash -c "ls ${themePath}/break/*.mp3 2>/dev/null"`)
+      const breakPlaylistStr = await Utils.execAsync(`bash -c "ls ${themePath}/break/*.mp3 2>/dev/null"`)
       this.#breakPlaylist = breakPlaylistStr.trim().split('\n').filter(f => f)
       console.log('Break playlist:', this.#breakPlaylist)
     } catch (e) {
@@ -616,7 +616,7 @@ class PomodoroService extends Service {
     return this.#SHORT_BREAK / 60
   }
 
-  setTheme(themeName) {
+  async setTheme(themeName) {
     if (!this.#availableThemes.includes(themeName)) {
       console.log(`Theme not found: ${themeName}`)
       return false
@@ -644,7 +644,7 @@ class PomodoroService extends Service {
     // Load new theme
     this.#currentTheme = themeName
     this.#pendingTheme = null
-    this.#loadThemePlaylists()
+    await this.#loadThemePlaylists()
     this.notify('current-theme')
     this.notify('available-themes')
 
