@@ -12,6 +12,7 @@ return {
 			local external_handlers = {
 				-- Documents
 				pdf = "zathura",
+				rnote = "rnote",
 
 				-- Videos
 				mp4 = "mpv",
@@ -71,10 +72,9 @@ return {
 					-- Add --title flag so Hyprland can identify mpv launched from nvim
 					-- Set geometry to 960x540 for 16:9 ratio (wide and short for videos)
 					cmd = string.format("setsid -f %s --title=nvim-mpv --geometry=960x540 %s", app, vim.fn.shellescape(path))
-				elseif app == "zathura" then
-					-- Zathura doesn't support --class, just launch it normally
-					-- Hyprland will catch it with the default zathura class
-					cmd = string.format("setsid -f %s %s", app, vim.fn.shellescape(path))
+				elseif app == "zathura" or app == "rnote" then
+					-- Open on workspace 3 using hyprctl dispatch
+					cmd = string.format("hyprctl dispatch exec '[workspace 3]' %s %s", app, vim.fn.shellescape(path))
 				else
 					cmd = string.format("setsid -f %s %s", app, vim.fn.shellescape(path))
 				end
@@ -87,7 +87,7 @@ return {
 			-- Intercept ALL attempts to open media files in buffers
 			-- This ensures consistent behavior regardless of how the file is opened
 			vim.api.nvim_create_autocmd("BufReadCmd", {
-				pattern = { "*.pdf", "*.mp4", "*.mkv", "*.avi", "*.mov", "*.webm", "*.flv", "*.wmv", "*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a", "*.aac", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.webp", "*.svg" },
+				pattern = { "*.pdf", "*.rnote", "*.mp4", "*.mkv", "*.avi", "*.mov", "*.webm", "*.flv", "*.wmv", "*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a", "*.aac", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.webp", "*.svg" },
 				callback = function(args)
 					local path = vim.fn.fnamemodify(args.file, ":p")
 					local ext = path:match("^.+%.(.+)$")
