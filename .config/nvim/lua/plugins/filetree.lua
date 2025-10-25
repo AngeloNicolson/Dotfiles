@@ -74,7 +74,7 @@ return {
 					cmd = string.format("setsid -f %s --title=nvim-mpv --geometry=960x540 %s", app, vim.fn.shellescape(path))
 				elseif app == "zathura" or app == "rnote" then
 					-- Open on workspace 3 using hyprctl dispatch
-					cmd = string.format("hyprctl dispatch exec '[workspace 3]' %s %s", app, vim.fn.shellescape(path))
+					cmd = string.format("hyprctl dispatch exec \"[workspace 3] %s %s\"", app, vim.fn.shellescape(path))
 				else
 					cmd = string.format("setsid -f %s %s", app, vim.fn.shellescape(path))
 				end
