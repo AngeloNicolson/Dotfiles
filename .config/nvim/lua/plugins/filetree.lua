@@ -113,6 +113,15 @@ return {
 				enable_git_status = true,
 				enable_diagnostics = true,
 				sort_case_insensitive = false,
+				event_handlers = {
+					{
+						event = "file_open_requested",
+						handler = function()
+							-- Auto-close neo-tree when opening files
+							require("neo-tree.command").execute({ action = "close" })
+						end,
+					},
+				},
 				-- Natural sorting: splits filenames into text/number segments and compares them properly
 				-- This ensures Week_1, Week_2, ..., Week_12 sort correctly instead of Week_1, Week_10, Week_11, Week_12, Week_2
 				sort_function = function(a, b)
@@ -270,11 +279,8 @@ return {
 							end
 						end
 
-						-- All other files: close tree THEN open in neovim
-						vim.cmd("Neotree close")
-						vim.schedule(function()
-							vim.cmd("edit " .. vim.fn.fnameescape(path))
-						end)
+						-- All other files: open in neovim (tree auto-closes via event handler)
+						vim.cmd("edit " .. vim.fn.fnameescape(path))
 					end,
 				},
 			})
