@@ -271,8 +271,8 @@ return {
 						end
 
 						-- All other files: close tree THEN open in neovim
+						vim.cmd("Neotree close")
 						vim.schedule(function()
-							require("neo-tree.sources.manager").close_all()
 							vim.cmd("edit " .. vim.fn.fnameescape(path))
 						end)
 					end,
