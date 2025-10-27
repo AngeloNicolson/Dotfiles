@@ -12,8 +12,21 @@ case $1 in
       exit 0
     fi
 
-    # Toggle sidebar open/close
-    echo `cat $STATES_PATH | jq '.reveal_sidebar |= not'` > $STATES_PATH
+    # If opening sidebar, set to home (unless pomodoro is running)
+    if [[ "$CURRENT_SIDEBAR" == "false" ]]; then
+      # Check if pomodoro is running by looking at pomodoro state
+      CURRENT_PANE=$(cat $STATES_PATH | jq -r '.sidebar_shown' 2>/dev/null)
+      if [[ "$CURRENT_PANE" == "pomodoro" ]]; then
+        # Keep pomodoro if it's the current pane (likely running)
+        echo `cat $STATES_PATH | jq '.reveal_sidebar = true'` > $STATES_PATH
+      else
+        # Otherwise go to home
+        echo `cat $STATES_PATH | jq '.reveal_sidebar = true | .sidebar_shown = "home"'` > $STATES_PATH
+      fi
+    else
+      # If closing sidebar, just toggle reveal
+      echo `cat $STATES_PATH | jq '.reveal_sidebar = false'` > $STATES_PATH
+    fi
 
     # Focus bar window when opening
     NEW_SIDEBAR=$(cat $STATES_PATH | jq -r '.reveal_sidebar' 2>/dev/null)
@@ -147,7 +160,7 @@ case $1 in
 
     # If sidebar is currently revealed and showing applauncher, close to home
     if [[ "$SIDEBAR_REVEALED" == "true" && "$CURRENT_PANE" == "applauncher" ]]; then
-      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
+      echo `cat $STATES_PATH | jq '.sidebar_shown = "home" | .reveal_sidebar = true'` > $STATES_PATH
       exit 0
     fi
 
@@ -171,7 +184,7 @@ case $1 in
 
     # If sidebar is currently revealed and showing wallpapers, close to home
     if [[ "$SIDEBAR_REVEALED" == "true" && "$CURRENT_PANE" == "wallpapers" ]]; then
-      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
+      echo `cat $STATES_PATH | jq '.sidebar_shown = "home" | .reveal_sidebar = true'` > $STATES_PATH
       exit 0
     fi
 
@@ -191,7 +204,7 @@ case $1 in
 
     # If sidebar is currently revealed and showing pomodoro, close to home
     if [[ "$SIDEBAR_REVEALED" == "true" && "$CURRENT_PANE" == "pomodoro" ]]; then
-      echo `cat $STATES_PATH | jq '.sidebar_shown = "home"'` > $STATES_PATH
+      echo `cat $STATES_PATH | jq '.sidebar_shown = "home" | .reveal_sidebar = true'` > $STATES_PATH
       exit 0
     fi
 
