@@ -110,7 +110,12 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
    - Edit `~/.config/hypr/custom/` files for personal customizations
    - Reload: `hyprctl reload`
 
-3. **Start Hyprland:**
+3. **Restore rnote settings (if using rnote):**
+   ```bash
+   dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini
+   ```
+
+4. **Start Hyprland:**
    ```bash
    Hyprland
    ```
@@ -164,6 +169,12 @@ Custom layout management system with visual designer:
 
 - See [README_WACOM.md](README_WACOM.md) for Wacom tablet setup (Intuos Pro)
 - Uses OpenTabletDriver for best Wayland/Hyprland compatibility
+
+### Rnote
+
+- Application settings stored in dconf: `/com/github/flxzt/rnote/`
+- GTK styling in `.config/gtk-4.0/rnote.css`
+- Restore settings with: `dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini`
 
 ## License
 
