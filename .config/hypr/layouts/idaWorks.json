@@ -1,0 +1,17 @@
+{
+  "type": "container",
+  "split": "horizontal",
+  "ratio": 0.24868995055089013,
+  "children": [
+    {
+      "type": "window",
+      "app": "foot",
+      "working_dir": "~/Documents/insert_disk2_to_continue/Creaky_Door/Dashboard/"
+    },
+    {
+      "type": "window",
+      "app": "foot",
+      "working_dir": "~/Documents/insert_disk2_to_continue/Creaky_Door/Dashboard/"
+    }
+  ]
+}

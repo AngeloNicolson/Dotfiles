@@ -1,16 +1,4 @@
 {
-  "type": "container",
-  "split": "horizontal",
-  "ratio": 0.5,
-  "children": [
-    {
-      "type": "window",
-      "app": "firefox"
-    },
-    {
-      "type": "window",
-      "app": "firefox",
-      "working_dir": "~/"
-    }
-  ]
+  "type": "window",
+  "app": "firefox"
 }
