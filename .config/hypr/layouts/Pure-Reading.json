@@ -1,5 +1,5 @@
 {
   "type": "window",
-  "app": "$(zenity --file-selection --filename=/home/Angel/Documents/insert_disk2_to_continue/E-books/)",
+  "app": "sh -c 'xdg-open \"$(zenity --file-selection --filename=/home/Angel/Documents/insert_disk2_to_continue/E-books/)\"'",
   "working_dir": "~/"
 }

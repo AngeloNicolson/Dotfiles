@@ -12,10 +12,10 @@ set highlight-color "#fabd2f"      # Highlight (bright3, bright yellow)
 set highlight-active-color "#b8bb26" # Active highlight (bright2, bright green)
 set font "monospace 12"           # Font matching Neovim
 set scroll-step 50                # Smooth scrolling for vertical DP-2
-set continuous true               # Continuous page scrolling
+set pages-per-row 1               # Continuous page scrolling
 set zoom-center true              # Center zoom for 1080x1920 vertical display
-set page-padding 10               # Padding between pages
+set vertical-center true          # Center pages vertically
 set selection-clipboard clipboard  # Copy to system clipboard
-set zoom 150                      # Default zoom for readability
+set zoom-step 20                  # Zoom increment/decrement step
 set adjust-open width             # Fit to width for vertical monitor
-map <C-t> toggle_recolor          # Toggle recolor (Ctrl+t)
+map <C-t> recolor                 # Toggle recolor (Ctrl+t)
