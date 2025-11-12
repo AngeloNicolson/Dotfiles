@@ -45,9 +45,9 @@ CENTER_Y=$((Y + HEIGHT / 2))
 # Get tablet name from OpenTabletDriver config
 TABLET=$(jq -r '.Profiles[0].Tablet' "$HOME/.config/OpenTabletDriver/settings.json")
 
-# Wacom PTH-660 (Intuos Pro Medium) max dimensions in mm
-MAX_TABLET_WIDTH=224
-MAX_TABLET_HEIGHT=148
+# Wacom PTH-660 (Intuos Pro Medium) active drawing area: 8.7" x 5.8"
+MAX_TABLET_WIDTH=220.9
+MAX_TABLET_HEIGHT=147.3
 
 # Add 2% margin to avoid edge detection issues when pen enters/exits range
 MARGIN=0.98
