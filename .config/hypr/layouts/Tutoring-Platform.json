@@ -1,0 +1,17 @@
+{
+  "type": "container",
+  "split": "horizontal",
+  "ratio": 0.2652438758557682,
+  "children": [
+    {
+      "type": "window",
+      "app": "foot",
+      "working_dir": "~/Documents/insert_disk2_to_continue/Personal-projects/Debating-platform"
+    },
+    {
+      "type": "window",
+      "app": "foot",
+      "working_dir": "~/Documents/insert_disk2_to_continue/Personal-projects/Debating-platform"
+    }
+  ]
+}

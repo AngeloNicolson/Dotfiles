@@ -1,16 +1,5 @@
 {
-  "type": "container",
-  "split": "horizontal",
-  "ratio": 0.5,
-  "children": [
-    {
-      "type": "window",
-      "app": "zathura"
-    },
-    {
-      "type": "window",
-      "app": "foot",
-      "working_dir": "~/Documents/Vaults"
-    }
-  ]
+  "type": "window",
+  "app": "foot",
+  "working_dir": "~/Documents/Vaults"
 }

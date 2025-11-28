@@ -36,6 +36,7 @@ import subprocess
 import time
 import sys
 import os
+import shlex
 
 
 def run_hyprctl(command):
@@ -84,6 +85,9 @@ def wait_for_new_window(previous_addresses, timeout=2.0, poll_interval=0.05, exp
     start_time = time.time()
     checked_addresses = set()  # Track addresses we've already checked and rejected
 
+    # Transient/dialog windows to ignore (these are temporary UI elements, not the actual app)
+    ignored_classes = ['zenity', 'yad', 'rofi', 'wofi', 'xdg-desktop-portal', 'portal']
+
     while time.time() - start_time < timeout:
         # Get all current window addresses
         result = subprocess.run(['hyprctl', '-j', 'clients'],
@@ -103,6 +107,15 @@ def wait_for_new_window(previous_addresses, timeout=2.0, poll_interval=0.05, exp
             # Skip if we've seen this window before or already checked it
             if addr in previous_addresses or addr in checked_addresses:
                 continue
+
+            # Skip transient/dialog windows (zenity, etc.)
+            window_class = client.get('class', '').lower()
+            if any(ignored in window_class for ignored in ignored_classes):
+                print(f"  Ignoring dialog window: {window_class}", file=sys.stderr)
+                checked_addresses.add(addr)
+                continue
+
+            print(f"  Found new window: {window_class} on workspace {client.get('workspace', {}).get('id')}", file=sys.stderr)
 
             new_found += 1
             # Found a new window
@@ -380,18 +393,27 @@ def launch_app(app_command, terminal_command=None, working_dir=None, window_titl
                     spec_parts.append(f'move {int(x)} {int(y)}')
                 exec_spec = ';'.join(spec_parts)
 
+                # Use shlex.quote to properly escape the entire command for hyprctl
+                full_command = f"[{exec_spec}] {app_command}"
+
+                # Don't redirect stdout/stderr for commands with dialogs - they need interaction
+                has_dialog = any(dialog in app_command.lower() for dialog in ['zenity', 'yad', 'rofi', 'wofi'])
+
                 subprocess.Popen(
-                    ['hyprctl', 'dispatch', 'exec', f'[{exec_spec}] {app_command}'],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    ['hyprctl', 'dispatch', 'exec', full_command],
+                    stdout=None if has_dialog else subprocess.DEVNULL,
+                    stderr=None if has_dialog else subprocess.DEVNULL
                 )
             else:
                 # Launch directly without workspace spec
+                # Don't redirect stdout/stderr for commands with dialogs - they need interaction
+                has_dialog = any(dialog in app_command.lower() for dialog in ['zenity', 'yad', 'rofi', 'wofi'])
+
                 subprocess.Popen(
                     app_command,
                     shell=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stdout=None if has_dialog else subprocess.DEVNULL,
+                    stderr=None if has_dialog else subprocess.DEVNULL
                 )
 
         time.sleep(0.1)  # Shorter wait since window will be pre-positioned
@@ -463,8 +485,21 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 launch_app(app, terminal_command, working_dir, window_title, workspace_id, x, y, width, height, force_float=True)
 
                 # Wait for NEW window to appear (shorter timeouts since we're on correct workspace)
-                timeout = 3.0 if not is_terminal else 1.0
+                # Increase timeout for commands with user interaction dialogs
+                if any(dialog in app.lower() for dialog in ['zenity', 'yad', 'rofi', 'wofi']):
+                    timeout = 120.0  # Give user time to select file/option AND for app to launch
+                elif is_terminal:
+                    timeout = 1.0
+                else:
+                    timeout = 3.0
+
+                print(f"Waiting for new window (timeout={timeout}s)...", file=sys.stderr)
                 new_address = wait_for_new_window(previous_addresses, timeout=timeout, expected_workspace=workspace_id)
+
+                if new_address:
+                    print(f"Detected new window: {new_address}", file=sys.stderr)
+                else:
+                    print(f"No new window detected within timeout", file=sys.stderr)
                 if new_address:
                     existing_address = new_address
 
