@@ -193,10 +193,13 @@ Custom Firefox theme with:
    ~/.mozilla/firefox/XXXXXXXX.default-release/
    ```
 
-2. Copy the chrome folder:
+2. Copy the chrome folder and config files:
    ```bash
    # Copy chrome folder to your Firefox profile
    cp -r .mozilla/firefox/chrome ~/.mozilla/firefox/XXXXXXXX.default-release/
+
+   # Copy performance config
+   cp .mozilla/firefox/user.js ~/.mozilla/firefox/XXXXXXXX.default-release/
    ```
    Replace `XXXXXXXX.default-release` with your actual profile folder name.
 
@@ -205,9 +208,17 @@ Custom Firefox theme with:
    - Search for `toolkit.legacyUserProfileCustomizations.stylesheets`
    - Set it to `true`
 
-4. Restart Firefox
+4. Install the Sidebery extension and import settings:
+   - Install [Sidebery](https://addons.mozilla.org/en-US/firefox/addon/sidebery)
+   - Open Sidebery Settings > Help > Import addon data
+   - Import `.mozilla/firefox/Sidebery-Data.json`
 
-**Note:** The custom CSS is optimized for use with the Sidebery extension for vertical tab management.
+5. Restart Firefox
+
+**Files included:**
+- `chrome/` - Custom CSS theme (Potatofox-based)
+- `user.js` - Performance optimizations (NVIDIA GPU acceleration, memory management)
+- `Sidebery-Data.json` - Sidebery extension configuration
 
 ## License
 
