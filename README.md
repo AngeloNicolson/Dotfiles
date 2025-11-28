@@ -176,6 +176,39 @@ Custom layout management system with visual designer:
 - GTK styling in `.config/gtk-4.0/rnote.css`
 - Restore settings with: `dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini`
 
+### Firefox Custom CSS
+
+Custom Firefox theme with:
+- Centered, always-visible URL/search bar with rounded corners
+- Auto-hiding navigation bar (shows on hover)
+- Auto-hiding sidebar (Sidebery)
+- Hidden tab bar (tabs managed by Sidebery)
+- Dark theme
+
+**Installation:**
+
+1. Find your Firefox profile folder:
+   ```bash
+   # Profile is typically at:
+   ~/.mozilla/firefox/XXXXXXXX.default-release/
+   ```
+
+2. Copy the chrome folder:
+   ```bash
+   # Copy chrome folder to your Firefox profile
+   cp -r .mozilla/firefox/chrome ~/.mozilla/firefox/XXXXXXXX.default-release/
+   ```
+   Replace `XXXXXXXX.default-release` with your actual profile folder name.
+
+3. Enable custom CSS in Firefox:
+   - Open `about:config` in Firefox
+   - Search for `toolkit.legacyUserProfileCustomizations.stylesheets`
+   - Set it to `true`
+
+4. Restart Firefox
+
+**Note:** The custom CSS is optimized for use with the Sidebery extension for vertical tab management.
+
 ## License
 
 MIT
