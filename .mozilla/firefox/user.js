@@ -1,3 +1,15 @@
+// Potatofox theme requirements
+user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+user_pref("svg.context-properties.content.enabled", true);
+user_pref("layout.css.has-selector.enabled", true);
+user_pref("widget.gtk.rounded-bottom-corners.enabled", true);
+user_pref("browser.tabs.allow_transparent_browser", true);
+user_pref("browser.uidensity", 1);
+
+// Disable new sidebar (conflicts with Potatofox/Sidebery)
+user_pref("sidebar.revamp", false);
+user_pref("sidebar.verticalTabs", false);
+
 // Firefox Performance Optimizations for YouTube and memory leaks
 
 // Enable hardware video decoding (use GPU instead of CPU for videos)

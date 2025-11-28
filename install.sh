@@ -53,20 +53,12 @@ FIREFOX_PROFILE_DIR=$(find "$HOME/.mozilla/firefox" -maxdepth 1 -type d -name "*
 if [ -z "$FIREFOX_PROFILE_DIR" ]; then
     echo "Firefox profile not found. Please run Firefox once to create a profile, then run this script again."
 else
-    # Create chrome directory if it doesn't exist
-    mkdir -p "$FIREFOX_PROFILE_DIR/chrome"
+    # Symlink chrome directory
+    rm -rf "$FIREFOX_PROFILE_DIR/chrome"
+    ln -sf "$DOTFILES_DIR/.mozilla/firefox/chrome" "$FIREFOX_PROFILE_DIR/chrome"
 
-    # Copy Firefox chrome files
-    cp -r "$DOTFILES_DIR/.mozilla/firefox/chrome/"* "$FIREFOX_PROFILE_DIR/chrome/"
-
-    # Enable userChrome.css in Firefox config
-    FIREFOX_PREFS="$FIREFOX_PROFILE_DIR/prefs.js"
-    if [ -f "$FIREFOX_PREFS" ]; then
-        # Check if userChrome is already enabled
-        if ! grep -q "toolkit.legacyUserProfileCustomizations.stylesheets" "$FIREFOX_PREFS"; then
-            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$FIREFOX_PREFS"
-        fi
-    fi
+    # Symlink user.js (contains Potatofox settings + performance tweaks)
+    ln -sf "$DOTFILES_DIR/.mozilla/firefox/user.js" "$FIREFOX_PROFILE_DIR/user.js"
 
     print_success "Firefox customization installed"
 fi

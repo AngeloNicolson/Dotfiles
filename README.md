@@ -203,10 +203,11 @@ Custom Firefox theme with:
    ```
    Replace `XXXXXXXX.default-release` with your actual profile folder name.
 
-3. Enable custom CSS in Firefox:
-   - Open `about:config` in Firefox
-   - Search for `toolkit.legacyUserProfileCustomizations.stylesheets`
-   - Set it to `true`
+3. Symlink user.js (contains Potatofox settings + performance tweaks):
+   ```bash
+   ln -sf ~/projects/personal/dotfiles/.mozilla/firefox/user.js ~/.mozilla/firefox/XXXXXXXX.default-release/user.js
+   ```
+   This enables userChrome CSS and sets required Firefox preferences automatically.
 
 4. Install the Sidebery extension and import settings:
    - Install [Sidebery](https://addons.mozilla.org/en-US/firefox/addon/sidebery)
@@ -217,7 +218,7 @@ Custom Firefox theme with:
 
 **Files included:**
 - `chrome/` - Custom CSS theme (Potatofox-based)
-- `user.js` - Performance optimizations (NVIDIA GPU acceleration, memory management)
+- `user.js` - Potatofox theme settings + performance optimizations (NVIDIA GPU acceleration, memory management)
 - `Sidebery-Data.json` - Sidebery extension configuration
 
 ## License
