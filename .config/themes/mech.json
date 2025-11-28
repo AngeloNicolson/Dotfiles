@@ -1,0 +1,39 @@
+{
+  "name": "mech",
+  "displayName": "Mech",
+  "colors": {
+    "bg": "#1d1f20",
+    "bg_dark": "#1d2021",
+    "bg_light": "#282828",
+    "bg_lighter": "#3c3836",
+    "fg": "#ebdbb2",
+    "fg_dim": "#a89984",
+    "fg_bright": "#fbf1c7",
+    "accent": "#d79921",
+    "red": "#cc241d",
+    "red_bright": "#fb4934",
+    "green": "#98971a",
+    "green_bright": "#b8bb26",
+    "yellow": "#d79921",
+    "yellow_bright": "#fabd2f",
+    "blue": "#458588",
+    "blue_bright": "#83a598",
+    "magenta": "#b16286",
+    "magenta_bright": "#d3869b",
+    "cyan": "#689d6a",
+    "cyan_bright": "#8ec07c",
+    "gray": "#928374"
+  },
+  "gtk": {
+    "theme": "Gruvbox-Retro",
+    "iconTheme": "Tela-circle-black",
+    "cursorTheme": "Bibata-Modern-Ice",
+    "colorScheme": "prefer-dark"
+  },
+  "hyprland": {
+    "borderRadius": 3,
+    "gapsIn": 2,
+    "gapsOut": 4,
+    "borderSize": 0
+  }
+}

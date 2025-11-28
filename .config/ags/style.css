@@ -1,0 +1,60 @@
+/* Gruvbox colors */
+@define-color bg #282828;
+@define-color bg0 #1d2021;
+@define-color bg1 #3c3836;
+@define-color bg2 #504945;
+@define-color fg #ebdbb2;
+@define-color fg0 #fbf1c7;
+@define-color red #fb4934;
+@define-color green #b8bb26;
+@define-color yellow #fabd2f;
+@define-color blue #83a598;
+@define-color purple #d3869b;
+@define-color aqua #8ec07c;
+@define-color orange #fe8019;
+
+* {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 14px;
+}
+
+.Bar {
+  background: transparent;
+}
+
+.bar {
+  background: @bg;
+  padding: 8px;
+  border-radius: 0 12px 12px 0;
+  min-width: 48px;
+}
+
+.bar label {
+  color: @fg;
+}
+
+.time-indicator {
+  background: @bg1;
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 32px;
+}
+
+.time-indicator:hover {
+  background: @bg2;
+}
+
+.time-indicator label {
+  color: @fg;
+}
+
+.bar-edge {
+  min-width: 4px;
+  min-height: 100px;
+  background: @bg1;
+  border-radius: 0 4px 4px 0;
+}
+
+.bar-edge:hover {
+  background: @aqua;
+}

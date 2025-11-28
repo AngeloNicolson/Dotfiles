@@ -1,0 +1,39 @@
+{
+  "name": "e-ink",
+  "displayName": "E-Ink",
+  "colors": {
+    "bg": "#ffffff",
+    "bg_dark": "#f5f5f5",
+    "bg_light": "#eeeeee",
+    "bg_lighter": "#e0e0e0",
+    "fg": "#000000",
+    "fg_dim": "#555555",
+    "fg_bright": "#000000",
+    "accent": "#333333",
+    "red": "#000000",
+    "red_bright": "#333333",
+    "green": "#000000",
+    "green_bright": "#333333",
+    "yellow": "#000000",
+    "yellow_bright": "#333333",
+    "blue": "#000000",
+    "blue_bright": "#333333",
+    "magenta": "#000000",
+    "magenta_bright": "#333333",
+    "cyan": "#000000",
+    "cyan_bright": "#333333",
+    "gray": "#888888"
+  },
+  "gtk": {
+    "theme": "adw-gtk3",
+    "iconTheme": "Tela-circle-black",
+    "cursorTheme": "Bibata-Modern-Classic",
+    "colorScheme": "prefer-light"
+  },
+  "hyprland": {
+    "borderRadius": 0,
+    "gapsIn": 0,
+    "gapsOut": 0,
+    "borderSize": 1
+  }
+}
