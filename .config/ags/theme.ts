@@ -141,20 +141,18 @@ function generateCSS(c: ThemeColors): string {
     #quick-toggles-row {
       margin: 4px 0;
     }
-    #quick-toggle, #quick-toggle-active {
+    #quick-toggle {
       border: none;
       border-radius: 8px;
       padding: 10px 14px;
       margin: 2px 4px;
       min-width: 100px;
-    }
-    #quick-toggle {
       background: ${c.bg_lighter};
     }
-    #quick-toggle-active {
+    #quick-toggle.active {
       background: ${c.accent};
     }
-    #quick-toggle:hover, #quick-toggle-active:hover {
+    #quick-toggle:hover {
       background: ${c.gray};
     }
     #toggle-icon {
@@ -178,17 +176,15 @@ function generateCSS(c: ThemeColors): string {
       color: ${c.fg};
       font-size: 18px;
     }
-    #slider-icon-btn, #slider-icon-btn-active {
+    #slider-icon-btn {
       font-size: 18px;
       margin-right: 10px;
       border: none;
       border-radius: 4px;
       padding: 4px 8px;
-    }
-    #slider-icon-btn {
       background: transparent;
     }
-    #slider-icon-btn-active {
+    #slider-icon-btn.active {
       background: ${c.accent};
     }
     #volume-slider, #brightness-slider {

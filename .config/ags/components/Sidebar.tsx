@@ -2,8 +2,9 @@ import Gtk from "gi://Gtk?version=3.0"
 import { setSidebarStack } from "../state"
 import Home from "./Home"
 import ThemeSwitcher from "./ThemeSwitcher"
+import AstalHyprland from "gi://AstalHyprland"
 
-export default function Sidebar() {
+export default function Sidebar({ gdkMonitorIndex }: { gdkMonitorIndex: number }) {
   const stack = new Gtk.Stack({
     transition_type: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,
     transition_duration: 300,
@@ -25,7 +26,19 @@ export default function Sidebar() {
   stack.set_visible_child_name("page1")
   stack.show_all()
 
-  setSidebarStack(stack)
+  // Get the Hyprland monitor ID from GDK monitor index
+  const hyprland = AstalHyprland.get_default()
+  const hyprMonitors = hyprland.get_monitors()
+
+  // Find the corresponding Hyprland monitor
+  // The inverted mapping: gdkIndex 0 -> hyprMonitor[1], gdkIndex 1 -> hyprMonitor[0]
+  const numMonitors = hyprMonitors.length
+  const hyprIndex = (numMonitors - 1) - gdkMonitorIndex
+  const hyprMonitor = hyprMonitors[hyprIndex]
+
+  if (hyprMonitor) {
+    setSidebarStack(hyprMonitor.get_id(), stack)
+  }
 
   return (
     <box name="sidebar-bg">

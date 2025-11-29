@@ -1,5 +1,6 @@
 import { createState } from "ags"
 import Gtk from "gi://Gtk?version=3.0"
+import AstalHyprland from "gi://AstalHyprland"
 
 // Bar visibility state
 export const [barVisible, setBarVisible] = createState(true)
@@ -8,18 +9,33 @@ export function toggleBar() {
   setBarVisible(!barVisible.get())
 }
 
-// Page cycling state
-let sidebarStack: Gtk.Stack | null = null
+// Page cycling state - track all sidebar stacks by monitor
+const sidebarStacks: Map<number, Gtk.Stack> = new Map()
 const pages = ["page1", "page2", "page3"]
-let currentPageIndex = 0
+const pageIndices: Map<number, number> = new Map()
 
-export function setSidebarStack(stack: Gtk.Stack) {
-  sidebarStack = stack
+export function setSidebarStack(monitorId: number, stack: Gtk.Stack) {
+  sidebarStacks.set(monitorId, stack)
+  if (!pageIndices.has(monitorId)) {
+    pageIndices.set(monitorId, 0)
+  }
 }
 
 export function cyclePage() {
-  currentPageIndex = (currentPageIndex + 1) % pages.length
-  if (sidebarStack) {
-    sidebarStack.set_visible_child_name(pages[currentPageIndex])
+  const hyprland = AstalHyprland.get_default()
+  const focusedWorkspace = hyprland.get_focused_workspace()
+  if (!focusedWorkspace) return
+
+  const focusedMonitor = focusedWorkspace.get_monitor()
+  if (!focusedMonitor) return
+
+  const monitorId = focusedMonitor.get_id()
+  const stack = sidebarStacks.get(monitorId)
+
+  if (stack) {
+    const currentIndex = pageIndices.get(monitorId) || 0
+    const nextIndex = (currentIndex + 1) % pages.length
+    pageIndices.set(monitorId, nextIndex)
+    stack.set_visible_child_name(pages[nextIndex])
   }
 }

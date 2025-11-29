@@ -1,9 +1,43 @@
 import { createPoll } from "ags/time"
+import { createState, type State } from "ags"
 import { execAsync } from "ags/process"
-import { createBinding } from "gnim"
+import { createBinding, type Accessor } from "gnim"
 import Network from "gi://AstalNetwork"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
+import Astal from "gi://Astal?version=3.0"
+import Gtk from "gi://Gtk?version=3.0"
+
+// Helper to create a toggle button with CSS class toggling
+function createToggleButton(
+  active: Accessor<boolean> | State<boolean>,
+  icon: string,
+  label: string,
+  onClick: () => void
+): Gtk.Widget {
+  const btn = new Astal.Button({
+    name: "quick-toggle",
+    visible: true,
+  })
+
+  const ctx = btn.get_style_context()
+  active.subscribe((a: boolean) => {
+    if (a) ctx.add_class("active")
+    else ctx.remove_class("active")
+  })
+  if (active.get()) ctx.add_class("active")
+
+  btn.connect("clicked", onClick)
+
+  const box = new Astal.Box({ visible: true })
+  const iconLabel = new Gtk.Label({ name: "toggle-icon", label: icon, visible: true })
+  const textLabel = new Gtk.Label({ name: "toggle-label", label: label, visible: true })
+  box.add(iconLabel)
+  box.add(textLabel)
+  btn.add(box)
+
+  return btn
+}
 
 // Time display
 function Clock() {
@@ -65,21 +99,13 @@ function WiFiToggle() {
   }
 
   const enabled = createBinding(wifi, "enabled")
-  const ssid = createBinding(wifi, "ssid")
+  const ssid = wifi.ssid || "WiFi"
 
-  return (
-    <button
-      name="quick-toggle"
-      css={enabled.as((e) => e ? "background: #d79921;" : "")}
-      onClicked={() => {
-        wifi.enabled = !wifi.enabled
-      }}
-    >
-      <box>
-        <label name="toggle-icon" label={enabled.as((e) => e ? "" : "")} />
-        <label name="toggle-label" label={ssid.as((s) => s || "WiFi")} />
-      </box>
-    </button>
+  return createToggleButton(
+    enabled,
+    "",
+    ssid,
+    () => { wifi.enabled = !wifi.enabled }
   )
 }
 
@@ -101,19 +127,11 @@ function BluetoothToggle() {
 
   const powered = createBinding(adapter, "powered")
 
-  return (
-    <button
-      name="quick-toggle"
-      css={powered.as((p) => p ? "background: #d79921;" : "")}
-      onClicked={() => {
-        adapter.powered = !adapter.powered
-      }}
-    >
-      <box>
-        <label name="toggle-icon" label="" />
-        <label name="toggle-label" label="Bluetooth" />
-      </box>
-    </button>
+  return createToggleButton(
+    powered,
+    "",
+    "Bluetooth",
+    () => { adapter.powered = !adapter.powered }
   )
 }
 
@@ -134,20 +152,28 @@ function VolumeSlider() {
   const muted = createBinding(speaker, "mute")
   const volume = createBinding(speaker, "volume")
 
+  // Create mute button with class toggling
+  const muteBtn = new Astal.Button({
+    name: "slider-icon-btn",
+    visible: true,
+  })
+
+  const ctx = muteBtn.get_style_context()
+  muted.subscribe((m: boolean) => {
+    if (m) ctx.add_class("active")
+    else ctx.remove_class("active")
+  })
+  if (muted.get()) ctx.add_class("active")
+
+  muteBtn.connect("clicked", () => { speaker.mute = !speaker.mute })
+
   return (
     <box name="slider-box">
-      <button
-        name="slider-icon-btn"
-        css={muted.as((m) => m ? "background: #d79921; border-radius: 4px;" : "background: transparent;")}
-        onClicked={() => {
-          speaker.mute = !speaker.mute
-        }}
-      >
-        <label
-          name="slider-icon"
-          label={muted.as((m) => m ? "" : "")}
-        />
-      </button>
+      {muteBtn}
+      <label
+        name="slider-icon"
+        label={muted.as((m) => m ? "" : "")}
+      />
       <slider
         name="volume-slider"
         hexpand
@@ -188,53 +214,46 @@ function BrightnessSlider() {
   )
 }
 
-// DND toggle - polls dunst state
+// DND toggle
 function DNDToggle() {
-  const dndState = createPoll(false, 2000, () => {
-    return execAsync("dunstctl is-paused")
-      .then((out) => out.trim() === "true")
-      .catch(() => false)
-  })
+  const [dndOn, setDndOn] = createState(false)
 
-  return (
-    <button
-      name="quick-toggle"
-      css={dndState.as((on) => on ? "background: #d79921;" : "")}
-      onClicked={() => {
-        execAsync("dunstctl set-paused toggle").catch(() => {})
-      }}
-    >
-      <box>
-        <label name="toggle-icon" label="" />
-        <label name="toggle-label" label="DND" />
-      </box>
-    </button>
+  // Check initial state once
+  execAsync("dunstctl is-paused")
+    .then((out) => setDndOn(out.trim() === "true"))
+    .catch(() => {})
+
+  return createToggleButton(
+    dndOn,
+    "",
+    "DND",
+    () => {
+      execAsync("dunstctl set-paused toggle").catch(() => {})
+      setDndOn(!dndOn.get())
+    }
   )
 }
 
-// Night Light toggle - checks if gammastep is running
+// Night Light toggle
 function NightLightToggle() {
-  const nightState = createPoll(false, 2000, () => {
-    return execAsync("pgrep gammastep")
-      .then(() => true)
-      .catch(() => false)
-  })
+  const [nightOn, setNightOn] = createState(false)
 
-  return (
-    <button
-      name="quick-toggle"
-      css={nightState.as((on) => on ? "background: #d79921;" : "")}
-      onClicked={() => {
-        execAsync("pgrep gammastep")
-          .then(() => execAsync("pkill gammastep"))
-          .catch(() => execAsync("gammastep &"))
-      }}
-    >
-      <box>
-        <label name="toggle-icon" label="" />
-        <label name="toggle-label" label="Night Light" />
-      </box>
-    </button>
+  // Check initial state once
+  execAsync("pgrep gammastep").then(() => setNightOn(true)).catch(() => {})
+
+  return createToggleButton(
+    nightOn,
+    "",
+    "Night Light",
+    () => {
+      if (nightOn.get()) {
+        execAsync("pkill gammastep")
+        setNightOn(false)
+      } else {
+        execAsync(["bash", "-c", "gammastep -O 4500 &"])
+        setNightOn(true)
+      }
+    }
   )
 }
 

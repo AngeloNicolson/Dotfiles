@@ -1,0 +1,798 @@
+// Gruvbox theme colors
+$bgh:       #1d2021;
+$bg:        #282828;
+$bg1:       #3c3836;
+$bg2:       #504945;
+
+$fgh:       #fbf1c7;
+$fg:        #ebdbb2;
+$fg1:       #d5c4a1;
+$fg2:       #bdae93;
+
+$red:       #cc241d;
+$green:     #98971a;
+$yellow:    #d79921;
+$orange:    #d65d0e;
+$blue:      #458588;
+$purple:    #b16286;
+$aqua:      #689d6a;
+$gray:      #928374;
+
+$accent:    #d79921;
+
+@mixin section {
+  background-color: $bg1;
+  border-radius: 3px;
+  padding: 4px 8px;
+}
+
+@mixin button-hover {
+  &:hover {
+    background-color: $bg2;
+  }
+}
+
+* {
+  all: unset;
+  font-family: "JetBrainsMono Nerd Font";
+  color: $fg;
+}
+
+window.Bar {
+  background: transparent;
+  color: $fg;
+
+  .sidebar {
+    background-color: $bg;
+    padding: 0;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+
+  .bar {
+    background-color: $bg;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    padding: 8px 4px;
+  }
+
+  eventbox .bar-edge {
+    background-color: $accent;
+    min-width: 3px;
+    min-height: 1000px;
+  }
+
+  .divider {
+    background-color: $bg1;
+    min-height: 2px;
+    margin: 2px 0;
+  }
+
+  .start {
+    .sidebar-button box {
+      background-size: cover;
+      border-radius: 999px;
+      min-width: 32px;
+      min-height: 32px;
+    }
+
+    .search-button,
+    .wallpaper-button,
+    .pomodoro-button {
+      @include section;
+      @include button-hover;
+
+      label {
+        font-size: 18px;
+        padding: 0 4px;
+      }
+    }
+
+    .wallpaper-button label {
+      font-size: 20px;
+      padding: 0 6px;
+    }
+  }
+
+  .center {
+    .workspaces {
+      @include section;
+      padding: 1rem 0;
+
+      .workspace {
+        background-color: $fg;
+        border-radius: 3px;
+        min-width: 10px;
+        min-height: 24px;
+        transition: min-height 100ms cubic-bezier(1, 0, 0, 1);
+
+        &.active {
+          background-color: $yellow;
+          min-height: 42px;
+        }
+
+        &:hover {
+          background-color: $fg2;
+          min-height: 32px;
+        }
+
+        label {
+          font-size: 0;
+        }
+      }
+    }
+  }
+
+  .end {
+    .controls {
+      @include section;
+
+      button {
+        padding: 4px 8px;
+
+        &:hover label {
+          color: $fg2;
+        }
+
+        label {
+          font-size: 20px;
+        }
+      }
+    }
+
+    .time-indicator {
+      @include section;
+      @include button-hover;
+      margin-top: 4px;
+      padding: 8px 4px;
+
+      label {
+        font-size: 16px;
+        font-weight: bold;
+      }
+    }
+  }
+
+  // Home page
+  .home {
+    background-color: $bg;
+    border-right: solid $bg2 1px;
+    padding: 8px;
+    min-width: 300px;
+
+    * {
+      min-width: 0;
+    }
+
+    .user_box {
+      @include section;
+      padding: 8px;
+
+      .face {
+        background-size: cover;
+        border: solid $bgh 0.5px;
+        border-radius: 999px;
+        min-width: 54px;
+        min-height: 54px;
+      }
+
+      .details {
+        .username {
+          font-weight: 900;
+          font-size: 16px;
+          color: $fgh;
+        }
+
+        .wm {
+          font-weight: 900;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: $yellow;
+        }
+      }
+
+      .shutdown_button {
+        background-color: $bgh;
+        border-radius: 999px;
+        font-size: 24px;
+        padding: 4px 13px;
+
+        label {
+          color: $red;
+          padding-right: 1px;
+        }
+      }
+    }
+
+    .power_menu {
+      background-color: $bg2;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .desktop_controls {
+      border-radius: 3px;
+      margin-top: 10px;
+      padding: 8px;
+
+      .buttons {
+        .icon {
+          background-color: $yellow;
+          border-radius: 999px;
+          padding: 10px;
+          color: $fg;
+
+          &.inactive {
+            background-color: $gray;
+          }
+        }
+
+        .name {
+          color: $gray;
+          font-weight: 700;
+          font-size: 11px;
+        }
+      }
+
+      .sliders {
+        .icon {
+          font-size: 20px;
+        }
+
+        .slider_row {
+          scale {
+            trough {
+              background-color: $bg2;
+              border-radius: 3px;
+            }
+
+            highlight {
+              background-color: $blue;
+              border-radius: 3px;
+              min-height: 16px;
+            }
+          }
+        }
+      }
+    }
+
+    .time_card {
+      @include section;
+      padding: 24px 8px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+
+      .time {
+        font-size: 32px;
+        font-weight: 900;
+        color: $fgh;
+      }
+
+      .date {
+        font-size: 14px;
+        font-weight: 900;
+        color: $yellow;
+        margin-top: 8px;
+      }
+    }
+  }
+
+  // Music Player
+  .music-player {
+    @include section;
+    padding: 8px;
+
+    .thumbnail {
+      background-size: cover;
+      border-radius: 3px;
+      min-width: 100px;
+      min-height: 100px;
+    }
+
+    .right {
+      padding: 0.8rem 0;
+
+      .meta {
+        .title {
+          font-size: 20px;
+          font-weight: 900;
+        }
+
+        .artist {
+          color: $yellow;
+          font-weight: 900;
+        }
+      }
+
+      .controls {
+        .control {
+          border-radius: 3px;
+          font-size: 28px;
+          padding: 0 8px;
+        }
+      }
+
+      .position {
+        margin-top: 4px;
+
+        .progress {
+          min-width: 20px;
+
+          trough {
+            background-color: $bg2;
+            border-radius: 3px;
+
+            progress {
+              background-color: $fg;
+              border-radius: 3px;
+            }
+          }
+        }
+
+        .current-progress, .length {
+          font-size: 10px;
+          color: $gray;
+        }
+      }
+    }
+  }
+
+  // Notification Center
+  .notification-center {
+    @include section;
+    padding: 8px;
+    margin-top: 1rem;
+
+    .header {
+      .title {
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .clear-button {
+        border-radius: 999px;
+        font-size: 24px;
+        font-weight: 900;
+        padding: 3px 11px 3px 9px;
+
+        &:hover label {
+          color: $gray;
+        }
+      }
+    }
+
+    .no-notifications {
+      margin-top: 3rem;
+
+      label {
+        font-size: 20px;
+        color: $gray;
+      }
+    }
+
+    .notification-item {
+      background-color: $bg2;
+      border-radius: 3px;
+      padding: 8px;
+
+      .app-name {
+        letter-spacing: 2px;
+        font-weight: 900;
+        font-size: 9px;
+        color: $yellow;
+      }
+
+      .summary {
+        font-weight: bold;
+      }
+
+      .body {
+        color: $gray;
+      }
+
+      .close-button {
+        padding-right: 4px;
+
+        label {
+          font-size: 16px;
+        }
+      }
+    }
+  }
+
+  // App Launcher
+  .app-launcher {
+    background-color: $bg;
+    border-right: solid $bg2 1px;
+    padding: 8px;
+    min-width: 300px;
+
+    * {
+      min-width: 0;
+    }
+
+    .search-entry {
+      background-color: $bg2;
+      border-radius: 3px;
+      padding: 8px;
+      font-size: 16px;
+    }
+
+    .app-list {
+      box {
+        .app-item {
+          background-color: $bg1;
+          border-radius: 3px;
+          padding: 8px;
+          margin: 8px 0;
+
+          &:hover {
+            background-color: $bg2;
+          }
+
+          &.selected {
+            background-color: $blue;
+          }
+
+          &:focus {
+            background-color: $blue;
+          }
+        }
+      }
+    }
+  }
+
+  // Wallpapers
+  .wallpapers {
+    background-color: $bg;
+    border-right: solid $bg2 1px;
+    padding: 8px;
+    min-width: 300px;
+
+    * {
+      min-width: 0;
+    }
+
+    .header {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .wallpaper-item {
+      @include button-hover;
+      padding: 8px;
+      border-radius: 3px;
+      margin: 4px 0;
+    }
+  }
+
+  // Pomodoro
+  .pomodoro {
+    background-color: $bg;
+    border-right: solid $bg2 1px;
+    padding: 16px;
+    min-width: 350px;
+
+    * {
+      min-width: 0;
+    }
+
+    .header {
+      font-weight: bold;
+      font-size: 18px;
+      color: $fgh;
+      margin-bottom: 12px;
+    }
+
+    .timer-display {
+      @include section;
+      padding: 24px 16px;
+      margin: 12px 0;
+
+      .timer-text {
+        font-size: 56px;
+        font-weight: 900;
+        color: $yellow;
+      }
+
+      .mode-text {
+        font-size: 14px;
+        font-weight: 700;
+        color: $gray;
+        margin-top: 8px;
+      }
+    }
+
+    .study-block-progress {
+      @include section;
+      padding: 12px;
+      margin: 8px 0;
+
+      .progress-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: $yellow;
+        margin-bottom: 8px;
+      }
+
+      .progress-bar-container {
+        .progress-segment {
+          background-color: $bg2;
+          border-radius: 3px;
+          min-height: 8px;
+          min-width: 100px;
+          margin: 2px 0;
+
+          &.completed {
+            background-color: $green;
+          }
+
+          &.active {
+            background-color: $yellow;
+          }
+        }
+      }
+    }
+
+    .mode-selector {
+      margin: 8px 0;
+
+      .mode-button {
+        @include section;
+        background-color: $bg1;
+        padding: 10px 16px;
+        border-radius: 3px;
+
+        &:hover {
+          background-color: $bg2;
+        }
+
+        &.active {
+          background-color: $yellow;
+
+          label {
+            color: $bgh;
+            font-weight: 700;
+          }
+        }
+
+        label {
+          font-size: 13px;
+        }
+      }
+    }
+
+    .single-session, .study-block {
+      margin: 12px 0;
+
+      .ratio-selector {
+        margin-bottom: 12px;
+
+        .ratio-button {
+          background-color: $bg1;
+          border-radius: 3px;
+          padding: 8px 12px;
+
+          &:hover {
+            background-color: $bg2;
+          }
+
+          &.active {
+            background-color: $blue;
+
+            label {
+              color: $fgh;
+              font-weight: 700;
+            }
+          }
+
+          label {
+            font-size: 12px;
+          }
+        }
+      }
+
+      .slider-row {
+        margin: 8px 0;
+
+        .slider-label {
+          font-size: 12px;
+          font-weight: 700;
+          color: $fg1;
+          min-width: 50px;
+        }
+
+        .slider-value {
+          font-size: 12px;
+          font-weight: 700;
+          color: $yellow;
+          min-width: 40px;
+        }
+
+        scale.slider {
+          min-height: 20px;
+
+          trough {
+            background-color: $bg2;
+            border-radius: 3px;
+            min-height: 10px;
+          }
+
+          highlight {
+            background-color: $yellow;
+            border-radius: 3px;
+            min-height: 10px;
+          }
+
+          slider {
+            background-color: $fg;
+            border-radius: 50%;
+            min-width: 16px;
+            min-height: 16px;
+            margin: -3px;
+          }
+        }
+      }
+
+      .study-summary {
+        font-size: 13px;
+        color: $aqua;
+        font-weight: 600;
+        margin-top: 8px;
+      }
+    }
+
+    .controls {
+      margin: 12px 0;
+
+      .control-button {
+        @include section;
+        padding: 12px 16px;
+        border-radius: 3px;
+
+        &.start-pause {
+          background-color: $green;
+
+          label {
+            color: $fgh;
+            font-weight: 700;
+            font-size: 14px;
+          }
+
+          &:hover {
+            background-color: #a8a820;
+          }
+        }
+
+        &.reset {
+          background-color: $red;
+
+          label {
+            color: $fgh;
+            font-weight: 700;
+            font-size: 14px;
+          }
+
+          &:hover {
+            background-color: #d5302b;
+          }
+        }
+
+        &:disabled {
+          background-color: $gray;
+          opacity: 0.5;
+        }
+      }
+    }
+
+    .audio-controls {
+      @include section;
+      padding: 12px;
+      margin: 12px 0;
+
+      .audio-toggle {
+        margin-bottom: 8px;
+
+        switch {
+          min-width: 44px;
+          min-height: 24px;
+
+          slider {
+            background-color: $bg2;
+            border-radius: 999px;
+            min-width: 44px;
+            min-height: 24px;
+          }
+
+          &:checked slider {
+            background-color: $green;
+          }
+        }
+
+        label {
+          font-size: 13px;
+          font-weight: 600;
+        }
+      }
+
+      .slider-row {
+        scale.slider {
+          min-height: 20px;
+
+          trough {
+            background-color: $bg2;
+            border-radius: 3px;
+            min-height: 10px;
+          }
+
+          highlight {
+            background-color: $yellow;
+            border-radius: 3px;
+            min-height: 10px;
+          }
+
+          slider {
+            background-color: $fg;
+            border-radius: 50%;
+            min-width: 16px;
+            min-height: 16px;
+            margin: -3px;
+          }
+        }
+      }
+    }
+
+    .close-button {
+      @include section;
+      @include button-hover;
+      padding: 10px 20px;
+      border-radius: 3px;
+      margin-top: 8px;
+
+      label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+    }
+  }
+
+  // Audio Controls
+  .audio-controls {
+    padding: 12px;
+    min-width: 200px;
+
+    .audio-header {
+      @include button-hover;
+      padding: 8px;
+      border-radius: 3px;
+      margin-bottom: 8px;
+    }
+
+    .volume-slider {
+      trough {
+        background-color: $bg1;
+        min-height: 6px;
+        border-radius: 3px;
+      }
+
+      highlight {
+        background-color: $accent;
+        min-height: 6px;
+        border-radius: 3px;
+      }
+    }
+
+    .mute-button {
+      @include section;
+      @include button-hover;
+      padding: 8px;
+      margin-top: 8px;
+    }
+  }
+
+  // Calendar
+  .calendar-popup {
+    padding: 8px;
+  }
+}

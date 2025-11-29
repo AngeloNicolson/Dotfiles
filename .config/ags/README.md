@@ -1,5 +1,13 @@
 # AGS v3 Configuration
 
+## Dependencies
+
+```bash
+# Required
+sudo pacman -S bluez bluez-utils brightnessctl dunst gammastep
+sudo systemctl enable --now bluetooth.service
+```
+
 ## Current Status
 
 ### Working

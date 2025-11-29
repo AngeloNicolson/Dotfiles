@@ -19,7 +19,7 @@ export default function Bar(monitor = 0) {
           transitionType="slide_right"
           transitionDuration={300}
         >
-          <Sidebar />
+          <Sidebar gdkMonitorIndex={monitor} />
         </revealer>
         <eventbox onButtonPressEvent={() => toggleBar()}>
           <box name="edge-strip" />
