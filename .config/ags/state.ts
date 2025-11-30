@@ -11,7 +11,7 @@ export function toggleBar() {
 
 // Page cycling state - track all sidebar stacks by monitor
 const sidebarStacks: Map<number, Gtk.Stack> = new Map()
-const pages = ["page1", "page2", "page3"]
+const pages = ["page1", "page2", "page3", "page4"]
 const pageIndices: Map<number, number> = new Map()
 
 export function setSidebarStack(monitorId: number, stack: Gtk.Stack) {

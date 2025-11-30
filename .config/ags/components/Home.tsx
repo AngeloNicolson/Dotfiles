@@ -8,35 +8,38 @@ import Wp from "gi://AstalWp"
 import Astal from "gi://Astal?version=3.0"
 import Gtk from "gi://Gtk?version=3.0"
 
-// Helper to create a toggle button with CSS class toggling
-function createToggleButton(
+// Helper to create a circular toggle button with label underneath
+function ToggleButton({
+  active,
+  icon,
+  label,
+  onClick,
+  onLabelClick
+}: {
   active: Accessor<boolean> | State<boolean>,
   icon: string,
   label: string,
-  onClick: () => void
-): Gtk.Widget {
-  const btn = new Astal.Button({
-    name: "quick-toggle",
-    visible: true,
-  })
-
-  const ctx = btn.get_style_context()
-  active.subscribe((a: boolean) => {
-    if (a) ctx.add_class("active")
-    else ctx.remove_class("active")
-  })
-  if (active.get()) ctx.add_class("active")
-
-  btn.connect("clicked", onClick)
-
-  const box = new Astal.Box({ visible: true })
-  const iconLabel = new Gtk.Label({ name: "toggle-icon", label: icon, visible: true })
-  const textLabel = new Gtk.Label({ name: "toggle-label", label: label, visible: true })
-  box.add(iconLabel)
-  box.add(textLabel)
-  btn.add(box)
-
-  return btn
+  onClick: () => void,
+  onLabelClick?: () => void
+}) {
+  return (
+    <box name="toggle-container" vertical>
+      <button
+        name="quick-toggle"
+        class={active.as((a) => a ? "active" : "")}
+        onClicked={onClick}
+      >
+        <icon name="toggle-icon" icon={icon} />
+      </button>
+      {onLabelClick ? (
+        <button name="toggle-label-btn" onClicked={onLabelClick}>
+          <label name="toggle-label" label={label} />
+        </button>
+      ) : (
+        <label name="toggle-label" label={label} />
+      )}
+    </box>
+  )
 }
 
 // Time display
@@ -98,14 +101,23 @@ function WiFiToggle() {
     )
   }
 
-  const enabled = createBinding(wifi, "enabled")
   const ssid = wifi.ssid || "WiFi"
+  const [wifiOn, setWifiOn] = createState(wifi.enabled)
 
-  return createToggleButton(
-    enabled,
-    "",
-    ssid,
-    () => { wifi.enabled = !wifi.enabled }
+  return (
+    <ToggleButton
+      active={wifiOn}
+      icon="network-wireless-symbolic"
+      label={ssid}
+      onClick={() => {
+        const newState = !wifiOn.get()
+        setWifiOn(newState)
+        wifi.enabled = newState
+      }}
+      onLabelClick={() => {
+        execAsync("nm-connection-editor").catch(() => {})
+      }}
+    />
   )
 }
 
@@ -125,13 +137,24 @@ function BluetoothToggle() {
     )
   }
 
-  const powered = createBinding(adapter, "powered")
+  const [btOn, setBtOn] = createState(adapter.powered)
 
-  return createToggleButton(
-    powered,
-    "",
-    "Bluetooth",
-    () => { adapter.powered = !adapter.powered }
+  return (
+    <ToggleButton
+      active={btOn}
+      icon="bluetooth-symbolic"
+      label="Bluetooth"
+      onClick={() => {
+        const newState = !btOn.get()
+        setBtOn(newState)
+        execAsync(`bluetoothctl power ${newState ? "on" : "off"}`).catch(() => {
+          setBtOn(!newState)
+        })
+      }}
+      onLabelClick={() => {
+        execAsync("blueberry").catch(() => {})
+      }}
+    />
   )
 }
 
@@ -223,14 +246,16 @@ function DNDToggle() {
     .then((out) => setDndOn(out.trim() === "true"))
     .catch(() => {})
 
-  return createToggleButton(
-    dndOn,
-    "",
-    "DND",
-    () => {
-      execAsync("dunstctl set-paused toggle").catch(() => {})
-      setDndOn(!dndOn.get())
-    }
+  return (
+    <ToggleButton
+      active={dndOn}
+      icon="notifications-disabled-symbolic"
+      label="DND"
+      onClick={() => {
+        execAsync("dunstctl set-paused toggle").catch(() => {})
+        setDndOn(!dndOn.get())
+      }}
+    />
   )
 }
 
@@ -241,19 +266,21 @@ function NightLightToggle() {
   // Check initial state once
   execAsync("pgrep gammastep").then(() => setNightOn(true)).catch(() => {})
 
-  return createToggleButton(
-    nightOn,
-    "",
-    "Night Light",
-    () => {
-      if (nightOn.get()) {
-        execAsync("pkill gammastep")
-        setNightOn(false)
-      } else {
-        execAsync(["bash", "-c", "gammastep -O 4500 &"])
-        setNightOn(true)
-      }
-    }
+  return (
+    <ToggleButton
+      active={nightOn}
+      icon="night-light-symbolic"
+      label="Night Light"
+      onClick={() => {
+        if (nightOn.get()) {
+          execAsync("pkill gammastep")
+          setNightOn(false)
+        } else {
+          execAsync(["bash", "-c", "gammastep -O 4500 &"])
+          setNightOn(true)
+        }
+      }}
+    />
   )
 }
 

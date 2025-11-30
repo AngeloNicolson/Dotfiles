@@ -2,6 +2,7 @@ import Gtk from "gi://Gtk?version=3.0"
 import { setSidebarStack } from "../state"
 import Home from "./Home"
 import ThemeSwitcher from "./ThemeSwitcher"
+import AppLauncher from "./AppLauncher"
 import AstalHyprland from "gi://AstalHyprland"
 
 export default function Sidebar({ gdkMonitorIndex }: { gdkMonitorIndex: number }) {
@@ -12,6 +13,7 @@ export default function Sidebar({ gdkMonitorIndex }: { gdkMonitorIndex: number }
 
   const homePage = <Home />
   const themePage = <ThemeSwitcher />
+  const appPage = <AppLauncher />
 
   const settingsPage = (
     <box vertical name="page-box">
@@ -22,7 +24,8 @@ export default function Sidebar({ gdkMonitorIndex }: { gdkMonitorIndex: number }
 
   stack.add_named(homePage, "page1")
   stack.add_named(themePage, "page2")
-  stack.add_named(settingsPage, "page3")
+  stack.add_named(appPage, "page3")
+  stack.add_named(settingsPage, "page4")
   stack.set_visible_child_name("page1")
   stack.show_all()
 

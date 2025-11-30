@@ -14,7 +14,7 @@
 @define-color orange #fe8019;
 
 * {
-  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-family: "JetBrainsMono Nerd Font";
   font-size: 14px;
 }
 
@@ -57,4 +57,58 @@
 
 .bar-edge:hover {
   background: @aqua;
+}
+
+/* Toggle Container */
+#toggle-container {
+  margin: 8px;
+  padding: 4px;
+}
+
+/* Circular Toggle Buttons */
+#quick-toggle {
+  background: @bg1;
+  border-radius: 50%;
+  padding: 0;
+  margin: 0 0 8px 0;
+  min-width: 64px;
+  min-height: 64px;
+  max-width: 64px;
+  max-height: 64px;
+  border: 2px solid transparent;
+  transition: all 200ms ease;
+}
+
+#quick-toggle:hover {
+  background: @bg2;
+  border-color: @bg2;
+}
+
+#quick-toggle.active {
+  background: alpha(@blue, 0.2);
+  border-color: @blue;
+}
+
+#quick-toggle.active:hover {
+  background: alpha(@blue, 0.3);
+}
+
+#toggle-icon {
+  font-size: 28px;
+  color: @fg;
+}
+
+#quick-toggle.active #toggle-icon {
+  color: @blue;
+}
+
+#toggle-label {
+  font-size: 10px;
+  color: @fg;
+  font-weight: 400;
+}
+
+/* Quick toggles row */
+#quick-toggles-row {
+  padding: 6px;
 }

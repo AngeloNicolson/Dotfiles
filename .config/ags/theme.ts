@@ -139,30 +139,57 @@ function generateCSS(c: ThemeColors): string {
 
     /* Quick toggles */
     #quick-toggles-row {
-      margin: 4px 0;
+      padding: 6px;
+    }
+    #toggle-container {
+      margin: 8px;
+      padding: 4px;
     }
     #quick-toggle {
-      border: none;
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin: 2px 4px;
-      min-width: 100px;
       background: ${c.bg_lighter};
-    }
-    #quick-toggle.active {
-      background: ${c.accent};
+      border-radius: 50%;
+      padding: 0;
+      margin: 0 0 8px 0;
+      min-width: 64px;
+      min-height: 64px;
+      border: 2px solid transparent;
+      transition: all 200ms ease;
     }
     #quick-toggle:hover {
       background: ${c.gray};
+      border-color: ${c.gray};
+    }
+    #quick-toggle.active {
+      background: alpha(${c.accent}, 0.2);
+      border-color: ${c.accent};
+    }
+    #quick-toggle.active:hover {
+      background: alpha(${c.accent}, 0.3);
     }
     #toggle-icon {
+      font-size: 28px;
       color: ${c.fg};
-      font-size: 16px;
-      margin-right: 8px;
+    }
+    #quick-toggle.active #toggle-icon {
+      color: ${c.accent};
+    }
+    #toggle-label-btn {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin: 0;
+    }
+    #toggle-label-btn:hover {
+      background: alpha(${c.accent}, 0.1);
+      border-radius: 4px;
     }
     #toggle-label {
+      font-size: 10px;
       color: ${c.fg};
-      font-size: 12px;
+      font-weight: 400;
+    }
+    #toggle-label-btn #toggle-label {
+      padding: 2px 4px;
     }
 
     /* Sliders */
@@ -205,6 +232,69 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 50%;
       min-width: 16px;
       min-height: 16px;
+    }
+
+    /* App Launcher - Cassettepunk Style */
+    #search-container {
+      margin-bottom: 16px;
+    }
+    #app-search {
+      background: ${c.bg_dark};
+      border: 2px solid ${c.accent};
+      border-radius: 4px;
+      padding: 10px 14px;
+      color: ${c.fg_bright};
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+    #app-search:focus {
+      border-color: ${c.blue_bright};
+    }
+    #app-list-scroll {
+      margin-top: 12px;
+    }
+    #app-item {
+      background: linear-gradient(135deg, ${c.bg_lighter} 0%, ${c.bg_dark} 100%);
+      border: 1px solid ${c.gray};
+      border-left: 3px solid ${c.accent};
+      border-radius: 0;
+      padding: 10px 12px;
+      margin: 0;
+      min-width: 220px;
+    }
+    #app-item:hover {
+      background: linear-gradient(135deg, ${c.gray} 0%, ${c.bg_lighter} 100%);
+      border-left-color: ${c.blue_bright};
+    }
+    #app-item:active {
+      background: ${c.bg_lighter};
+      border-left-color: ${c.cyan_bright};
+    }
+    #app-icon-container {
+      background: ${c.bg_dark};
+      border: 1px solid ${c.accent};
+      border-radius: 2px;
+      padding: 6px;
+      min-width: 36px;
+      min-height: 36px;
+    }
+    #app-icon {
+      color: ${c.accent};
+      font-size: 24px;
+    }
+    #app-name {
+      color: ${c.fg_bright};
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+    }
+    #app-description {
+      color: ${c.fg_dim};
+      font-size: 10px;
+      opacity: 0.8;
+      font-family: monospace;
+      letter-spacing: 0.2px;
     }
   `
 }
@@ -276,6 +366,11 @@ export async function applyTheme(themeName: string) {
   await execAsync(`gsettings set org.gnome.desktop.interface icon-theme '${gtk.iconTheme}'`).catch(() => {})
   await execAsync(`gsettings set org.gnome.desktop.interface cursor-theme '${gtk.cursorTheme}'`).catch(() => {})
   await execAsync(`gsettings set org.gnome.desktop.interface color-scheme '${gtk.colorScheme}'`).catch(() => {})
+
+  // Force GTK apps to reload theme by toggling it
+  await execAsync(`gsettings set org.gnome.desktop.interface gtk-theme ''`).catch(() => {})
+  await execAsync(`gsettings set org.gnome.desktop.interface gtk-theme '${gtk.theme}'`).catch(() => {})
+
   print("  Updated GTK")
 
   // Apply Hyprland settings
