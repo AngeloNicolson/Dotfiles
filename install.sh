@@ -77,6 +77,34 @@ else
     echo "Hyprland config directory not found. Make sure symlinking worked correctly."
 fi
 
+# Setup Ollama
+print_status "Setting up Ollama AI..."
+if command -v ollama &> /dev/null; then
+    # Enable and start ollama service
+    print_status "Enabling ollama service..."
+    sudo systemctl enable ollama
+    sudo systemctl start ollama
+    print_success "Ollama service started"
+
+    # Wait for ollama to be ready
+    sleep 2
+
+    # Pull AI models
+    print_status "Pulling AI models (this may take a while)..."
+    echo "  Pulling qwen3-coder:30b (18GB, optimized for coding)..."
+    ollama pull qwen3-coder:30b
+    print_success "AI models installed"
+
+    echo ""
+    echo -e "${GREEN}AI Setup Complete!${NC}"
+    echo "  Use 'monolith' command to manage AI models"
+    echo "  In Neovim:"
+    echo "    - Space cc: CodeCompanion chat"
+    echo "    - Space ae: Avante edit (visual mode)"
+else
+    echo "Ollama not found. AI features will not be available."
+fi
+
 echo ""
 echo -e "${GREEN}Installation complete!${NC}"
 echo ""

@@ -9,9 +9,65 @@ My personal configuration files for Hyprland, AGS, Neovim, Fish, and more.
   - Window rules and workspace management
   - Layout manager scripts (visual layout designer, browser, and apply tools)
 - **AGS** - Desktop UI (bar, notifications, widgets)
-- **Neovim** - Editor configuration
+- **Neovim** - Editor configuration with AI coding assistants
 - **Fish** - Shell configuration with Starship prompt
 - **Foot** - Terminal emulator configuration
+- **Ollama** - Local AI/LLM server with GPU acceleration
+  - Qwen3-Coder 30B model for coding assistance
+  - Integrated with Neovim (CodeCompanion, Avante)
+  - CLI management tool (Monolith)
+
+## AI Coding Features
+
+### Local AI Integration
+
+This dotfiles setup includes local AI coding assistants powered by Ollama with GPU acceleration:
+
+**Models:**
+- **Qwen3-Coder 30B** (Q4_K_M quantized, 18GB)
+  - Optimized for code generation and programming tasks
+  - 262K token context window
+  - Runs on NVIDIA GPU (RTX 5090 24GB VRAM)
+
+**Tools:**
+- **CodeCompanion** (Neovim) - Chat and inline code editing
+  - `Space cc` - Toggle chat window
+  - `Space ci` - Inline code generation
+  - `Space ca` - Code actions (explain, refactor, fix)
+- **Avante** (Neovim) - Cursor-like AI editing experience
+  - `Space aa` - Show sidebar
+  - `Space ae` - Edit selection (visual mode)
+  - Apply/reject AI suggestions with `a` / `co` / `ct`
+- **Monolith** (CLI) - Ollama management tool
+  - Interactive model selection
+  - Service management (start/stop)
+  - Status monitoring
+
+**System Requirements:**
+- NVIDIA GPU with 20GB+ VRAM (for 30B models)
+- CUDA drivers installed
+- ~20GB disk space for models
+
+### Using the AI Features
+
+**Start the AI service:**
+```bash
+monolith         # Interactive menu
+monolith start   # Quick start
+monolith status  # Check status
+```
+
+**In Neovim:**
+```vim
+Space cc         # Open AI chat
+Space ci         # Inline code generation
+Space ae         # AI edit (visual mode)
+```
+
+**Chat with AI directly:**
+```bash
+ollama run qwen3-coder:30b
+```
 
 ## Prerequisites
 

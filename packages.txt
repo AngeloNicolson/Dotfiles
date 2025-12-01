@@ -13,6 +13,10 @@ starship
 # Editor
 neovim
 
+# AI/LLM Tools
+ollama
+ollama-cuda
+
 # Document Viewer
 zathura
 zathura-pdf-poppler
@@ -28,7 +32,7 @@ nerd-fonts-complete
 # Shell Utilities
 polkit-kde-agent
 
-# Audio/Media
+  # Audio/Media
 pipewire                    # Audio server
 wireplumber                 # PipeWire session manager
 pavucontrol                 # PulseAudio volume control GUI
