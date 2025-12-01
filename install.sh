@@ -44,6 +44,12 @@ print_status "Symlinking tmux config..."
 ln -sf "$DOTFILES_DIR/.tmux.conf" "$HOME/.tmux.conf"
 print_success "Tmux config symlinked"
 
+# Symlink local bin directory
+print_status "Symlinking local bin..."
+mkdir -p "$HOME/.local/bin"
+ln -sf "$DOTFILES_DIR/.local/bin/"* "$HOME/.local/bin/"
+print_success "Local bin symlinked"
+
 # Setup Firefox
 print_status "Setting up Firefox..."
 

@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+# Monolith - Ollama Manager
+# Manage ollama service and models
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+print_header() {
+    echo -e "${BLUE}╔════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║${NC}     ${GREEN}MONOLITH AI MANAGER${NC}       ${BLUE}║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════╝${NC}\n"
+}
+
+check_ollama_status() {
+    if systemctl is-active --quiet ollama; then
+        echo -e "${GREEN}●${NC} Ollama Service: ${GREEN}RUNNING${NC}"
+        return 0
+    else
+        echo -e "${RED}●${NC} Ollama Service: ${RED}STOPPED${NC}"
+        return 1
+    fi
+}
+
+show_loaded_models() {
+    echo -e "\n${YELLOW}Currently Loaded:${NC}"
+    local loaded=$(ollama ps 2>/dev/null)
+    if [ -z "$loaded" ] || [ "$loaded" = "NAME    ID    SIZE    MODIFIED" ]; then
+        echo "  No models loaded in VRAM"
+    else
+        echo "$loaded" | tail -n +2
+    fi
+}
+
+list_models() {
+    echo -e "\n${YELLOW}Available Models:${NC}"
+    ollama list 2>/dev/null | tail -n +2 | nl -w2 -s'. '
+}
+
+select_model() {
+    list_models
+    echo -e "\n${BLUE}Select model number (or 'q' to quit):${NC} "
+    read -r choice
+
+    if [ "$choice" = "q" ]; then
+        exit 0
+    fi
+
+    local model=$(ollama list 2>/dev/null | tail -n +2 | sed -n "${choice}p" | awk '{print $1}')
+
+    if [ -z "$model" ]; then
+        echo -e "${RED}Invalid selection${NC}"
+        exit 1
+    fi
+
+    echo -e "\n${GREEN}Loading model: ${model}${NC}"
+    echo -e "${YELLOW}Running chat... (Ctrl+D to exit)${NC}\n"
+    ollama run "$model"
+}
+
+toggle_service() {
+    if check_ollama_status >/dev/null 2>&1; then
+        echo -e "\n${YELLOW}Stopping ollama service...${NC}"
+        sudo systemctl stop ollama
+        echo -e "${GREEN}✓${NC} Service stopped"
+    else
+        echo -e "\n${YELLOW}Starting ollama service...${NC}"
+        sudo systemctl start ollama
+        echo -e "${GREEN}✓${NC} Service started"
+    fi
+}
+
+show_menu() {
+    print_header
+    check_ollama_status
+    show_loaded_models
+
+    echo -e "\n${BLUE}Options:${NC}"
+    echo "  1) Select & run model"
+    echo "  2) Toggle service (start/stop)"
+    echo "  3) Show status"
+    echo "  4) Unload all models"
+    echo "  q) Quit"
+    echo -e "\n${BLUE}Choice:${NC} "
+    read -r choice
+
+    case $choice in
+        1)
+            select_model
+            ;;
+        2)
+            toggle_service
+            echo ""
+            read -p "Press enter to continue..."
+            show_menu
+            ;;
+        3)
+            show_menu
+            ;;
+        4)
+            echo -e "\n${YELLOW}Unloading all models...${NC}"
+            sudo systemctl restart ollama
+            echo -e "${GREEN}✓${NC} All models unloaded"
+            sleep 1
+            show_menu
+            ;;
+        q|Q)
+            echo -e "\n${GREEN}Goodbye!${NC}"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Invalid choice${NC}"
+            sleep 1
+            show_menu
+            ;;
+    esac
+}
+
+# Main
+if [ $# -eq 0 ]; then
+    show_menu
+else
+    case $1 in
+        start)
+            sudo systemctl start ollama
+            echo -e "${GREEN}✓${NC} Ollama started"
+            ;;
+        stop)
+            sudo systemctl stop ollama
+            echo -e "${GREEN}✓${NC} Ollama stopped"
+            ;;
+        status)
+            check_ollama_status
+            show_loaded_models
+            ;;
+        *)
+            echo "Usage: monolith [start|stop|status]"
+            echo "Or run without arguments for interactive menu"
+            ;;
+    esac
+fi
