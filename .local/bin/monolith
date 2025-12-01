@@ -123,7 +123,31 @@ show_menu() {
 
 # Main
 if [ $# -eq 0 ]; then
-    show_menu
+    # Auto-start service if not running
+    if ! systemctl is-active --quiet ollama; then
+        print_header
+        echo -e "${YELLOW}Starting ollama service...${NC}"
+        sudo systemctl start ollama
+        echo -e "${GREEN}✓${NC} Service started"
+        sleep 2  # Wait for service to be ready
+    fi
+
+    # Check if a model is already loaded
+    loaded=$(ollama ps 2>/dev/null | tail -n +2)
+
+    if [ -n "$loaded" ]; then
+        # Model already loaded, get the model name and run chat
+        model=$(echo "$loaded" | head -n 1 | awk '{print $1}')
+        echo -e "${GREEN}Using loaded model: ${model}${NC}"
+        echo -e "${YELLOW}Running chat... (Ctrl+D to exit)${NC}\n"
+        ollama run "$model"
+    else
+        # No model loaded, show selection
+        print_header
+        echo -e "${GREEN}●${NC} Ollama Service: ${GREEN}RUNNING${NC}"
+        show_loaded_models
+        select_model
+    fi
 else
     case $1 in
         start)
@@ -138,9 +162,12 @@ else
             check_ollama_status
             show_loaded_models
             ;;
+        menu)
+            show_menu
+            ;;
         *)
-            echo "Usage: monolith [start|stop|status]"
-            echo "Or run without arguments for interactive menu"
+            echo "Usage: monolith [start|stop|status|menu]"
+            echo "Or run without arguments to select and load a model"
             ;;
     esac
 fi

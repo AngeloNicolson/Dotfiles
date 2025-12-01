@@ -1,6 +1,9 @@
 # System-specific configuration template
 # Copy this file to system-local.fish and customize for your machine
 
+# Local bin directory
+set -gx PATH $HOME/.local/bin $PATH
+
 # Java setup (uncomment if needed)
 # set -gx JAVA_HOME (readlink -f /usr/lib/jvm/default)
 # set -gx PATH $JAVA_HOME/bin $PATH
