@@ -4,6 +4,9 @@ My personal configuration files for Hyprland, AGS, Neovim, Fish, and more.
 
 ## Contents
 
+- **Theme System** - Unified theme management (Mech, Famicom, E-Ink)
+  - Synchronized colors across Neovim, Foot, GTK, and Hyprland
+  - Single command theme switching
 - **Hyprland** - Wayland compositor configuration
   - Custom keybindings
   - Window rules and workspace management
@@ -69,6 +72,56 @@ Space ae         # AI edit (visual mode)
 ollama run qwen3-coder:30b
 ```
 
+## Theme System
+
+Unified theme management system that synchronizes colors across all applications.
+
+### Available Themes
+
+- **Mech** (dark, gruvbox-inspired) - Warm dark theme with high contrast
+- **Famicom** (light, retro) - Cream background with vibrant gaming-inspired colors
+- **E-Ink** (monochrome) - Pure black and white for minimal distraction
+
+### Architecture
+
+Themes are defined in JSON files at `~/.config/themes/`:
+- `mech.json`, `famicom.json`, `e-ink.json` - Theme definitions with color palettes and settings
+- `.current` - Stores the currently active theme name
+- `apply-theme.sh` - Script to apply themes system-wide
+
+Each theme file defines:
+- **Colors** - Complete palette (background, foreground, accents, ANSI colors)
+- **GTK** - GTK theme, icon theme, cursor theme, color scheme preference
+- **Hyprland** - Border radius, gaps, border size
+
+### Switching Themes
+
+```bash
+# Apply a theme
+~/.config/themes/apply-theme.sh mech
+~/.config/themes/apply-theme.sh famicom
+~/.config/themes/apply-theme.sh e-ink
+
+# The script automatically:
+# 1. Updates Foot terminal colors
+# 2. Applies GTK theme settings
+# 3. Updates Hyprland appearance (gaps, borders, rounding)
+# 4. Saves theme selection to .current file
+```
+
+### Neovim Integration
+
+Neovim automatically syncs with the system theme on startup by:
+1. Reading `~/.config/themes/.current` to detect active theme
+2. Loading matching colorscheme from `~/.config/nvim/colors/`
+
+To reload theme in Neovim after changing system theme:
+```vim
+:ReloadSystemTheme
+```
+
+The Neovim colorschemes use identical color values from the theme JSON files, ensuring perfect synchronization.
+
 ## Prerequisites
 
 Install required packages (Arch Linux):
@@ -94,6 +147,7 @@ cp -r ~/.config/ags ~/.config-backup/ 2>/dev/null
 cp -r ~/.config/nvim ~/.config-backup/ 2>/dev/null
 cp -r ~/.config/fish ~/.config-backup/ 2>/dev/null
 cp -r ~/.config/foot ~/.config-backup/ 2>/dev/null
+cp -r ~/.config/themes ~/.config-backup/ 2>/dev/null
 
 # Copy configs
 cp -r .config/* ~/.config/
@@ -134,6 +188,7 @@ mv ~/.config/ags ~/.config-backup/ 2>/dev/null
 mv ~/.config/nvim ~/.config-backup/ 2>/dev/null
 mv ~/.config/fish ~/.config-backup/ 2>/dev/null
 mv ~/.config/foot ~/.config-backup/ 2>/dev/null
+mv ~/.config/themes ~/.config-backup/ 2>/dev/null
 mv ~/.config/starship.toml ~/.config-backup/ 2>/dev/null
 
 # Create symlinks
@@ -142,6 +197,7 @@ ln -s ~/dotfiles/.config/ags ~/.config/ags
 ln -s ~/dotfiles/.config/nvim ~/.config/nvim
 ln -s ~/dotfiles/.config/fish ~/.config/fish
 ln -s ~/dotfiles/.config/foot ~/.config/foot
+ln -s ~/dotfiles/.config/themes ~/.config/themes
 ln -s ~/dotfiles/.config/starship.toml ~/.config/starship.toml
 
 # Create fish system-local.fish
@@ -162,16 +218,21 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
    - Edit `~/.config/fish/system-local.fish` for machine-specific paths
    - Restart your shell
 
-2. **Configure Hyprland:**
+2. **Apply a theme:**
+   ```bash
+   ~/.config/themes/apply-theme.sh mech
+   ```
+
+3. **Configure Hyprland:**
    - Edit `~/.config/hypr/custom/` files for personal customizations
    - Reload: `hyprctl reload`
 
-3. **Restore rnote settings (if using rnote):**
+4. **Restore rnote settings (if using rnote):**
    ```bash
    dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini
    ```
 
-4. **Start Hyprland:**
+5. **Start Hyprland:**
    ```bash
    Hyprland
    ```

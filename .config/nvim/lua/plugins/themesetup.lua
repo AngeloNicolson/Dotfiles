@@ -1,31 +1,56 @@
 return {
-	-- Gruvbox Material theme
-	"sainnhe/gruvbox-material",
-	lazy = false,
-	priority = 1000,
+	-- System theme sync
+	-- Gruvbox Material theme (backup fallback)
+	{
+		"sainnhe/gruvbox-material",
+		lazy = true,
+		priority = 999,
+	},
 
-	-- Configuration for termguicolors and Gruvbox Material options
-	config = function()
-		-- Enable termguicolors for true color support
-		vim.o.termguicolors = true
+	-- System-synced colorscheme loader
+	{
+		name = "system-theme-sync",
+		dir = vim.fn.stdpath("config") .. "/colors",
+		lazy = false,
+		priority = 1000,
+		config = function()
+			-- Enable termguicolors for true color support
+			vim.o.termguicolors = true
 
-		-- Gruvbox Material settings
-		vim.g.gruvbox_material_background = "hard" -- Contrast: hard, medium, soft
-		vim.g.gruvbox_material_foreground = "original" -- Use original bright colors
-		vim.g.gruvbox_material_transparent_background = 1 -- Enable transparent background
-		vim.g.gruvbox_material_dim_inactive_windows = 0 -- Ensure inactive windows are not dimmed
-		vim.g.gruvbox_material_show_eob = 0 -- Hide end of buffer filler characters
+			-- Function to read current system theme
+			local function get_system_theme()
+				local theme_file = os.getenv("HOME") .. "/.config/themes/.current"
+				local file = io.open(theme_file, "r")
+				if file then
+					local theme = file:read("*line")
+					file:close()
+					return theme
+				end
+				return "mech" -- Default fallback
+			end
 
-		-- Load Gruvbox Material color scheme
-		vim.cmd("colorscheme gruvbox-material")
+			-- Load the matching colorscheme
+			local system_theme = get_system_theme()
+			local colorscheme_map = {
+				mech = "mech",
+				famicom = "famicom",
+				["e-ink"] = "e-ink",
+			}
 
-		-- Apply specific highlight settings after the theme is loaded
-		vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
-		vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
-		vim.api.nvim_set_hl(0, "EndOfBuffer", { bg = "none" }) -- Ensure EOB filler matches transparency
+			local colorscheme = colorscheme_map[system_theme] or "mech"
+			vim.cmd("colorscheme " .. colorscheme)
 
-		-- Enable bold and italics
-		vim.cmd("highlight Comment cterm=bold gui=bold")
-		vim.cmd("highlight Function cterm=italic gui=italic")
-	end,
+			-- Enable bold and italics
+			vim.cmd("highlight Comment cterm=italic gui=italic")
+			vim.cmd("highlight Function cterm=bold gui=bold")
+
+			-- Create a command to reload theme from system
+			vim.api.nvim_create_user_command("ReloadSystemTheme", function()
+				local theme = get_system_theme()
+				local scheme = colorscheme_map[theme] or "mech"
+				vim.cmd("colorscheme " .. scheme)
+				print("Loaded " .. scheme .. " theme")
+			end, {})
+		end,
+	},
 }
