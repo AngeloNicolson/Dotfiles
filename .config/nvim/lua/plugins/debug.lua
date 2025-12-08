@@ -21,12 +21,13 @@ return {
 
 			-- Setup mason-nvim-dap
 			require("mason-nvim-dap").setup({
-				automatic_installation = true,
-				ensure_installed = {
-					"python",
-					"codelldb", -- C/C++/Rust
-					"js-debug-adapter", -- JavaScript/TypeScript
-				},
+				automatic_installation = false,
+				-- Install debuggers manually via :Mason when needed
+				-- ensure_installed = {
+				-- 	"python",
+				-- 	"codelldb",
+				-- 	"js-debug-adapter",
+				-- },
 				handlers = {},
 			})
 

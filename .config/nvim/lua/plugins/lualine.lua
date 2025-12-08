@@ -21,16 +21,45 @@ return {
 
 			lualine.setup({
 				options = {
-					icons_enabled = true, -- Enable icons
-					theme = "gruvbox-material", -- Set theme
-					filetype = { colored = false }, -- Disable filetype colored
-					component_separators = { left = "", right = "" }, -- Remove component separators
-					section_separators = { left = "", right = "" }, -- Remove section separators
-					disabled_filetypes = {}, -- No filetypes disabled
-					always_divide_middle = true, -- Always divide the middle
+					icons_enabled = true,
+					theme = "gruvbox-material",
+					component_separators = { left = "", right = "" },
+					section_separators = { left = "", right = "" },
+					disabled_filetypes = { statusline = { "dashboard", "alpha" } },
+					always_divide_middle = true,
+					globalstatus = true, -- Single statusline for all windows
 				},
-				sections = sections, -- Customize sections as needed
-				inactive_sections = inactive_sections, -- Customize inactive sections
+				sections = {
+					lualine_a = { "mode" },
+					lualine_b = { "branch", "diff", "diagnostics" },
+					lualine_c = {
+						{
+							"filename",
+							path = 1, -- Show relative path
+							symbols = { modified = " ", readonly = " ", unnamed = "[No Name]" },
+						},
+					},
+					lualine_x = {
+						{
+							require("lazy.status").updates,
+							cond = require("lazy.status").has_updates,
+							color = { fg = "#ff9e64" },
+						},
+						{ "encoding", show_bomb = true },
+						"fileformat",
+						"filetype",
+					},
+					lualine_y = { "progress" },
+					lualine_z = { "location" },
+				},
+				inactive_sections = {
+					lualine_a = {},
+					lualine_b = {},
+					lualine_c = { "filename" },
+					lualine_x = { "location" },
+					lualine_y = {},
+					lualine_z = {},
+				},
 			})
 		end,
 	},

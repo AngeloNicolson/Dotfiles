@@ -8,17 +8,16 @@ return {
 		local null_ls = require("null-ls")
 		local formatting = null_ls.builtins.formatting
 
+		-- Install formatters manually via :Mason when needed
+		-- Automatic installation disabled to prevent startup conflicts
 		require("mason-null-ls").setup({
-			ensure_installed = {
-				"stylua",
-				"black",
-				"prettierd",
-				"clangd",
-				"clang-format",
-				"codelldb",
-				"cmake-language-server",
-			},
-			automatic_installation = true,
+			-- ensure_installed = {
+			-- 	"stylua",
+			-- 	"black",
+			-- 	"prettierd",
+			-- 	"clang-format",
+			-- },
+			automatic_installation = false,
 		})
 
 		local sources = {
@@ -51,7 +50,7 @@ return {
 			}),
 			formatting.prettierd.with({
 				extra_args = {
-					"--semi",
+					"--no-semi",
 					"--double-quote",
 					"--jsx-single-quote",
 					"--bracket-same-line",

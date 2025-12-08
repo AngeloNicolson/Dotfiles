@@ -66,108 +66,147 @@ export function loadTheme(themeName: string): Theme | null {
 function generateCSS(c: ThemeColors): string {
   return `
     * {
-      transition: 300ms ease;
+      font-family: "JetBrainsMono Nerd Font", "CaskaydiaCove Nerd Font", monospace;
+      transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    window {
+      background: transparent;
+    }
+
+    /* Sidebar container */
     #sidebar-bg {
-      background: ${c.bg_light};
+      background: ${c.bg};
+      border-radius: 0 16px 16px 0;
+      padding: 4px;
     }
+
     #edge-strip {
-      background: ${c.bg_lighter};
-      min-width: 4px;
-      border-radius: 0 4px 4px 0;
+      background: transparent;
+      min-width: 3px;
+      border-radius: 0 8px 8px 0;
+      margin: 24px 0;
     }
+    #edge-strip:hover {
+      background: ${c.accent};
+    }
+
     #page-box {
-      padding: 20px;
-      min-width: 250px;
-      min-height: 400px;
+      padding: 24px 20px;
+      min-width: 280px;
     }
+
+    /* Typography */
     #title {
       color: ${c.fg};
-      font-size: 24px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
     }
     #subtitle {
       color: ${c.fg_dim};
-      font-size: 14px;
+      font-size: 12px;
+      font-weight: 400;
     }
     #title-blue {
-      color: ${c.blue_bright};
-      font-size: 24px;
+      color: ${c.accent};
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
     }
+
+    /* Theme Switcher */
     #theme-title {
       color: ${c.fg};
-      font-size: 20px;
-      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 20px;
     }
     #theme-button {
-      background: ${c.bg_lighter};
+      background: ${c.bg_light};
       border: none;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin: 4px 0;
-      min-width: 200px;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 6px 0;
+      min-width: 220px;
     }
     #theme-button:hover {
-      background: ${c.gray};
+      background: ${c.bg_lighter};
+    }
+    #theme-button:active {
+      background: alpha(${c.accent}, 0.15);
     }
     #theme-button label {
       color: ${c.fg};
-      font-size: 14px;
+      font-size: 13px;
+      font-weight: 500;
     }
 
     /* Clock */
     #clock {
       color: ${c.fg};
-      font-size: 48px;
-      font-weight: bold;
+      font-size: 56px;
+      font-weight: 300;
+      letter-spacing: -2px;
+      margin-bottom: 2px;
     }
     #date {
       color: ${c.fg_dim};
-      font-size: 14px;
-      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      margin-bottom: 16px;
     }
     #secondary-clock-box {
-      margin-bottom: 20px;
+      background: alpha(${c.bg_lighter}, 0.5);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 24px;
     }
     #clock-secondary {
-      color: ${c.fg_dim};
-      font-size: 20px;
+      color: ${c.fg};
+      font-size: 18px;
+      font-weight: 400;
     }
     #clock-location {
-      color: ${c.gray};
-      font-size: 11px;
+      color: ${c.fg_dim};
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
     }
 
-    /* Quick toggles */
+    /* Quick Toggles */
     #quick-toggles-row {
-      padding: 6px;
+      padding: 4px 0;
     }
     #toggle-container {
-      margin: 8px;
-      padding: 4px;
+      margin: 6px 10px;
     }
     #quick-toggle {
-      background: ${c.bg_lighter};
-      border-radius: 50%;
+      background: ${c.bg_light};
+      border-radius: 16px;
       padding: 0;
-      margin: 0 0 8px 0;
-      min-width: 64px;
-      min-height: 64px;
-      border: 2px solid transparent;
-      transition: all 200ms ease;
+      margin: 0 0 6px 0;
+      min-width: 52px;
+      min-height: 52px;
+      border: none;
     }
     #quick-toggle:hover {
-      background: ${c.gray};
-      border-color: ${c.gray};
+      background: ${c.bg_lighter};
     }
     #quick-toggle.active {
-      background: alpha(${c.accent}, 0.2);
-      border-color: ${c.accent};
+      background: alpha(${c.accent}, 0.15);
     }
     #quick-toggle.active:hover {
-      background: alpha(${c.accent}, 0.3);
+      background: alpha(${c.accent}, 0.22);
     }
     #toggle-icon {
-      font-size: 28px;
+      font-size: 22px;
+      color: ${c.fg_dim};
+    }
+    #quick-toggle:hover #toggle-icon {
       color: ${c.fg};
     }
     #quick-toggle.active #toggle-icon {
@@ -178,123 +217,131 @@ function generateCSS(c: ThemeColors): string {
       border: none;
       padding: 0;
       margin: 0;
-    }
-    #toggle-label-btn:hover {
-      background: alpha(${c.accent}, 0.1);
       border-radius: 4px;
     }
+    #toggle-label-btn:hover {
+      background: alpha(${c.fg_dim}, 0.1);
+    }
     #toggle-label {
-      font-size: 10px;
-      color: ${c.fg};
-      font-weight: 400;
+      font-size: 9px;
+      color: ${c.fg_dim};
+      font-weight: 500;
+      letter-spacing: 0.2px;
     }
     #toggle-label-btn #toggle-label {
-      padding: 2px 4px;
+      padding: 3px 6px;
     }
 
     /* Sliders */
     #sliders-box {
-      margin-top: 16px;
+      margin-top: 20px;
+      padding: 0 4px;
     }
     #slider-box {
-      margin: 8px 0;
+      margin: 10px 0;
     }
     #slider-icon {
-      color: ${c.fg};
-      font-size: 18px;
+      color: ${c.fg_dim};
+      font-size: 16px;
+      margin-right: 12px;
     }
     #slider-icon-btn {
-      font-size: 18px;
-      margin-right: 10px;
+      font-size: 16px;
+      margin-right: 12px;
       border: none;
-      border-radius: 4px;
-      padding: 4px 8px;
+      border-radius: 6px;
+      padding: 6px 8px;
       background: transparent;
+      min-width: 32px;
+    }
+    #slider-icon-btn:hover {
+      background: alpha(${c.fg_dim}, 0.1);
     }
     #slider-icon-btn.active {
-      background: ${c.accent};
+      background: alpha(${c.accent}, 0.2);
+    }
+    #slider-icon-btn.active #slider-icon {
+      color: ${c.accent};
     }
     #volume-slider, #brightness-slider {
-      min-width: 180px;
-      min-height: 8px;
+      min-width: 160px;
+      min-height: 4px;
     }
     #volume-slider trough, #brightness-slider trough {
-      background: ${c.bg_lighter};
-      border-radius: 4px;
-      min-height: 8px;
+      background: alpha(${c.fg_dim}, 0.15);
+      border-radius: 2px;
+      min-height: 4px;
     }
     #volume-slider highlight, #brightness-slider highlight {
       background: ${c.accent};
-      border-radius: 4px;
+      border-radius: 2px;
     }
     #volume-slider slider, #brightness-slider slider {
       background: ${c.fg};
       border-radius: 50%;
-      min-width: 16px;
-      min-height: 16px;
+      min-width: 14px;
+      min-height: 14px;
+      margin: -5px 0;
+      box-shadow: 0 1px 4px alpha(black, 0.3);
+    }
+    #volume-slider slider:hover, #brightness-slider slider:hover {
+      background: ${c.fg_bright};
     }
 
-    /* App Launcher - Cassettepunk Style */
+    /* App Launcher */
     #search-container {
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     #app-search {
-      background: ${c.bg_dark};
-      border: 2px solid ${c.accent};
-      border-radius: 4px;
-      padding: 10px 14px;
-      color: ${c.fg_bright};
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
+      background: ${c.bg_light};
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: ${c.fg};
+      font-size: 12px;
+      font-weight: 500;
     }
     #app-search:focus {
-      border-color: ${c.blue_bright};
+      background: ${c.bg_lighter};
     }
     #app-list-scroll {
-      margin-top: 12px;
+      margin-top: 8px;
     }
     #app-item {
-      background: linear-gradient(135deg, ${c.bg_lighter} 0%, ${c.bg_dark} 100%);
-      border: 1px solid ${c.gray};
-      border-left: 3px solid ${c.accent};
-      border-radius: 0;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
       padding: 10px 12px;
-      margin: 0;
-      min-width: 220px;
+      margin: 2px 0;
+      min-width: 240px;
     }
     #app-item:hover {
-      background: linear-gradient(135deg, ${c.gray} 0%, ${c.bg_lighter} 100%);
-      border-left-color: ${c.blue_bright};
+      background: ${c.bg_light};
     }
     #app-item:active {
       background: ${c.bg_lighter};
-      border-left-color: ${c.cyan_bright};
     }
     #app-icon-container {
-      background: ${c.bg_dark};
-      border: 1px solid ${c.accent};
-      border-radius: 2px;
-      padding: 6px;
-      min-width: 36px;
-      min-height: 36px;
+      background: alpha(${c.accent}, 0.1);
+      border: none;
+      border-radius: 10px;
+      padding: 8px;
+      min-width: 40px;
+      min-height: 40px;
     }
     #app-icon {
       color: ${c.accent};
-      font-size: 24px;
+      font-size: 22px;
     }
     #app-name {
-      color: ${c.fg_bright};
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 0.3px;
+      color: ${c.fg};
+      font-size: 12px;
+      font-weight: 600;
     }
     #app-description {
       color: ${c.fg_dim};
       font-size: 10px;
-      opacity: 0.8;
-      font-family: monospace;
-      letter-spacing: 0.2px;
+      font-weight: 400;
     }
   `
 }

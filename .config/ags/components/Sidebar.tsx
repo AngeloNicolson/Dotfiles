@@ -39,8 +39,15 @@ export default function Sidebar({ gdkMonitorIndex }: { gdkMonitorIndex: number }
   const hyprIndex = (numMonitors - 1) - gdkMonitorIndex
   const hyprMonitor = hyprMonitors[hyprIndex]
 
+  console.log(`Sidebar: gdkIndex=${gdkMonitorIndex}, numMonitors=${numMonitors}, hyprIndex=${hyprIndex}`)
+  console.log(`hyprMonitor:`, hyprMonitor)
+
   if (hyprMonitor) {
-    setSidebarStack(hyprMonitor.get_id(), stack)
+    const monitorId = hyprMonitor.get_id()
+    console.log(`Registering stack for monitor ID: ${monitorId}`)
+    setSidebarStack(monitorId, stack)
+  } else {
+    console.error(`Failed to find hyprMonitor for gdkIndex=${gdkMonitorIndex}`)
   }
 
   return (

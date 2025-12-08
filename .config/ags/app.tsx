@@ -18,6 +18,10 @@ app.start({
     } else if (cmd === "cycle-sidebar") {
       cyclePage()
       response("cycled")
+    } else if (cmd === "debug-stacks") {
+      const { getSidebarStacks } = require("./state")
+      const stacks = getSidebarStacks()
+      response(`Registered stacks: ${JSON.stringify(Array.from(stacks.keys()))}`)
     } else if (cmd === "theme") {
       const themeName = request[1]
       if (themeName) {
@@ -33,47 +37,88 @@ app.start({
   main() {
     initTheme()
 
-    // Create bars for all monitors
     const display = Gdk.Display.get_default()
     const hyprland = AstalHyprland.get_default()
-    const bars: Map<string, any> = new Map()
-    let numMonitors = 0
 
-    if (display) {
-      numMonitors = display.get_n_monitors()
-      for (let i = 0; i < numMonitors; i++) {
-        bars.set(`gdk-${i}`, Bar(i))
-      }
+    // Track bars by monitor name (stable identifier)
+    const bars: Map<string, any> = new Map()
+
+    // Sync bars with current monitors
+    const syncBars = () => {
+      const hyprMonitors = hyprland.get_monitors()
+
+      // Get current monitor names
+      const currentMonitors = new Set<string>()
+      hyprMonitors.forEach(mon => {
+        currentMonitors.add(mon.get_name())
+      })
+
+      // Remove bars for disconnected monitors
+      bars.forEach((bar, name) => {
+        if (!currentMonitors.has(name)) {
+          console.log(`Removing bar for disconnected monitor: ${name}`)
+          bar.destroy()
+          bars.delete(name)
+        }
+      })
+
+      // Add bars for new monitors
+      hyprMonitors.forEach((mon, idx) => {
+        const name = mon.get_name()
+        if (!bars.has(name)) {
+          // GDK monitor index is typically reversed from Hyprland order
+          const numMonitors = display?.get_n_monitors() || 1
+          const gdkIndex = numMonitors > 1 ? (numMonitors - 1) - idx : 0
+          console.log(`Creating bar for monitor: ${name} (gdk index: ${gdkIndex})`)
+          bars.set(name, Bar(gdkIndex))
+        }
+      })
+
+      console.log(`Active bars: ${Array.from(bars.keys()).join(", ")}`)
     }
 
-    // Map Hyprland monitor IDs to GDK indices (inverted)
-    const hyprMonitors = hyprland.get_monitors()
-    const monitorMap: Map<number, number> = new Map()
-
-    hyprMonitors.forEach((mon, idx) => {
-      // Invert the mapping: Hyprland ID to opposite GDK index
-      const gdkIndex = (numMonitors - 1) - idx
-      monitorMap.set(mon.get_id(), gdkIndex)
-    })
-
-    // Track focused monitor and show/hide bars accordingly
+    // Update which bar is visible based on focus
     const updateBarVisibility = () => {
+      const numMonitors = display?.get_n_monitors() || 1
+
+      // Single monitor - just show it
+      if (numMonitors <= 1) {
+        bars.forEach(bar => bar.visible = true)
+        return
+      }
+
       const focusedWorkspace = hyprland.get_focused_workspace()
-      if (!focusedWorkspace) return
+      const focusedMonitor = focusedWorkspace?.get_monitor()
 
-      const focusedMonitor = focusedWorkspace.get_monitor()
-      if (!focusedMonitor) return
+      if (!focusedMonitor) {
+        bars.forEach(bar => bar.visible = true)
+        return
+      }
 
-      const hyprId = focusedMonitor.get_id()
-      const gdkIndex = monitorMap.get(hyprId)
+      const focusedName = focusedMonitor.get_name()
 
-      bars.forEach((bar, key) => {
-        const barIndex = parseInt(key.replace('gdk-', ''))
-        bar.visible = barIndex === gdkIndex
+      bars.forEach((bar, name) => {
+        bar.visible = name === focusedName
       })
     }
 
+    // Listen for monitor changes from Hyprland
+    hyprland.connect("monitor-added", (_hypr, mon) => {
+      console.log(`Monitor added: ${mon.get_name()}`)
+      syncBars()
+      updateBarVisibility()
+    })
+
+    hyprland.connect("monitor-removed", (_hypr, name) => {
+      console.log(`Monitor removed: ${name}`)
+      syncBars()
+      updateBarVisibility()
+    })
+
     hyprland.connect("notify::focused-workspace", updateBarVisibility)
+
+    // Initial setup
+    syncBars()
     updateBarVisibility()
   },
 })

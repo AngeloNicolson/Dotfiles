@@ -212,9 +212,9 @@ function VolumeSlider() {
 // Brightness slider
 function BrightnessSlider() {
   const brightness = createPoll(1, 1000, () => {
-    return execAsync("brightnessctl get")
+    return execAsync("brightnessctl -d intel_backlight get")
       .then((current) => {
-        return execAsync("brightnessctl max").then((max) => {
+        return execAsync("brightnessctl -d intel_backlight max").then((max) => {
           return parseInt(current) / parseInt(max)
         })
       })
@@ -230,7 +230,7 @@ function BrightnessSlider() {
         value={brightness}
         onDragged={(self) => {
           const percent = Math.round(self.value * 100)
-          execAsync(`brightnessctl set ${percent}%`).catch(() => {})
+          execAsync(`brightnessctl -d intel_backlight set ${percent}%`).catch(() => {})
         }}
       />
     </box>

@@ -93,6 +93,20 @@ return {
       clangd = {
         capabilities = { offsetEncoding = { "utf-16" } },
         on_attach = on_attach,
+        cmd = {
+          "clangd",
+          "--background-index",
+          "--clang-tidy",
+          "--header-insertion=iwyu",
+          "--completion-style=detailed",
+          "--function-arg-placeholders",
+          "--fallback-style=llvm",
+        },
+        init_options = {
+          usePlaceholders = true,
+          completeUnimported = true,
+          clangdFileStatus = true,
+        },
       },
       glslls = {
         on_attach = on_attach,
@@ -181,13 +195,14 @@ return {
     -- Setup Mason
     require("mason").setup()
 
-    -- Ensure servers and tools are installed
-    local ensure_installed = vim.tbl_keys(servers or {})
-    vim.list_extend(ensure_installed, {
-      "stylua",
-      "eslint_d",
-    })
-    require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
+    -- Install servers and tools manually via :Mason when needed
+    -- Automatic installation disabled to prevent startup conflicts
+    -- local ensure_installed = vim.tbl_keys(servers or {})
+    -- vim.list_extend(ensure_installed, {
+    --   "stylua",
+    --   "eslint_d",
+    -- })
+    -- require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
     -- Setup Mason-LSPconfig
     require("mason-lspconfig").setup({

@@ -21,9 +21,6 @@ export default function Bar(monitor = 0) {
         >
           <Sidebar gdkMonitorIndex={monitor} />
         </revealer>
-        <eventbox onButtonPressEvent={() => toggleBar()}>
-          <box name="edge-strip" />
-        </eventbox>
       </box>
     </window>
   )

@@ -1,1 +1,0 @@
-/home/Angel/.config/hypr/layouts/environment_configs/Main.json

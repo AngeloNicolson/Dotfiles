@@ -20,16 +20,100 @@ return {
 					adapter = "ollama",
 				},
 			},
-			adapters = {
-				ollama = function()
-					return require("codecompanion.adapters").extend("ollama", {
-						schema = {
-							model = {
-								default = "qwen2.5-coder:7b-instruct-q6_K",
-							},
+			prompt_library = {
+				["Explain"] = {
+					strategy = "chat",
+					description = "Explain how code works",
+					prompts = {
+						{
+							role = "system",
+							content = "You are an expert programmer. Explain the selected code clearly and concisely.",
 						},
-					})
-				end,
+						{
+							role = "user",
+							content = function(context)
+								return "Explain this code:\n\n```" .. context.filetype .. "\n" .. context.selection .. "\n```"
+							end,
+						},
+					},
+				},
+				["Refactor"] = {
+					strategy = "inline",
+					description = "Refactor the code",
+					prompts = {
+						{
+							role = "system",
+							content = "You are an expert programmer. Refactor the code to be more efficient and readable.",
+						},
+						{
+							role = "user",
+							content = function(context)
+								return "Refactor this code:\n\n```" .. context.filetype .. "\n" .. context.selection .. "\n```"
+							end,
+						},
+					},
+				},
+				["Fix Bugs"] = {
+					strategy = "chat",
+					description = "Find and fix bugs",
+					prompts = {
+						{
+							role = "system",
+							content = "You are an expert debugger. Find and explain bugs in the code.",
+						},
+						{
+							role = "user",
+							content = function(context)
+								return "Find bugs in this code:\n\n```" .. context.filetype .. "\n" .. context.selection .. "\n```"
+							end,
+						},
+					},
+				},
+				["Add Comments"] = {
+					strategy = "inline",
+					description = "Add helpful comments",
+					prompts = {
+						{
+							role = "system",
+							content = "You are an expert programmer. Add clear, helpful comments to the code.",
+						},
+						{
+							role = "user",
+							content = function(context)
+								return "Add comments to this code:\n\n```" .. context.filetype .. "\n" .. context.selection .. "\n```"
+							end,
+						},
+					},
+				},
+				["Optimize"] = {
+					strategy = "chat",
+					description = "Optimize code performance",
+					prompts = {
+						{
+							role = "system",
+							content = "You are an expert in performance optimization. Suggest optimizations for the code.",
+						},
+						{
+							role = "user",
+							content = function(context)
+								return "Optimize this code:\n\n```" .. context.filetype .. "\n" .. context.selection .. "\n```"
+							end,
+						},
+					},
+				},
+			},
+			adapters = {
+				http = {
+					ollama = function()
+						return require("codecompanion.adapters").extend("ollama", {
+							schema = {
+								model = {
+									default = "qwen3-coder:30b",
+								},
+							},
+						})
+					end,
+				},
 			},
 			display = {
 				chat = {
