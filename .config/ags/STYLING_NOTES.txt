@@ -1,0 +1,98 @@
+AGS STYLING NOTES
+=================
+
+UNIFIED HOLOGRAPHIC THEME
+-------------------------
+All panels use a consistent "Star Citizen holographic" style with these colors:
+- Background: #040608 (dark blue-black)
+- Panel backgrounds: alpha(#1a2530, 0.6) (semi-transparent dark blue)
+- Borders: #2a3a45 (muted blue-gray)
+- Active/hover borders: #60c0d0 (cyan glow)
+- Primary text: #70c0d0 (cyan)
+- Headers: #5090a0 (muted cyan)
+- Dim text: #4a6070 (gray-blue)
+
+PANEL STRUCTURE
+---------------
+- #sidebar-bg: Main container with left cyan border accent
+- #tab-bar: Top navigation with tab buttons
+- #home-page: Content area for all pages (Home, Power, Themes, Apps, Systems)
+- #section-header: "//SECTION" style headers
+
+TAB BUTTONS (#tab-btn)
+----------------------
+- Inactive: dark background, muted icon/label
+- Hover: slightly lighter, brighter icon
+- Active: cyan border, inner glow, bright cyan icon/label
+
+CONTROL ELEMENTS
+----------------
+- System toggles (#sys-toggle): Square buttons with icon + label
+- Control panels (#control-panel): Brightness/Volume with segmented bars
+- Status panel (#status-panel): Battery info row
+- Clock panel (#clock-panel): Time display with secondary timezone
+
+APP LAUNCHER
+------------
+- Scrollable page wrapping #home-page content
+- Search entry with cyan accent on focus
+- App items (#app-item): Simple cards with icon + truncated name (22 chars max)
+- No descriptions to keep items compact
+- Names truncated in JS: app.get_name().substring(0, 22)
+
+POWER INDICATOR
+---------------
+- Vertical bar with 10 segments
+- Scale markers on left (0, 50, 100)
+- Status indicators on right (AC/BAT, profile, cycle count)
+- Large percentage display
+
+SCROLLABLE ELEMENTS
+-------------------
+To remove GTK's default borders on scrollables, target ALL nested elements:
+
+    scrolledwindow,
+    scrollable {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      outline: none;
+    }
+    scrolledwindow frame,
+    scrolledwindow viewport,
+    scrollable frame,
+    scrollable viewport {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+BUTTON RESET
+------------
+GTK buttons have default styling that needs to be reset:
+
+    button {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      outline: none;
+    }
+
+TRANSITIONS
+-----------
+- Stack transitions: SLIDE_RIGHT (new pages slide in from left)
+- CSS transitions: 150ms linear on all elements
+
+STATE MANAGEMENT
+----------------
+- Page state is shared between Sidebar tabs and keyboard cycling (SUPER+Tab)
+- getPageState(monitorName) returns reactive state per monitor
+- setPage() updates both the GTK Stack and reactive state
+- cyclePage() cycles through pages and updates state
+
+KEYBINDINGS (Hyprland)
+----------------------
+- SUPER + SHIFT: App launching (T=kitty, F=firefox, E=nemo, D=vesktop, B=blender, K=ktouch)
+- SUPER + CTRL: Window management (arrows=resize, 1-5=move to workspace, S=special)
+- SUPER + Tab: Cycle sidebar panels
+- SUPER + Q: Toggle bar visibility

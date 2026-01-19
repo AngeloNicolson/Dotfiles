@@ -45,9 +45,13 @@ python-gobject
 gtk3
 gtk4
 
+# Wallpaper
+swww                        # Static wallpaper daemon
+mpvpaper                    # Live video wallpaper for wlroots compositors
+ffmpeg                      # Video processing, thumbnail generation
+
 # Additional utilities (from your AGS/Hyprland setup)
 swaylock
-swww
 brightnessctl
 pamixer
 wl-clipboard
@@ -61,8 +65,14 @@ wl-color-picker
 # Input Devices
 opentabletdriver          # Wacom tablet driver (Intuos Pro, etc.)
 
+# Filesystem Support
+ntfs-3g                      # NTFS read/write support for external drives
+
 # Optional but recommended
 firefox
 kitty
 ktouch
 rnote                        # Note-taking and sketching app
+
+# AUR packages (install with yay)
+# video2x-git                 # AI video upscaling (Real-ESRGAN)

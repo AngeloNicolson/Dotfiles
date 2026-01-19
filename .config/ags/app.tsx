@@ -1,5 +1,5 @@
 import app from "ags/gtk3/app"
-import { toggleBar, cyclePage } from "./state"
+import { toggleBar, cyclePage, removeSidebarStack } from "./state"
 import { initTheme, applyTheme } from "./theme"
 import Bar from "./components/Bar"
 import AstalHyprland from "gi://AstalHyprland"
@@ -13,6 +13,7 @@ app.start({
       return
     }
     if (cmd === "toggle-bar") {
+      print("app.tsx: calling toggleBar")
       toggleBar()
       response("toggled")
     } else if (cmd === "cycle-sidebar") {
@@ -59,6 +60,7 @@ app.start({
           console.log(`Removing bar for disconnected monitor: ${name}`)
           bar.destroy()
           bars.delete(name)
+          removeSidebarStack(name)
         }
       })
 
@@ -70,7 +72,7 @@ app.start({
           const numMonitors = display?.get_n_monitors() || 1
           const gdkIndex = numMonitors > 1 ? (numMonitors - 1) - idx : 0
           console.log(`Creating bar for monitor: ${name} (gdk index: ${gdkIndex})`)
-          bars.set(name, Bar(gdkIndex))
+          bars.set(name, Bar(gdkIndex, name))
         }
       })
 

@@ -13,11 +13,11 @@ function ThemeButton({ name, displayName }: { name: string; displayName: string 
 
 export default function ThemeSwitcher() {
   return (
-    <box vertical name="page-box">
-      <label name="theme-title" label="Themes" />
-      <ThemeButton name="mech" displayName="Mech" />
-      <ThemeButton name="e-ink" displayName="E-Ink" />
-      <ThemeButton name="famicom" displayName="Famicom" />
+    <box vertical name="home-page">
+      <label name="section-header" label="//THEMES" />
+      <ThemeButton name="mech" displayName="MECH" />
+      <ThemeButton name="e-ink" displayName="E-INK" />
+      <ThemeButton name="famicom" displayName="FAMICOM" />
     </box>
   )
 }

@@ -15,7 +15,27 @@ button:hover {
     color: #d0d0d0;
 }
 
-/* Hide window controls start icon */
-.titlebar image {
+/* Hide window controls start icon (app icon on left side only) */
+.titlebar windowcontrols.start image {
     opacity: 0;
+}
+
+/* Style window control buttons (close, minimize, maximize) */
+headerbar button.titlebutton,
+.titlebar button.titlebutton {
+    background: transparent;
+    color: #fcfcfc;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+headerbar button.titlebutton:hover,
+.titlebar button.titlebutton:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+headerbar button.titlebutton.close:hover,
+.titlebar button.titlebutton.close:hover {
+    background: #c01c28;
+    color: #ffffff;
 }

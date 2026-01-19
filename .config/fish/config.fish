@@ -25,3 +25,5 @@ if test -f ~/.config/fish/system-local.fish
     source ~/.config/fish/system-local.fish
 end
 
+set -x JAVA_HOME /opt/android-studio/jbr
+set -x PATH $JAVA_HOME/bin $PATH

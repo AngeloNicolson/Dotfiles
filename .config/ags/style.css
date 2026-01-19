@@ -112,3 +112,156 @@
 #quick-toggles-row {
   padding: 6px;
 }
+
+/* Battery Status */
+#battery-box {
+  background: @bg1;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px;
+}
+
+#battery-header {
+  margin-bottom: 4px;
+}
+
+#battery-icon {
+  font-size: 24px;
+  color: @green;
+  margin-right: 8px;
+}
+
+#battery-level {
+  font-size: 18px;
+  font-weight: bold;
+  color: @fg;
+  margin-right: 8px;
+}
+
+#battery-status {
+  font-size: 14px;
+  color: @yellow;
+}
+
+#battery-details {
+  margin-top: 4px;
+}
+
+#battery-health {
+  font-size: 11px;
+  color: @aqua;
+  margin-right: 12px;
+}
+
+#battery-cycles {
+  font-size: 11px;
+  color: @purple;
+}
+
+/* Wallpaper Selector */
+#wallpaper-list {
+  padding: 4px;
+}
+
+#wallpaper-list.animating {
+  background: alpha(@aqua, 0.05);
+}
+
+#wallpaper-thumb {
+  background: @bg2;
+  border-radius: 8px;
+  padding: 6px;
+  margin: 4px;
+  border: 2px solid transparent;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#wallpaper-thumb:hover {
+  background: @bg;
+  border-color: @blue;
+  transform: scale(1.02);
+}
+
+#wallpaper-thumb.selected {
+  border-color: @aqua;
+  background: alpha(@aqua, 0.15);
+}
+
+#wallpaper-thumb.selected:hover {
+  border-color: @aqua;
+  background: alpha(@aqua, 0.25);
+}
+
+#wallpaper-thumb image {
+  border-radius: 4px;
+  min-width: 280px;
+  min-height: 175px;
+}
+
+
+#wallpaper-empty {
+  padding: 40px 20px;
+  margin: 8px;
+  background: @bg1;
+  border-radius: 8px;
+}
+
+#wallpaper-empty #status-icon {
+  font-size: 48px;
+  color: @bg2;
+  margin-bottom: 12px;
+}
+
+#wallpaper-empty #status-label {
+  font-size: 14px;
+  color: @fg;
+  margin-bottom: 8px;
+}
+
+#wallpaper-hint {
+  font-size: 11px;
+  color: @blue;
+  opacity: 0.7;
+}
+
+#wallpaper-status {
+  margin: 4px 8px 8px 8px;
+  padding: 8px 12px;
+  background: @bg1;
+  border-radius: 6px;
+}
+
+#wallpaper-status #status-icon {
+  font-size: 14px;
+  color: @aqua;
+  margin-right: 8px;
+}
+
+#wallpaper-status #status-label {
+  font-size: 12px;
+  color: @fg;
+}
+
+#wallpaper-status #status-indicator {
+  font-size: 11px;
+  color: @green;
+  font-weight: bold;
+}
+
+/* Hide scrollbar for wallpaper list */
+#wallpaper-list scrollbar,
+#home-page scrollbar {
+  opacity: 0;
+  min-width: 0;
+}
+
+/* Slide animation keyframes for wallpaper change */
+@keyframes wallpaper-pulse {
+  0% { box-shadow: inset 0 0 0 alpha(@aqua, 0); }
+  50% { box-shadow: inset 0 0 30px alpha(@aqua, 0.4); }
+  100% { box-shadow: inset 0 0 0 alpha(@aqua, 0); }
+}
+
+#wallpaper-list.animating {
+  animation: wallpaper-pulse 1.5s ease-in-out;
+}

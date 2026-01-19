@@ -1,57 +1,64 @@
 import Gtk from "gi://Gtk?version=3.0"
-import { setSidebarStack } from "../state"
+import { setSidebarStack, getPageState, setPage } from "../state"
 import Home from "./Home"
 import ThemeSwitcher from "./ThemeSwitcher"
 import AppLauncher from "./AppLauncher"
-import AstalHyprland from "gi://AstalHyprland"
+import PowerIndicator from "./PowerIndicator"
+import WallpaperSelector from "./WallpaperSelector"
 
-export default function Sidebar({ gdkMonitorIndex }: { gdkMonitorIndex: number }) {
+const tabs = [
+  { id: "page1", icon: "", label: "HOME" },
+  { id: "page2", icon: "", label: "APPS" },
+  { id: "page3", icon: "", label: "THM" },
+  { id: "page4", icon: "", label: "WALL" },
+  { id: "page5", icon: "", label: "PWR" },
+]
+
+export default function Sidebar({ monitorName }: { monitorName: string }) {
+  // Use shared state so cycling and clicking stay in sync
+  const [activePage] = getPageState(monitorName)
+
   const stack = new Gtk.Stack({
-    transition_type: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,
+    transition_type: Gtk.StackTransitionType.SLIDE_RIGHT,
     transition_duration: 300,
   })
 
   const homePage = <Home />
+  const powerPage = <PowerIndicator />
   const themePage = <ThemeSwitcher />
   const appPage = <AppLauncher />
 
-  const settingsPage = (
-    <box vertical name="page-box">
-      <label name="title-blue" label="Settings" />
-      <label name="subtitle" label="Coming soon..." />
-    </box>
-  )
+  const wallpaperPage = <WallpaperSelector />
 
   stack.add_named(homePage, "page1")
-  stack.add_named(themePage, "page2")
-  stack.add_named(appPage, "page3")
-  stack.add_named(settingsPage, "page4")
+  stack.add_named(appPage, "page2")
+  stack.add_named(themePage, "page3")
+  stack.add_named(wallpaperPage, "page4")
+  stack.add_named(powerPage, "page5")
   stack.set_visible_child_name("page1")
   stack.show_all()
 
-  // Get the Hyprland monitor ID from GDK monitor index
-  const hyprland = AstalHyprland.get_default()
-  const hyprMonitors = hyprland.get_monitors()
-
-  // Find the corresponding Hyprland monitor
-  // The inverted mapping: gdkIndex 0 -> hyprMonitor[1], gdkIndex 1 -> hyprMonitor[0]
-  const numMonitors = hyprMonitors.length
-  const hyprIndex = (numMonitors - 1) - gdkMonitorIndex
-  const hyprMonitor = hyprMonitors[hyprIndex]
-
-  console.log(`Sidebar: gdkIndex=${gdkMonitorIndex}, numMonitors=${numMonitors}, hyprIndex=${hyprIndex}`)
-  console.log(`hyprMonitor:`, hyprMonitor)
-
-  if (hyprMonitor) {
-    const monitorId = hyprMonitor.get_id()
-    console.log(`Registering stack for monitor ID: ${monitorId}`)
-    setSidebarStack(monitorId, stack)
-  } else {
-    console.error(`Failed to find hyprMonitor for gdkIndex=${gdkMonitorIndex}`)
-  }
+  // Register stack using the stable monitor name
+  setSidebarStack(monitorName, stack)
 
   return (
-    <box name="sidebar-bg">
+    <box name="sidebar-bg" vertical>
+      {/* Tab bar */}
+      <box name="tab-bar">
+        {tabs.map((tab) => (
+          <button
+            name="tab-btn"
+            class={activePage.as((p) => p === tab.id ? "active" : "")}
+            onClicked={() => setPage(monitorName, tab.id)}
+          >
+            <box vertical>
+              <label name="tab-icon" label={tab.icon} />
+              <label name="tab-label" label={tab.label} />
+            </box>
+          </button>
+        ))}
+      </box>
+      {/* Page content */}
       {stack}
     </box>
   )

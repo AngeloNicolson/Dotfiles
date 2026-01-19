@@ -65,283 +65,838 @@ export function loadTheme(themeName: string): Theme | null {
 // Generate CSS from theme colors using widget names
 function generateCSS(c: ThemeColors): string {
   return `
+    /* === STAR WARS TERMINAL THEME === */
+
     * {
       font-family: "JetBrainsMono Nerd Font", "CaskaydiaCove Nerd Font", monospace;
-      transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      transition: 150ms linear;
     }
 
     window {
       background: transparent;
     }
 
-    /* Sidebar container */
+    /* Reset default button styles */
+    button {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      outline: none;
+    }
+
+    /* Reset scrollable styles */
+    scrolledwindow,
+    scrollable {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      outline: none;
+    }
+    scrolledwindow frame,
+    scrolledwindow viewport,
+    scrollable frame,
+    scrollable viewport {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    scrollbar {
+      background: transparent;
+      border: none;
+    }
+    scrollbar trough {
+      background: transparent;
+      border: none;
+    }
+    scrollbar slider {
+      background: alpha(#3a5060, 0.5);
+      border-radius: 4px;
+      min-width: 6px;
+    }
+    scrollbar slider:hover {
+      background: alpha(#60c0d0, 0.5);
+    }
+
+    /* Sidebar container - Holographic */
     #sidebar-bg {
-      background: ${c.bg};
-      border-radius: 0 16px 16px 0;
-      padding: 4px;
+      background: #040608;
+      border-radius: 0;
+      padding: 0;
+      border: 1px solid #1a2530;
+      border-left: 2px solid #3a6080;
     }
 
     #edge-strip {
       background: transparent;
-      min-width: 3px;
-      border-radius: 0 8px 8px 0;
-      margin: 24px 0;
-    }
-    #edge-strip:hover {
-      background: ${c.accent};
+      min-width: 0;
+      margin: 0;
     }
 
     #page-box {
-      padding: 24px 20px;
-      min-width: 280px;
+      padding: 16px 14px;
+      min-width: 260px;
+      background: #040608;
     }
 
-    /* Typography */
-    #title {
-      color: ${c.fg};
+    /* Tab Bar - Holographic navigation */
+    #tab-bar {
+      background: #040608;
+      border-bottom: 1px solid #1a2530;
+      padding: 6px 6px;
+    }
+    #tab-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 8px 6px;
+      margin: 0 3px;
+      min-width: 46px;
+    }
+    #tab-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #tab-btn.active {
+      background: alpha(#1a3040, 0.8);
+      border: 1px solid #60c0d0;
+      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+    }
+    #tab-icon {
       font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      color: #4a6070;
+      margin-bottom: 2px;
     }
-    #subtitle {
-      color: ${c.fg_dim};
-      font-size: 12px;
-      font-weight: 400;
+    #tab-btn:hover #tab-icon {
+      color: #6080a0;
     }
-    #title-blue {
-      color: ${c.accent};
-      font-size: 14px;
+    #tab-btn.active #tab-icon {
+      color: #80e0f0;
+    }
+    #tab-label {
+      font-size: 7px;
       font-weight: 700;
       letter-spacing: 1px;
-      margin-bottom: 8px;
+      color: #4a6070;
+    }
+    #tab-btn:hover #tab-label {
+      color: #6080a0;
+    }
+    #tab-btn.active #tab-label {
+      color: #80e0f0;
     }
 
-    /* Theme Switcher */
+    /* Typography - terminal style */
+    #title {
+      color: #50d0d0;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    #subtitle {
+      color: #2a4a4a;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 1px;
+    }
+    #title-blue {
+      color: #50d0d0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      margin-bottom: 12px;
+    }
+
+    /* Theme Switcher - Holographic Style (matches Home) */
     #theme-title {
-      color: ${c.fg};
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      margin-bottom: 20px;
+      color: #5090a0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
     }
     #theme-button {
-      background: ${c.bg_light};
-      border: none;
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin: 6px 0;
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 12px 16px;
+      margin: 4px 0;
       min-width: 220px;
     }
     #theme-button:hover {
-      background: ${c.bg_lighter};
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
     }
     #theme-button:active {
-      background: alpha(${c.accent}, 0.15);
+      background: alpha(#1a3040, 0.8);
+      border-color: #60c0d0;
     }
     #theme-button label {
-      color: ${c.fg};
-      font-size: 13px;
-      font-weight: 500;
+      color: #70c0d0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
     }
 
-    /* Clock */
-    #clock {
-      color: ${c.fg};
-      font-size: 56px;
-      font-weight: 300;
-      letter-spacing: -2px;
-      margin-bottom: 2px;
+    /* ============ HOME PAGE - Holographic Star Citizen Style ============ */
+    #home-page {
+      padding: 12px;
+      background: #040608;
     }
-    #date {
-      color: ${c.fg_dim};
-      font-size: 12px;
-      font-weight: 500;
-      letter-spacing: 0.3px;
-      margin-bottom: 16px;
+
+    /* Section Header */
+    #section-header {
+      color: #5090a0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
     }
-    #secondary-clock-box {
-      background: alpha(${c.bg_lighter}, 0.5);
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin-bottom: 24px;
+
+    /* System Toggles Row */
+    #sys-toggles-row {
+      margin-bottom: 12px;
+    }
+    #sys-toggle {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 8px;
+      margin: 0 4px;
+      min-width: 52px;
+    }
+    #sys-toggle:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #sys-toggle.active {
+      background: alpha(#1a3040, 0.8);
+      border: 1px solid #60c0d0;
+      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+    }
+    #sys-toggle-icon {
+      font-size: 18px;
+      color: #4a6070;
+      margin-bottom: 4px;
+    }
+    #sys-toggle:hover #sys-toggle-icon {
+      color: #6080a0;
+    }
+    #sys-toggle.active #sys-toggle-icon {
+      color: #80e0f0;
+    }
+    #sys-toggle-label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+    }
+    #sys-toggle:hover #sys-toggle-label {
+      color: #6080a0;
+    }
+    #sys-toggle.active #sys-toggle-label {
+      color: #80e0f0;
+    }
+
+    /* Clock Panel */
+    #clock-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    #clock-time {
+      color: #70c0d0;
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: 4px;
+    }
+    #clock-date {
+      color: #506070;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
     }
     #clock-secondary {
-      color: ${c.fg};
-      font-size: 18px;
-      font-weight: 400;
+      background: alpha(#0a1015, 0.5);
+      border-top: 1px solid #2a3a45;
+      padding: 8px 0 0 0;
+      margin-top: 6px;
     }
-    #clock-location {
-      color: ${c.fg_dim};
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
+    #clock-alt-label {
+      color: #4a6070;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    #clock-alt-time {
+      color: #5a8090;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 2px;
     }
 
-    /* Quick Toggles */
+    /* Control Panels (Brightness/Volume) */
+    #control-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    #control-header {
+      margin-bottom: 8px;
+    }
+    #control-icon {
+      font-size: 12px;
+      color: #5a8090;
+      margin-right: 8px;
+    }
+    #control-icon-btn {
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin-right: 8px;
+    }
+    #control-icon-btn:hover #control-icon {
+      color: #80e0f0;
+    }
+    #control-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #4a6070;
+    }
+    #control-value {
+      font-size: 11px;
+      font-weight: 700;
+      color: #70c0d0;
+      letter-spacing: 1px;
+    }
+    #control-bar-container {
+    }
+    #control-segment {
+      min-width: 9px;
+      min-height: 6px;
+      border-radius: 1px;
+      border: none;
+      padding: 0;
+      margin: 0 1px;
+    }
+    #control-segment.unlit {
+      background: alpha(#2a3a45, 0.5);
+    }
+    #control-segment.lit {
+      background: #60c0d0;
+    }
+    #control-segment:hover {
+      background: #3a5060;
+    }
+    #control-segment.lit:hover {
+      background: #80e0f0;
+    }
+
+    /* Status Panel (Battery) */
+    #status-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+    }
+    #status-icon {
+      font-size: 14px;
+      color: #5a8090;
+      margin-right: 8px;
+    }
+    #status-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #4a6070;
+    }
+    #status-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: #70c0d0;
+      letter-spacing: 1px;
+      margin-right: 8px;
+    }
+    #status-indicator {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #80e0f0;
+      background: alpha(#2a4050, 0.6);
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    /* Wallpaper selector styles */
+    #wallpaper-tab-bar {
+      background: #040608;
+      border-bottom: 1px solid #1a2530;
+      padding: 6px;
+      margin-bottom: 8px;
+    }
+    #wallpaper-tab-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin: 0 3px;
+      transition: all 150ms linear;
+    }
+    #wallpaper-tab-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #wallpaper-tab-btn.active {
+      background: alpha(#1a3040, 0.8);
+      border: 1px solid #60c0d0;
+      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+    }
+    #wallpaper-tab-btn #tab-icon {
+      font-size: 16px;
+      color: #4a6070;
+      margin-bottom: 2px;
+    }
+    #wallpaper-tab-btn:hover #tab-icon {
+      color: #6080a0;
+    }
+    #wallpaper-tab-btn.active #tab-icon {
+      color: #80e0f0;
+    }
+    #wallpaper-tab-btn #tab-label {
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+    }
+    #wallpaper-tab-btn:hover #tab-label {
+      color: #6080a0;
+    }
+    #wallpaper-tab-btn.active #tab-label {
+      color: #80e0f0;
+    }
+    #wallpaper-thumb {
+      background: alpha(#1a2530, 0.4);
+      border: 1px solid #2a3a45;
+      border-radius: 6px;
+      padding: 4px;
+      margin: 4px 0;
+      transition: all 150ms linear;
+    }
+    #wallpaper-thumb:hover {
+      background: alpha(#253540, 0.6);
+      border-color: #60c0d0;
+      box-shadow: 0 0 8px alpha(#60d0e0, 0.2);
+    }
+    #video-badge {
+      background: alpha(#000000, 0.7);
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin: 6px;
+    }
+    #video-badge label {
+      font-size: 12px;
+      color: #80e0f0;
+    }
+    #video-name {
+      font-size: 9px;
+      font-weight: 600;
+      color: #5a8090;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+    #wallpaper-empty {
+      padding: 40px 20px;
+    }
+    #wallpaper-empty #status-icon {
+      font-size: 32px;
+      color: #3a5060;
+      margin-bottom: 12px;
+    }
+    #wallpaper-empty #status-label {
+      font-size: 10px;
+      color: #4a6070;
+    }
+    #wallpaper-empty #status-sublabel {
+      font-size: 8px;
+      color: #3a5060;
+      margin-top: 4px;
+    }
+
+    /* Legacy styles kept for compatibility */
     #quick-toggles-row {
-      padding: 4px 0;
+      padding: 6px 0;
     }
     #toggle-container {
-      margin: 6px 10px;
+      margin: 4px 6px;
     }
     #quick-toggle {
-      background: ${c.bg_light};
-      border-radius: 16px;
+      background: #0a1214;
+      border-radius: 4px;
       padding: 0;
-      margin: 0 0 6px 0;
-      min-width: 52px;
-      min-height: 52px;
-      border: none;
+      margin: 0 0 4px 0;
+      min-width: 44px;
+      min-height: 44px;
+      border: 1px solid #331111;
     }
     #quick-toggle:hover {
-      background: ${c.bg_lighter};
+      background: #110808;
+      border-color: #551122;
     }
     #quick-toggle.active {
-      background: alpha(${c.accent}, 0.15);
+      background: #110808;
+      border: 1px solid #aa2233;
     }
     #quick-toggle.active:hover {
-      background: alpha(${c.accent}, 0.22);
+      background: #1a0a0a;
     }
     #toggle-icon {
-      font-size: 22px;
-      color: ${c.fg_dim};
+      font-size: 18px;
+      color: #441515;
     }
     #quick-toggle:hover #toggle-icon {
-      color: ${c.fg};
+      color: #662222;
     }
     #quick-toggle.active #toggle-icon {
-      color: ${c.accent};
+      color: #aa2233;
     }
     #toggle-label-btn {
       background: transparent;
       border: none;
       padding: 0;
       margin: 0;
-      border-radius: 4px;
+      border-radius: 0;
     }
     #toggle-label-btn:hover {
-      background: alpha(${c.fg_dim}, 0.1);
+      background: alpha(#aa2233, 0.1);
     }
     #toggle-label {
-      font-size: 9px;
-      color: ${c.fg_dim};
-      font-weight: 500;
-      letter-spacing: 0.2px;
+      font-size: 8px;
+      color: #441515;
+      font-weight: 700;
+      letter-spacing: 1px;
     }
     #toggle-label-btn #toggle-label {
-      padding: 3px 6px;
+      padding: 2px 4px;
     }
 
-    /* Sliders */
-    #sliders-box {
-      margin-top: 20px;
-      padding: 0 4px;
+    /* LED Segment Bar - Red terminal style */
+    #led-bar {
+      margin-top: 6px;
     }
-    #slider-box {
-      margin: 10px 0;
-    }
-    #slider-icon {
-      color: ${c.fg_dim};
-      font-size: 16px;
-      margin-right: 12px;
-    }
-    #slider-icon-btn {
-      font-size: 16px;
-      margin-right: 12px;
+    #led-segment {
+      min-width: 8px;
+      min-height: 18px;
+      border-radius: 2px;
       border: none;
-      border-radius: 6px;
-      padding: 6px 8px;
+      padding: 0;
+      margin: 0 1px;
+    }
+    #led-segment.unlit {
+      background: #1a0a0a;
+    }
+    #led-segment.lit,
+    #led-segment.lit.green,
+    #led-segment.lit.yellow,
+    #led-segment.lit.red {
+      background: #aa2233;
+    }
+    #led-segment:hover {
+      background: #2a1010;
+    }
+    #led-segment.lit:hover,
+    #led-segment.lit.green:hover,
+    #led-segment.lit.yellow:hover,
+    #led-segment.lit.red:hover {
+      background: #cc2244;
+    }
+
+    /* Brightness Card - Red terminal panel */
+    #brightness-card {
       background: transparent;
-      min-width: 32px;
+      border-radius: 0;
+      border: 1px solid #331111;
+      border-left: 2px solid #aa2233;
+      padding: 10px 12px;
+      margin-top: 10px;
     }
-    #slider-icon-btn:hover {
-      background: alpha(${c.fg_dim}, 0.1);
+    #brightness-header {
+      margin-bottom: 8px;
     }
-    #slider-icon-btn.active {
-      background: alpha(${c.accent}, 0.2);
+    #brightness-icon {
+      font-size: 14px;
+      color: #aa2233;
+      margin-right: 8px;
     }
-    #slider-icon-btn.active #slider-icon {
-      color: ${c.accent};
+    #brightness-title {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #551122;
     }
-    #volume-slider, #brightness-slider {
-      min-width: 160px;
-      min-height: 4px;
-    }
-    #volume-slider trough, #brightness-slider trough {
-      background: alpha(${c.fg_dim}, 0.15);
-      border-radius: 2px;
-      min-height: 4px;
-    }
-    #volume-slider highlight, #brightness-slider highlight {
-      background: ${c.accent};
-      border-radius: 2px;
-    }
-    #volume-slider slider, #brightness-slider slider {
-      background: ${c.fg};
-      border-radius: 50%;
-      min-width: 14px;
-      min-height: 14px;
-      margin: -5px 0;
-      box-shadow: 0 1px 4px alpha(black, 0.3);
-    }
-    #volume-slider slider:hover, #brightness-slider slider:hover {
-      background: ${c.fg_bright};
+    #brightness-percent {
+      font-size: 11px;
+      font-weight: 700;
+      color: #aa2233;
+      letter-spacing: 1px;
     }
 
-    /* App Launcher */
-    #search-container {
-      margin-bottom: 12px;
-    }
-    #app-search {
-      background: ${c.bg_light};
-      border: none;
-      border-radius: 10px;
-      padding: 12px 16px;
-      color: ${c.fg};
-      font-size: 12px;
-      font-weight: 500;
-    }
-    #app-search:focus {
-      background: ${c.bg_lighter};
-    }
-    #app-list-scroll {
+    /* Volume Card - Red terminal panel */
+    #volume-card {
+      background: transparent;
+      border-radius: 0;
+      border: 1px solid #331111;
+      border-left: 2px solid #aa2233;
+      padding: 10px 12px;
       margin-top: 8px;
     }
-    #app-item {
+    #volume-header {
+      margin-bottom: 8px;
+    }
+    #volume-icon-btn {
       background: transparent;
       border: none;
-      border-radius: 10px;
+      padding: 0;
+      margin: 0;
+      margin-right: 8px;
+    }
+    #volume-icon-btn:hover #volume-icon {
+      color: #cc2244;
+    }
+    #volume-icon {
+      font-size: 14px;
+      color: #aa2233;
+    }
+    #volume-title {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #551122;
+    }
+    #volume-percent {
+      font-size: 11px;
+      font-weight: 700;
+      color: #aa2233;
+      letter-spacing: 1px;
+    }
+
+    /* Battery Card - Compact style */
+    #battery-card {
+      background: transparent;
+      border-radius: 0;
+      border: 1px solid #331111;
+      border-left: 2px solid #aa2233;
       padding: 10px 12px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+    #battery-header {
+      margin-bottom: 8px;
+    }
+    #battery-icon {
+      font-size: 14px;
+      color: #aa2233;
+      margin-right: 8px;
+    }
+    #battery-title {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #551122;
+    }
+    #battery-percent {
+      font-size: 11px;
+      font-weight: 700;
+      color: #aa2233;
+      letter-spacing: 1px;
+    }
+    #battery-status-icon {
+      font-size: 10px;
+      color: #aa2233;
+    }
+    #battery-level-bar {
+      min-height: 8px;
+    }
+    #battery-level-bar trough {
+      background: #0a0505;
+      border: 1px solid #331111;
+      border-radius: 0;
+      min-height: 8px;
+    }
+    #battery-level-bar block.filled {
+      background: #aa2233;
+      border-radius: 0;
+      min-height: 8px;
+    }
+    #battery-level-bar block.empty {
+      background: transparent;
+    }
+
+    /* Power Indicator Page - Holographic Style (matches Home) */
+    #power-page {
+      padding: 12px;
+      min-width: 260px;
+      background: #040608;
+    }
+    #power-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 12px;
+    }
+    #power-panel-header {
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #2a3a45;
+    }
+    #power-panel-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #5090a0;
+    }
+    #power-panel-data {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #70c0d0;
+    }
+
+    /* Power bar container */
+    #power-bar-container {
+      margin: 10px 0;
+    }
+
+    /* Scale on left side */
+    #power-scale {
+      min-width: 40px;
+      margin-right: 8px;
+      padding: 4px 0;
+    }
+    #power-scale-mark {
+      font-size: 9px;
+      font-weight: 600;
+      color: #5a8090;
+      letter-spacing: 1px;
+    }
+
+    /* The bar frame */
+    #power-bar-frame {
+      border: 2px solid #60c0d0;
+      min-width: 150px;
+      min-height: 200px;
+      padding: 4px;
+      background: alpha(#0a1015, 0.5);
+    }
+    #power-segments {
+      background: transparent;
+    }
+    #power-segment {
       margin: 2px 0;
-      min-width: 240px;
+      min-height: 16px;
+    }
+    #power-segment.unlit {
+      background: alpha(#2a3a45, 0.5);
+    }
+    #power-segment.lit {
+      background: #60c0d0;
+    }
+
+    /* Right side indicators */
+    #power-indicators {
+      min-width: 40px;
+      margin-left: 8px;
+      padding: 4px 0;
+    }
+    #power-indicator {
+      font-size: 9px;
+      font-weight: 700;
+      color: #5a8090;
+      letter-spacing: 1px;
+    }
+
+    /* Big percentage display */
+    #power-big-percent {
+      font-size: 56px;
+      font-weight: 700;
+      color: #70c0d0;
+      letter-spacing: 4px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+
+    /* Footer data row */
+    #power-panel-footer {
+      padding-top: 8px;
+      border-top: 1px solid #2a3a45;
+    }
+    #power-footer-data {
+      font-size: 9px;
+      font-weight: 600;
+      color: #4a6070;
+      letter-spacing: 2px;
+    }
+
+    /* App Launcher - Holographic Style (matches Home) */
+    #search-container {
+      margin-bottom: 10px;
+    }
+    #app-search {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 14px;
+      color: #70c0d0;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+    #app-search:focus {
+      background: alpha(#253540, 0.7);
+      border-color: #60c0d0;
+    }
+    #app-page-scroll,
+    #app-page-scroll frame,
+    #app-page-scroll viewport {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      outline: none;
+    }
+    #app-list {
+      margin-top: 10px;
+    }
+    #app-item {
+      background: alpha(#1a2530, 0.6);
+      border: none;
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin: 3px 0;
     }
     #app-item:hover {
-      background: ${c.bg_light};
+      background: alpha(#253540, 0.8);
     }
     #app-item:active {
-      background: ${c.bg_lighter};
-    }
-    #app-icon-container {
-      background: alpha(${c.accent}, 0.1);
-      border: none;
-      border-radius: 10px;
-      padding: 8px;
-      min-width: 40px;
-      min-height: 40px;
+      background: alpha(#1a3040, 0.9);
+      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
     }
     #app-icon {
-      color: ${c.accent};
-      font-size: 22px;
+      color: #5a8090;
+      font-size: 20px;
+      min-width: 20px;
+      min-height: 20px;
+    }
+    #app-item:hover #app-icon {
+      color: #70c0d0;
     }
     #app-name {
-      color: ${c.fg};
-      font-size: 12px;
-      font-weight: 600;
-    }
-    #app-description {
-      color: ${c.fg_dim};
+      color: #70c0d0;
       font-size: 10px;
-      font-weight: 400;
+      font-weight: 600;
     }
   `
 }

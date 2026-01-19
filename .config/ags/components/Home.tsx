@@ -5,44 +5,34 @@ import { createBinding, type Accessor } from "gnim"
 import Network from "gi://AstalNetwork"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
-import Astal from "gi://Astal?version=3.0"
-import Gtk from "gi://Gtk?version=3.0"
 
-// Helper to create a circular toggle button with label underneath
-function ToggleButton({
+// System toggle button - Star Citizen style
+function SystemToggle({
   active,
   icon,
   label,
   onClick,
-  onLabelClick
 }: {
   active: Accessor<boolean> | State<boolean>,
   icon: string,
   label: string,
   onClick: () => void,
-  onLabelClick?: () => void
 }) {
   return (
-    <box name="toggle-container" vertical>
-      <button
-        name="quick-toggle"
-        class={active.as((a) => a ? "active" : "")}
-        onClicked={onClick}
-      >
-        <icon name="toggle-icon" icon={icon} />
-      </button>
-      {onLabelClick ? (
-        <button name="toggle-label-btn" onClicked={onLabelClick}>
-          <label name="toggle-label" label={label} />
-        </button>
-      ) : (
-        <label name="toggle-label" label={label} />
-      )}
-    </box>
+    <button
+      name="sys-toggle"
+      class={active.as((a) => a ? "active" : "")}
+      onClicked={onClick}
+    >
+      <box vertical>
+        <label name="sys-toggle-icon" label={icon} />
+        <label name="sys-toggle-label" label={label} />
+      </box>
+    </button>
   )
 }
 
-// Time display
+// Time display - styled as main panel
 function Clock() {
   const localTime = createPoll("00:00", 1000, () => {
     const now = new Date()
@@ -50,8 +40,17 @@ function Clock() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-      timeZone: "Pacific/Auckland", // NZ
+      timeZone: "Pacific/Auckland",
     })
+  })
+
+  const date = createPoll("", 60000, () => {
+    const now = new Date()
+    return now.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).toUpperCase()
   })
 
   const tennesseeTime = createPoll("00:00", 1000, () => {
@@ -60,26 +59,18 @@ function Clock() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-      timeZone: "America/Chicago", // Nashville, TN
-    })
-  })
-
-  const date = createPoll("", 60000, () => {
-    const now = new Date()
-    return now.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
+      timeZone: "America/Chicago",
     })
   })
 
   return (
-    <box vertical>
-      <label name="clock" label={localTime} />
-      <label name="date" label={date} />
-      <box vertical name="secondary-clock-box">
-        <label name="clock-secondary" label={tennesseeTime} />
-        <label name="clock-location" label="Nashville" />
+    <box name="clock-panel" vertical>
+      <label name="clock-time" label={localTime} />
+      <label name="clock-date" label={date} />
+      <box name="clock-secondary">
+        <label name="clock-alt-label" label="NSH" />
+        <box hexpand />
+        <label name="clock-alt-time" label={tennesseeTime} />
       </box>
     </box>
   )
@@ -89,33 +80,19 @@ function Clock() {
 function WiFiToggle() {
   const network = Network.get_default()
   const wifi = network?.wifi
-
-  if (!wifi) {
-    return (
-      <button name="quick-toggle" onClicked={() => {}}>
-        <box>
-          <label name="toggle-icon" label="" />
-          <label name="toggle-label" label="No WiFi" />
-        </box>
-      </button>
-    )
-  }
-
-  const ssid = wifi.ssid || "WiFi"
-  const [wifiOn, setWifiOn] = createState(wifi.enabled)
+  const [wifiOn, setWifiOn] = createState(wifi?.enabled ?? false)
 
   return (
-    <ToggleButton
+    <SystemToggle
       active={wifiOn}
-      icon="network-wireless-symbolic"
-      label={ssid}
+      icon=""
+      label="WIFI"
       onClick={() => {
-        const newState = !wifiOn.get()
-        setWifiOn(newState)
-        wifi.enabled = newState
-      }}
-      onLabelClick={() => {
-        execAsync("nm-connection-editor").catch(() => {})
+        if (wifi) {
+          const newState = !wifiOn.get()
+          setWifiOn(newState)
+          wifi.enabled = newState
+        }
       }}
     />
   )
@@ -125,25 +102,13 @@ function WiFiToggle() {
 function BluetoothToggle() {
   const bluetooth = Bluetooth.get_default()
   const adapter = bluetooth?.adapter
-
-  if (!adapter) {
-    return (
-      <button name="quick-toggle" onClicked={() => {}}>
-        <box>
-          <label name="toggle-icon" label="" />
-          <label name="toggle-label" label="No BT" />
-        </box>
-      </button>
-    )
-  }
-
-  const [btOn, setBtOn] = createState(adapter.powered)
+  const [btOn, setBtOn] = createState(adapter?.powered ?? false)
 
   return (
-    <ToggleButton
+    <SystemToggle
       active={btOn}
-      icon="bluetooth-symbolic"
-      label="Bluetooth"
+      icon=""
+      label="BT"
       onClick={() => {
         const newState = !btOn.get()
         setBtOn(newState)
@@ -151,105 +116,21 @@ function BluetoothToggle() {
           setBtOn(!newState)
         })
       }}
-      onLabelClick={() => {
-        execAsync("blueberry").catch(() => {})
-      }}
     />
-  )
-}
-
-// Volume slider with reactive binding
-function VolumeSlider() {
-  const wp = Wp.get_default()
-  const speaker = wp?.audio?.defaultSpeaker
-
-  if (!speaker) {
-    return (
-      <box name="slider-box">
-        <label name="slider-icon" label="" />
-        <label label="No audio" />
-      </box>
-    )
-  }
-
-  const muted = createBinding(speaker, "mute")
-  const volume = createBinding(speaker, "volume")
-
-  // Create mute button with class toggling
-  const muteBtn = new Astal.Button({
-    name: "slider-icon-btn",
-    visible: true,
-  })
-
-  const ctx = muteBtn.get_style_context()
-  muted.subscribe((m: boolean) => {
-    if (m) ctx.add_class("active")
-    else ctx.remove_class("active")
-  })
-  if (muted.get()) ctx.add_class("active")
-
-  muteBtn.connect("clicked", () => { speaker.mute = !speaker.mute })
-
-  return (
-    <box name="slider-box">
-      {muteBtn}
-      <label
-        name="slider-icon"
-        label={muted.as((m) => m ? "" : "")}
-      />
-      <slider
-        name="volume-slider"
-        hexpand
-        value={volume}
-        onDragged={(self) => {
-          speaker.volume = self.value
-        }}
-      />
-    </box>
-  )
-}
-
-// Brightness slider
-function BrightnessSlider() {
-  const brightness = createPoll(1, 1000, () => {
-    return execAsync("brightnessctl -d intel_backlight get")
-      .then((current) => {
-        return execAsync("brightnessctl -d intel_backlight max").then((max) => {
-          return parseInt(current) / parseInt(max)
-        })
-      })
-      .catch(() => 1)
-  })
-
-  return (
-    <box name="slider-box">
-      <label name="slider-icon" label="" />
-      <slider
-        name="brightness-slider"
-        hexpand
-        value={brightness}
-        onDragged={(self) => {
-          const percent = Math.round(self.value * 100)
-          execAsync(`brightnessctl -d intel_backlight set ${percent}%`).catch(() => {})
-        }}
-      />
-    </box>
   )
 }
 
 // DND toggle
 function DNDToggle() {
   const [dndOn, setDndOn] = createState(false)
-
-  // Check initial state once
   execAsync("dunstctl is-paused")
     .then((out) => setDndOn(out.trim() === "true"))
     .catch(() => {})
 
   return (
-    <ToggleButton
+    <SystemToggle
       active={dndOn}
-      icon="notifications-disabled-symbolic"
+      icon=""
       label="DND"
       onClick={() => {
         execAsync("dunstctl set-paused toggle").catch(() => {})
@@ -262,15 +143,13 @@ function DNDToggle() {
 // Night Light toggle
 function NightLightToggle() {
   const [nightOn, setNightOn] = createState(false)
-
-  // Check initial state once
   execAsync("pgrep gammastep").then(() => setNightOn(true)).catch(() => {})
 
   return (
-    <ToggleButton
+    <SystemToggle
       active={nightOn}
-      icon="night-light-symbolic"
-      label="Night Light"
+      icon=""
+      label="NITE"
       onClick={() => {
         if (nightOn.get()) {
           execAsync("pkill gammastep")
@@ -284,22 +163,144 @@ function NightLightToggle() {
   )
 }
 
+// Volume control bar
+function VolumeControl() {
+  const wp = Wp.get_default()
+  const speaker = wp?.audio?.defaultSpeaker
+
+  if (!speaker) {
+    return (
+      <box name="control-panel" vertical>
+        <box name="control-header">
+          <label name="control-label" label="//AUDIO" />
+          <box hexpand />
+          <label name="control-value" label="--%" />
+        </box>
+        <box name="control-bar">
+          <box name="control-bar-fill" hexpand={false} />
+        </box>
+      </box>
+    )
+  }
+
+  const muted = createBinding(speaker, "mute")
+  const volume = createBinding(speaker, "volume")
+
+  return (
+    <box name="control-panel" vertical>
+      <box name="control-header">
+        <button
+          name="control-icon-btn"
+          onClicked={() => { speaker.mute = !speaker.mute }}
+        >
+          <label name="control-icon" label={muted.as((m) => m ? "" : "")} />
+        </button>
+        <label name="control-label" label="AUDIO" />
+        <box hexpand />
+        <label name="control-value" label={volume.as((v) => `${Math.round(v * 100)}%`)} />
+      </box>
+      <box name="control-bar-container">
+        {Array(20).fill(0).map((_, i) => (
+          <button
+            name="control-segment"
+            class={volume.as((v) => i < Math.round(v * 20) ? "lit" : "unlit")}
+            onClicked={() => { speaker.volume = (i + 1) / 20 }}
+          />
+        ))}
+      </box>
+    </box>
+  )
+}
+
+// Brightness control bar
+function BrightnessControl() {
+  const brightness = createPoll(1, 1000, () => {
+    return execAsync("brightnessctl -d intel_backlight get")
+      .then((current) => {
+        return execAsync("brightnessctl -d intel_backlight max").then((max) => {
+          return parseInt(current) / parseInt(max)
+        })
+      })
+      .catch(() => 1)
+  })
+
+  const setBrightness = (val: number) => {
+    const percent = Math.round(val * 100)
+    execAsync(`brightnessctl -d intel_backlight set ${percent}%`).catch(() => {})
+  }
+
+  return (
+    <box name="control-panel" vertical>
+      <box name="control-header">
+        <label name="control-icon" label="" />
+        <label name="control-label" label="DISPLAY" />
+        <box hexpand />
+        <label name="control-value" label={brightness.as((b) => `${Math.round(b * 100)}%`)} />
+      </box>
+      <box name="control-bar-container">
+        {Array(20).fill(0).map((_, i) => (
+          <button
+            name="control-segment"
+            class={brightness.as((b) => i < Math.round(b * 20) ? "lit" : "unlit")}
+            onClicked={() => setBrightness((i + 1) / 20)}
+          />
+        ))}
+      </box>
+    </box>
+  )
+}
+
+// Battery status panel
+function BatteryPanel() {
+  const batteryLevel = createPoll(100, 5000, () => {
+    return execAsync("cat /sys/class/power_supply/BAT0/capacity")
+      .then((out) => parseInt(out.trim()))
+      .catch(() => 100)
+  })
+
+  const batteryStatus = createPoll("Unknown", 5000, () => {
+    return execAsync("cat /sys/class/power_supply/BAT0/status")
+      .then((out) => out.trim())
+      .catch(() => "Unknown")
+  })
+
+  return (
+    <box name="status-panel">
+      <label name="status-icon" label={batteryStatus.as((s) => s === "Charging" ? "" : "")} />
+      <label name="status-label" label="PWR" />
+      <box hexpand />
+      <label name="status-value" label={batteryLevel.as((l) => `${l}%`)} />
+      <label
+        name="status-indicator"
+        label={batteryStatus.as((s) => s === "Charging" ? "CHG" : s === "Discharging" ? "ACT" : "RDY")}
+      />
+    </box>
+  )
+}
+
 export default function Home() {
   return (
-    <box vertical name="page-box">
-      <Clock />
-      <box name="quick-toggles-row">
+    <box vertical name="home-page">
+      {/* Section header */}
+      <label name="section-header" label="//SYSTEMS" />
+
+      {/* System toggles row */}
+      <box name="sys-toggles-row">
         <WiFiToggle />
         <BluetoothToggle />
-      </box>
-      <box name="quick-toggles-row">
         <DNDToggle />
         <NightLightToggle />
       </box>
-      <box vertical name="sliders-box">
-        <VolumeSlider />
-        <BrightnessSlider />
-      </box>
+
+      {/* Clock panel */}
+      <Clock />
+
+      {/* Control bars */}
+      <BrightnessControl />
+      <VolumeControl />
+
+      {/* Status bar */}
+      <BatteryPanel />
     </box>
   )
 }
