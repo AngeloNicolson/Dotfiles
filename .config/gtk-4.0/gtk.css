@@ -20,3 +20,20 @@ button:hover {
 windowcontrols.start image.icon {
     opacity: 0;
 }
+
+/* Style window control buttons (close, minimize, maximize) */
+windowcontrols button {
+    background: transparent;
+    color: #fcfcfc;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+windowcontrols button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+windowcontrols button.close:hover {
+    background: #c01c28;
+    color: #ffffff;
+}

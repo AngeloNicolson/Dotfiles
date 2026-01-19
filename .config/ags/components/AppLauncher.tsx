@@ -20,25 +20,21 @@ export default function AppLauncher() {
   const apps = getInstalledApps()
 
   return (
-    <box vertical name="page-box">
-      <box vertical spacing={12}>
-        <label name="title-blue" label="◢ APPLICATIONS ◣" />
-        <box name="search-container">
-          <entry
-            name="app-search"
-            placeholder_text="⌕ SEARCH..."
-            onChanged={(self) => setSearchQuery(self.get_text())}
-          />
-        </box>
-      </box>
+    <scrollable
+      hscroll="never"
+      vscroll="automatic"
+      vexpand={true}
+    >
+      <box vertical name="home-page">
+        <label name="section-header" label="//APPLICATIONS" />
+        <entry
+          name="app-search"
+          placeholder_text="⌕ SEARCH..."
+          onChanged={(self) => setSearchQuery(self.get_text())}
+          hexpand
+        />
 
-      <scrollable
-        name="app-list-scroll"
-        hscroll="never"
-        vscroll="automatic"
-        vexpand={true}
-      >
-        <box vertical spacing={6}>
+        <box vertical name="app-list">
           {apps
             .filter(app => {
               const query = searchQuery.get().toLowerCase()
@@ -46,36 +42,24 @@ export default function AppLauncher() {
               const desc = app.get_description()?.toLowerCase() || ""
               return query === "" || name.includes(query) || desc.includes(query)
             })
+            .sort((a, b) => a.get_name().localeCompare(b.get_name()))
             .map(app => (
               <button
                 name="app-item"
                 onClicked={() => launchApp(app)}
               >
-                <box spacing={12}>
-                  <box name="app-icon-container">
-                    <icon name="app-icon" gicon={app.get_icon()} />
-                  </box>
-                  <box vertical halign="start" spacing={2}>
-                    <label
-                      name="app-name"
-                      label={app.get_name()}
-                      halign="start"
-                      xalign={0}
-                    />
-                    {app.get_description() && (
-                      <label
-                        name="app-description"
-                        label={app.get_description()}
-                        halign="start"
-                        xalign={0}
-                      />
-                    )}
-                  </box>
+                <box spacing={8} halign="start">
+                  <icon name="app-icon" gicon={app.get_icon()} />
+                  <label
+                    name="app-name"
+                    label={app.get_name().substring(0, 22)}
+                    halign="start"
+                  />
                 </box>
               </button>
             ))}
         </box>
-      </scrollable>
-    </box>
+      </box>
+    </scrollable>
   )
 }

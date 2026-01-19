@@ -1,15 +1,15 @@
 import app from "ags/gtk3/app"
 import { Astal } from "ags/gtk3"
-import { barVisible, toggleBar } from "../state"
+import { barVisible } from "../state"
 import Sidebar from "./Sidebar"
 
-export default function Bar(monitor = 0) {
+export default function Bar(gdkMonitor: number, monitorName: string) {
   const { TOP, LEFT, BOTTOM } = Astal.WindowAnchor
 
   return (
     <window
       visible
-      monitor={monitor}
+      monitor={gdkMonitor}
       anchor={TOP | LEFT | BOTTOM}
       application={app}
     >
@@ -19,7 +19,7 @@ export default function Bar(monitor = 0) {
           transitionType="slide_right"
           transitionDuration={300}
         >
-          <Sidebar gdkMonitorIndex={monitor} />
+          <Sidebar monitorName={monitorName} />
         </revealer>
       </box>
     </window>
