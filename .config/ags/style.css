@@ -265,3 +265,17 @@
 #wallpaper-list.animating {
   animation: wallpaper-pulse 1.5s ease-in-out;
 }
+
+/* Destination Menu */
+#destination-menu-window {
+  background: transparent;
+}
+
+#destination-menu {
+  background: transparent;
+}
+
+/* Galaxy Overlay */
+#galaxy-window {
+  background: transparent;
+}

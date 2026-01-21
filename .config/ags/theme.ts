@@ -527,6 +527,70 @@ function generateCSS(c: ThemeColors): string {
       margin-top: 4px;
     }
 
+    /* Destination Overlay - Solar System UI */
+    #destination-window {
+      background: radial-gradient(ellipse at center, rgba(5, 10, 15, 0.95) 0%, rgba(0, 5, 10, 0.98) 100%);
+    }
+    #destination-overlay {
+      background: transparent;
+      border-radius: 20px;
+      padding: 40px;
+    }
+    #destination-center {
+      background: radial-gradient(circle at 30% 30%, #60c0d0, #1a4050);
+      border: 2px solid #80e0f0;
+      border-radius: 50%;
+      box-shadow: 0 0 30px rgba(96, 192, 208, 0.5),
+                  0 0 60px rgba(96, 192, 208, 0.2),
+                  inset 0 0 20px rgba(255, 255, 255, 0.1);
+      transition: all 200ms ease;
+    }
+    #destination-center:hover {
+      border-color: #a0f0ff;
+      box-shadow: 0 0 40px rgba(96, 192, 208, 0.7),
+                  0 0 80px rgba(96, 192, 208, 0.3),
+                  inset 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    #destination-center.selected {
+      border-color: #ffffff;
+      box-shadow: 0 0 50px rgba(160, 240, 255, 0.8),
+                  0 0 100px rgba(96, 192, 208, 0.4);
+    }
+    #destination-center #destination-icon {
+      font-size: 32px;
+      color: #ffffff;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+    #destination-node {
+      background: radial-gradient(circle at 30% 30%, #4a8090, #1a3040);
+      border: 2px solid #5090a0;
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(80, 144, 160, 0.4),
+                  0 0 30px rgba(80, 144, 160, 0.1),
+                  inset 0 0 10px rgba(255, 255, 255, 0.05);
+      transition: all 200ms ease;
+    }
+    #destination-node:hover {
+      border-color: #80e0f0;
+      box-shadow: 0 0 25px rgba(96, 192, 208, 0.6),
+                  0 0 50px rgba(96, 192, 208, 0.2),
+                  inset 0 0 15px rgba(255, 255, 255, 0.1);
+    }
+    #destination-node.selected {
+      background: radial-gradient(circle at 30% 30%, #60c0d0, #2a5060);
+      border-color: #a0f0ff;
+      box-shadow: 0 0 30px rgba(160, 240, 255, 0.7),
+                  0 0 60px rgba(96, 192, 208, 0.3);
+    }
+    #destination-node #destination-icon {
+      font-size: 20px;
+      color: #a0d0e0;
+      text-shadow: 0 0 5px rgba(160, 208, 224, 0.3);
+    }
+    #destination-node:hover #destination-icon {
+      color: #ffffff;
+    }
+
     /* Legacy styles kept for compatibility */
     #quick-toggles-row {
       padding: 6px 0;

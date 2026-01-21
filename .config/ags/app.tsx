@@ -1,7 +1,9 @@
 import app from "ags/gtk3/app"
-import { toggleBar, cyclePage, removeSidebarStack } from "./state"
+import { toggleBar, cyclePage, removeSidebarStack, toggleDestination, toggleGalaxy } from "./state"
 import { initTheme, applyTheme } from "./theme"
 import Bar from "./components/Bar"
+import DestinationWindow from "./components/DestinationWindow"
+import GalaxyWindow from "./components/GalaxyWindow"
 import AstalHyprland from "gi://AstalHyprland"
 import { Gdk } from "ags/gtk3"
 
@@ -19,6 +21,12 @@ app.start({
     } else if (cmd === "cycle-sidebar") {
       cyclePage()
       response("cycled")
+    } else if (cmd === "toggle-destination") {
+      toggleDestination()
+      response("destination toggled")
+    } else if (cmd === "toggle-galaxy") {
+      toggleGalaxy()
+      response("galaxy toggled")
     } else if (cmd === "debug-stacks") {
       const { getSidebarStacks } = require("./state")
       const stacks = getSidebarStacks()
@@ -122,5 +130,9 @@ app.start({
     // Initial setup
     syncBars()
     updateBarVisibility()
+
+    // Create destination menu and galaxy overlay windows on primary monitor
+    DestinationWindow(0)
+    GalaxyWindow(0)
   },
 })

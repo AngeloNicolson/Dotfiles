@@ -5,6 +5,32 @@ import AstalHyprland from "gi://AstalHyprland"
 // Bar visibility state
 export const [barVisible, setBarVisible] = createState(true)
 
+// Destination menu visibility state
+export const [destinationVisible, setDestinationVisible] = createState(false)
+
+// Galaxy overlay visibility state
+export const [galaxyVisible, setGalaxyVisible] = createState(false)
+
+export function toggleDestination() {
+  const newVisible = !destinationVisible.get()
+  print(`toggleDestination: setting visible to ${newVisible}`)
+  // Close galaxy if opening destination
+  if (newVisible && galaxyVisible.get()) {
+    setGalaxyVisible(false)
+  }
+  setDestinationVisible(newVisible)
+}
+
+export function toggleGalaxy() {
+  const newVisible = !galaxyVisible.get()
+  print(`toggleGalaxy: setting visible to ${newVisible}`)
+  // Close destination if opening galaxy
+  if (newVisible && destinationVisible.get()) {
+    setDestinationVisible(false)
+  }
+  setGalaxyVisible(newVisible)
+}
+
 export function toggleBar() {
   const newVisible = !barVisible.get()
   print(`toggleBar: setting visible to ${newVisible}`)
@@ -25,7 +51,7 @@ export function toggleBar() {
 
 // Page cycling state - track all sidebar stacks by monitor NAME (stable identifier)
 const sidebarStacks: Map<string, Gtk.Stack> = new Map()
-export const pages = ["page1", "page2", "page3", "page4", "page5"]
+export const pages = ["page1", "page2", "page3", "page4", "page5", "page6"]
 const pageIndices: Map<string, number> = new Map()
 
 // Reactive state for current page per monitor - components can subscribe to this
