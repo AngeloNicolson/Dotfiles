@@ -6,7 +6,7 @@ import { createState } from "ags"
 
 const WALLPAPER_DIR = "/home/Angel/projects/personal/dotfiles/.config/ags/wallpapers"
 const SWWW_DIR = GLib.get_home_dir() + "/.config/swww"
-const VIDEO_DIR = "/home/Angel/Videos"
+const VIDEO_DIR = WALLPAPER_DIR
 const THUMB_CACHE_DIR = GLib.get_home_dir() + "/.cache/ags/video-thumbs"
 const CURRENT_LIVE_FILE = "/tmp/mpvpaper-current"
 
@@ -47,22 +47,19 @@ function getStaticWallpapers(): string[] {
 
 function getLiveWallpapers(): string[] {
   const videos: string[] = []
-  const dirs = [VIDEO_DIR, WALLPAPER_DIR]
 
-  for (const dir of dirs) {
-    try {
-      const gdir = GLib.Dir.open(dir, 0)
-      let name: string | null
-      while ((name = gdir.read_name()) !== null) {
-        const lower = name.toLowerCase()
-        if (VIDEO_EXTENSIONS.some(ext => lower.endsWith(ext))) {
-          videos.push(`${dir}/${name}`)
-        }
+  try {
+    const gdir = GLib.Dir.open(WALLPAPER_DIR, 0)
+    let name: string | null
+    while ((name = gdir.read_name()) !== null) {
+      const lower = name.toLowerCase()
+      if (VIDEO_EXTENSIONS.some(ext => lower.endsWith(ext))) {
+        videos.push(`${WALLPAPER_DIR}/${name}`)
       }
-      gdir.close()
-    } catch {
-      // Directory doesn't exist
     }
+    gdir.close()
+  } catch {
+    // Directory doesn't exist
   }
 
   return videos.sort()
@@ -195,6 +192,7 @@ export default function WallpaperSelector() {
   const [activeTab, setActiveTab] = createState<"static" | "live">("static")
   const staticWallpapers = getStaticWallpapers()
   const liveWallpapers = getLiveWallpapers()
+  print(`DEBUG: liveWallpapers count=${liveWallpapers.length}, items=${JSON.stringify(liveWallpapers)}`)
 
   const applyStaticWallpaper = async (path: string) => {
     // Force kill any running mpvpaper
@@ -301,7 +299,7 @@ export default function WallpaperSelector() {
       const ipcSocket = "/tmp/mpvpaper-ipc"
       execAsync(["rm", "-f", ipcSocket]).catch(() => {})
       execAsync([
-        "mpvpaper", "-f", "-o", `no-audio loop panscan=1.0 vf=fade=t=in:st=0:d=0.8 input-ipc-server=${ipcSocket}`,
+        "mpvpaper", "-f", "-o", `hwdec=nvdec-copy no-audio loop panscan=1.0 vf=fade=t=in:st=0:d=0.8 input-ipc-server=${ipcSocket}`,
         monitor, path
       ]).catch(() => {})
 
@@ -312,7 +310,7 @@ export default function WallpaperSelector() {
     } else {
       // Same wallpaper (service restart) - no fade
       execAsync([
-        "mpvpaper", "-f", "-o", "no-audio loop panscan=1.0",
+        "mpvpaper", "-f", "-o", "hwdec=nvdec-copy no-audio loop panscan=1.0",
         monitor, path
       ]).catch(() => {})
     }
