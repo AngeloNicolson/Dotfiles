@@ -228,9 +228,9 @@ def create_window_rule(window_title, x, y, width, height, app_class=None, worksp
         if is_terminal:
             # For terminals: use title-based rules (they respect --title flag)
             rules = [
-                f'float,title:^{window_title}$',
-                f'size {int(width)} {int(height)},title:^{window_title}$',
-                f'move {int(x)} {int(y)},title:^{window_title}$'
+                f'float on, match:title ^{window_title}$',
+                f'size {int(width)} {int(height)}, match:title ^{window_title}$',
+                f'move {int(x)} {int(y)}, match:title ^{window_title}$'
             ]
         else:
             # For GUI apps: use class-based rules (they don't respect --title)
@@ -238,21 +238,21 @@ def create_window_rule(window_title, x, y, width, height, app_class=None, worksp
                 if workspace_id:
                     # With workspace: scope rules to specific workspace
                     rules = [
-                        f'float,class:({app_class}),workspace:{workspace_id}',
-                        f'size {int(width)} {int(height)},class:({app_class}),workspace:{workspace_id}',
-                        f'move {int(x)} {int(y)},class:({app_class}),workspace:{workspace_id}'
+                        f'float on, match:class ^{app_class}$, match:workspace {workspace_id}',
+                        f'size {int(width)} {int(height)}, match:class ^{app_class}$, match:workspace {workspace_id}',
+                        f'move {int(x)} {int(y)}, match:class ^{app_class}$, match:workspace {workspace_id}'
                     ]
                 else:
                     # Without workspace: use class-only rules
                     rules = [
-                        f'float,class:({app_class})',
-                        f'size {int(width)} {int(height)},class:({app_class})',
-                        f'move {int(x)} {int(y)},class:({app_class})'
+                        f'float on, match:class ^{app_class}$',
+                        f'size {int(width)} {int(height)}, match:class ^{app_class}$',
+                        f'move {int(x)} {int(y)}, match:class ^{app_class}$'
                     ]
 
         for rule in rules:
             subprocess.run(
-                ['hyprctl', 'keyword', 'windowrulev2', rule],
+                ['hyprctl', 'keyword', 'windowrule', rule],
                 capture_output=True,
                 check=False
             )
@@ -470,7 +470,7 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                     create_window_rule(window_title, x, y, width, height, app_executable, workspace_id, is_terminal)
                     if workspace_id:
                         subprocess.run(
-                            ['hyprctl', 'keyword', 'windowrulev2', f'workspace {workspace_id},title:^{window_title}$'],
+                            ['hyprctl', 'keyword', 'windowrule', f'workspace {workspace_id}, match:title ^{window_title}$'],
                             capture_output=True, check=False
                         )
                 # Note: GUI apps use exec spec [workspace X;float;size W H;move X Y] instead of
