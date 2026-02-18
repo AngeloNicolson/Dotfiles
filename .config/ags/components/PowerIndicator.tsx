@@ -1,45 +1,44 @@
 import { createPoll } from "ags/time"
-import { execAsync } from "ags/process"
+import { execAsync, createSubprocess } from "ags/process"
 
 export default function PowerIndicator() {
-  const batteryLevel = createPoll(100, 5000, () => {
-    return execAsync("cat /sys/class/power_supply/BAT0/capacity")
-      .then((out) => parseInt(out.trim()))
-      .catch(() => 100)
-  })
-
-  const batteryStatus = createPoll("Unknown", 5000, () => {
-    return execAsync("cat /sys/class/power_supply/BAT0/status")
-      .then((out) => out.trim())
-      .catch(() => "Unknown")
-  })
-
-  const acPlugged = createPoll(false, 5000, () => {
-    return execAsync("cat /sys/class/power_supply/AC/online")
-      .then((out) => out.trim() === "1")
-      .catch(() => false)
-  })
+  const bat = createSubprocess(
+    { level: 100, status: "Unknown", ac: false, health: 100, cycles: 0, watts: "--W", time: "--" },
+    ["bash", "-c", 'while true; do read -r cap < /sys/class/power_supply/BAT0/capacity; read -r st < /sys/class/power_supply/BAT0/status; read -r ac < /sys/class/power_supply/AC/online; read -r vo < /sys/class/power_supply/BAT0/voltage_now; read -r cu < /sys/class/power_supply/BAT0/current_now; read -r cn < /sys/class/power_supply/BAT0/charge_now; read -r cf < /sys/class/power_supply/BAT0/charge_full; read -r cfd < /sys/class/power_supply/BAT0/charge_full_design; read -r cc < /sys/class/power_supply/BAT0/cycle_count; echo "$cap|$st|$ac|$vo|$cu|$cn|$cf|$cfd|$cc"; sleep 5; done'],
+    (line) => {
+      const [cap, st, ac, vo, cu, cn, cf, cfd, cc] = line.split("|")
+      const level = parseInt(cap) || 0
+      const status = st || "Unknown"
+      const v = parseInt(vo) || 0
+      const c = parseInt(cu) || 0
+      const watts = (v * c) / 1e12
+      let time = "--"
+      if (c > 0) {
+        let hours = 0
+        if (status === "Discharging") hours = parseInt(cn) / c
+        else if (status === "Charging") hours = (parseInt(cf) - parseInt(cn)) / c
+        if (hours > 0) {
+          const h = Math.floor(hours)
+          const m = Math.round((hours - h) * 60)
+          time = `${h}h${m.toString().padStart(2, "0")}m`
+        }
+      }
+      return {
+        level,
+        status,
+        ac: ac === "1",
+        health: Math.round((parseInt(cf) / parseInt(cfd)) * 100) || 100,
+        cycles: parseInt(cc) || 0,
+        watts: watts > 0 ? `${watts.toFixed(1)}W` : "0W",
+        time,
+      }
+    },
+  )
 
   const powerProfile = createPoll("balanced", 5000, () => {
     return execAsync("powerprofilesctl get")
       .then((out) => out.trim())
       .catch(() => "balanced")
-  })
-
-  const batteryHealth = createPoll(100, 60000, () => {
-    return Promise.all([
-      execAsync("cat /sys/class/power_supply/BAT0/charge_full"),
-      execAsync("cat /sys/class/power_supply/BAT0/charge_full_design")
-    ]).then(([full, design]) => {
-      const health = Math.round((parseInt(full) / parseInt(design)) * 100)
-      return health
-    }).catch(() => 100)
-  })
-
-  const cycleCount = createPoll(0, 60000, () => {
-    return execAsync("cat /sys/class/power_supply/BAT0/cycle_count")
-      .then((out) => parseInt(out.trim()))
-      .catch(() => 0)
   })
 
   return (
@@ -49,7 +48,7 @@ export default function PowerIndicator() {
         <box name="power-panel-header">
           <label name="power-panel-title" label="POWER // INDICATOR" />
           <box hexpand />
-          <label name="power-panel-data" label={batteryHealth.as((h) => `H:${h}%`)} />
+          <label name="power-panel-data" label={bat.as((d) => `H:${d.health}%`)} />
         </box>
 
         {/* Main vertical bar container - centered */}
@@ -73,9 +72,9 @@ export default function PowerIndicator() {
                   return (
                     <box
                       name="power-segment"
-                      class={batteryLevel.as((l) => {
+                      class={bat.as((d) => {
                         const threshold = (segmentIndex + 1) * 10
-                        return l >= threshold ? "lit" : "unlit"
+                        return d.level >= threshold ? "lit" : "unlit"
                       })}
                       vexpand
                       hexpand
@@ -89,7 +88,7 @@ export default function PowerIndicator() {
             <box name="power-indicators" vertical>
               <label
                 name="power-indicator"
-                label={acPlugged.as((p) => p ? "▶ AC" : "● BAT")}
+                label={bat.as((d) => d.ac ? "▶ AC" : "● BAT")}
               />
               <box vexpand />
               <label
@@ -99,7 +98,7 @@ export default function PowerIndicator() {
               <box vexpand />
               <label
                 name="power-indicator"
-                label={cycleCount.as((c) => `C:${c}`)}
+                label={bat.as((d) => `C:${d.cycles}`)}
               />
             </box>
           </box>
@@ -109,16 +108,17 @@ export default function PowerIndicator() {
         {/* Large percentage display */}
         <label
           name="power-big-percent"
-          label={batteryLevel.as((l) => `${l}%`)}
+          label={bat.as((d) => `${d.level}%`)}
         />
 
         {/* Bottom data row */}
         <box name="power-panel-footer">
-          <label name="power-footer-data" label={batteryStatus.as((s) =>
-            s === "Charging" ? "CHARGING" : s === "Discharging" ? "ACTIVE" : "STANDBY"
+          <label name="power-footer-data" label={bat.as((d) =>
+            d.status === "Charging" ? "CHARGING" : d.status === "Discharging" ? "ACTIVE" : "STANDBY"
           )} />
           <box hexpand />
-          <label name="power-footer-data" label="PWR-01" />
+          <label name="power-footer-data" label={bat.as((d) => d.watts)} />
+          <label name="power-footer-data" label={bat.as((d) => d.time !== "--" ? `ETA:${d.time}` : "")} />
         </box>
       </box>
     </box>

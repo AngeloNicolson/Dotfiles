@@ -1,10 +1,13 @@
 import { createPoll } from "ags/time"
 import { createState, type State } from "ags"
-import { execAsync } from "ags/process"
+import { execAsync, createSubprocess } from "ags/process"
 import { createBinding, type Accessor } from "gnim"
 import Network from "gi://AstalNetwork"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
+import { togglePeriodicTable } from "../state"
+import AudioEQ from "./AudioEQ"
+import DisplayEQ from "./DisplayEQ"
 
 // System toggle button - Star Citizen style
 function SystemToggle({
@@ -163,116 +166,65 @@ function NightLightToggle() {
   )
 }
 
-// Volume control bar
-function VolumeControl() {
-  const wp = Wp.get_default()
-  const speaker = wp?.audio?.defaultSpeaker
 
-  if (!speaker) {
-    return (
-      <box name="control-panel" vertical>
-        <box name="control-header">
-          <label name="control-label" label="//AUDIO" />
-          <box hexpand />
-          <label name="control-value" label="--%" />
-        </box>
-        <box name="control-bar">
-          <box name="control-bar-fill" hexpand={false} />
-        </box>
-      </box>
-    )
-  }
-
-  const muted = createBinding(speaker, "mute")
-  const volume = createBinding(speaker, "volume")
-
+// Tool button for launching popups
+function ToolButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: string,
+  label: string,
+  onClick: () => void,
+}) {
   return (
-    <box name="control-panel" vertical>
-      <box name="control-header">
-        <button
-          name="control-icon-btn"
-          onClicked={() => { speaker.mute = !speaker.mute }}
-        >
-          <label name="control-icon" label={muted.as((m) => m ? "" : "")} />
-        </button>
-        <label name="control-label" label="AUDIO" />
-        <box hexpand />
-        <label name="control-value" label={volume.as((v) => `${Math.round(v * 100)}%`)} />
+    <button name="tool-btn" onClicked={onClick}>
+      <box vertical>
+        <label name="tool-btn-icon" label={icon} />
+        <label name="tool-btn-label" label={label} />
       </box>
-      <box name="control-bar-container">
-        {Array(20).fill(0).map((_, i) => (
-          <button
-            name="control-segment"
-            class={volume.as((v) => i < Math.round(v * 20) ? "lit" : "unlit")}
-            onClicked={() => { speaker.volume = (i + 1) / 20 }}
-          />
-        ))}
-      </box>
-    </box>
-  )
-}
-
-// Brightness control bar
-function BrightnessControl() {
-  const brightness = createPoll(1, 1000, () => {
-    return execAsync("brightnessctl -d intel_backlight get")
-      .then((current) => {
-        return execAsync("brightnessctl -d intel_backlight max").then((max) => {
-          return parseInt(current) / parseInt(max)
-        })
-      })
-      .catch(() => 1)
-  })
-
-  const setBrightness = (val: number) => {
-    const percent = Math.round(val * 100)
-    execAsync(`brightnessctl -d intel_backlight set ${percent}%`).catch(() => {})
-  }
-
-  return (
-    <box name="control-panel" vertical>
-      <box name="control-header">
-        <label name="control-icon" label="" />
-        <label name="control-label" label="DISPLAY" />
-        <box hexpand />
-        <label name="control-value" label={brightness.as((b) => `${Math.round(b * 100)}%`)} />
-      </box>
-      <box name="control-bar-container">
-        {Array(20).fill(0).map((_, i) => (
-          <button
-            name="control-segment"
-            class={brightness.as((b) => i < Math.round(b * 20) ? "lit" : "unlit")}
-            onClicked={() => setBrightness((i + 1) / 20)}
-          />
-        ))}
-      </box>
-    </box>
+    </button>
   )
 }
 
 // Battery status panel
 function BatteryPanel() {
-  const batteryLevel = createPoll(100, 5000, () => {
-    return execAsync("cat /sys/class/power_supply/BAT0/capacity")
-      .then((out) => parseInt(out.trim()))
-      .catch(() => 100)
-  })
-
-  const batteryStatus = createPoll("Unknown", 5000, () => {
-    return execAsync("cat /sys/class/power_supply/BAT0/status")
-      .then((out) => out.trim())
-      .catch(() => "Unknown")
-  })
+  const bat = createSubprocess(
+    { level: 100, status: "Unknown", watts: "--W", time: "" },
+    ["bash", "-c", 'while true; do read -r cap < /sys/class/power_supply/BAT0/capacity; read -r st < /sys/class/power_supply/BAT0/status; read -r vo < /sys/class/power_supply/BAT0/voltage_now; read -r cu < /sys/class/power_supply/BAT0/current_now; read -r cn < /sys/class/power_supply/BAT0/charge_now; read -r cf < /sys/class/power_supply/BAT0/charge_full; echo "$cap|$st|$vo|$cu|$cn|$cf"; sleep 5; done'],
+    (line) => {
+      const [cap, st, vo, cu, cn, cf] = line.split("|")
+      const level = parseInt(cap) || 0
+      const status = st || "Unknown"
+      const v = parseInt(vo) || 0
+      const c = parseInt(cu) || 0
+      const watts = (v * c) / 1e12
+      let time = ""
+      if (c > 0) {
+        let hours = 0
+        if (status === "Discharging") hours = parseInt(cn) / c
+        else if (status === "Charging") hours = (parseInt(cf) - parseInt(cn)) / c
+        if (hours > 0) {
+          const h = Math.floor(hours)
+          const m = Math.round((hours - h) * 60)
+          time = `${h}h${m.toString().padStart(2, "0")}m`
+        }
+      }
+      return { level, status, watts: watts > 0 ? `${watts.toFixed(1)}W` : "0W", time }
+    },
+  )
 
   return (
     <box name="status-panel">
-      <label name="status-icon" label={batteryStatus.as((s) => s === "Charging" ? "" : "")} />
+      <label name="status-icon" label={bat.as((d) => d.status === "Charging" ? "" : "")} />
       <label name="status-label" label="PWR" />
       <box hexpand />
-      <label name="status-value" label={batteryLevel.as((l) => `${l}%`)} />
+      <label name="status-value" label={bat.as((d) => d.watts)} />
+      <label name="status-value" label={bat.as((d) => `${d.level}%`)} />
+      <label name="status-value" label={bat.as((d) => d.time)} />
       <label
         name="status-indicator"
-        label={batteryStatus.as((s) => s === "Charging" ? "CHG" : s === "Discharging" ? "ACT" : "RDY")}
+        label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
       />
     </box>
   )
@@ -295,9 +247,15 @@ export default function Home() {
       {/* Clock panel */}
       <Clock />
 
-      {/* Control bars */}
-      <BrightnessControl />
-      <VolumeControl />
+      {/* EQ control panels */}
+      <AudioEQ />
+      <DisplayEQ />
+
+      {/* Tools section */}
+      <label name="section-header" label="//TOOLS" />
+      <box name="tools-row">
+        <ToolButton icon="" label="PTABLE" onClick={togglePeriodicTable} />
+      </box>
 
       {/* Status bar */}
       <BatteryPanel />

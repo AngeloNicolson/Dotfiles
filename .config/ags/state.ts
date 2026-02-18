@@ -3,13 +3,28 @@ import Gtk from "gi://Gtk?version=3.0"
 import AstalHyprland from "gi://AstalHyprland"
 
 // Bar visibility state
-export const [barVisible, setBarVisible] = createState(true)
+export const [barVisible, setBarVisible] = createState(false)
 
 // Destination menu visibility state
 export const [destinationVisible, setDestinationVisible] = createState(false)
 
 // Galaxy overlay visibility state
 export const [galaxyVisible, setGalaxyVisible] = createState(false)
+
+// Periodic table visibility state
+export const [periodicTableVisible, setPeriodicTableVisible] = createState(false)
+
+// Break popup visibility state (Pomodoro)
+export const [breakPopupVisible, setBreakPopupVisible] = createState(false)
+
+// Pomodoro maintain focus — when on, bar always opens to POMO page
+export const [pomoMaintainFocus, setPomoMaintainFocus] = createState(false)
+
+export function togglePeriodicTable() {
+  const newVisible = !periodicTableVisible.get()
+  print(`togglePeriodicTable: setting visible to ${newVisible}`)
+  setPeriodicTableVisible(newVisible)
+}
 
 export function toggleDestination() {
   const newVisible = !destinationVisible.get()
@@ -33,14 +48,22 @@ export function toggleGalaxy() {
 
 export function toggleBar() {
   const newVisible = !barVisible.get()
-  print(`toggleBar: setting visible to ${newVisible}`)
-  setBarVisible(newVisible)
 
-  // Reset to home page when opening the bar
   if (newVisible) {
-    print(`toggleBar: resetting to home, stacks: ${sidebarStacks.size}`)
+    // Set page BEFORE showing bar to avoid flicker
+    const targetPage = pomoMaintainFocus.get() ? "page6" : "page1"
+    const targetIndex = pages.indexOf(targetPage)
     sidebarStacks.forEach((stack, monitorName) => {
-      print(`resetting ${monitorName} to page1`)
+      stack.set_visible_child_name(targetPage)
+      pageIndices.set(monitorName, targetIndex)
+      const [, setPageState] = getPageState(monitorName)
+      setPageState(targetPage)
+    })
+    setBarVisible(true)
+  } else {
+    setBarVisible(false)
+    // Reset to home after hiding so stack is pre-positioned
+    sidebarStacks.forEach((stack, monitorName) => {
       stack.set_visible_child_name("page1")
       pageIndices.set(monitorName, 0)
       const [, setPageState] = getPageState(monitorName)

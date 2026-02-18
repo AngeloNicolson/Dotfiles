@@ -279,3 +279,238 @@
 #galaxy-window {
   background: transparent;
 }
+
+/* Periodic Table Window */
+#periodic-table-window {
+  background: @bg;
+  border-radius: 12px;
+  border: 2px solid @bg2;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+#periodic-drag-handle {
+  cursor: grab;
+}
+
+#periodic-header {
+  background: @bg1;
+  padding: 8px 12px;
+  border-radius: 10px 10px 0 0;
+}
+
+#drag-hint {
+  color: @fg;
+  opacity: 0.5;
+  font-size: 11px;
+}
+
+#close-button {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: @fg;
+  font-size: 14px;
+}
+
+#close-button:hover {
+  background: @red;
+  color: @bg;
+}
+
+#periodic-table {
+  padding: 12px;
+}
+
+#periodic-title-bar {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+#periodic-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: @fg0;
+}
+
+#periodic-grid {
+  padding: 4px;
+}
+
+#element-row {
+  margin: 1px 0;
+}
+
+#element-cell {
+  min-width: 42px;
+  min-height: 42px;
+  max-width: 42px;
+  max-height: 42px;
+  margin: 1px;
+  border-radius: 4px;
+  padding: 2px;
+  border: 1px solid transparent;
+  transition: all 150ms ease;
+}
+
+#element-cell-empty {
+  min-width: 42px;
+  min-height: 42px;
+  max-width: 42px;
+  max-height: 42px;
+  margin: 1px;
+  background: transparent;
+  border: none;
+}
+
+#element-cell:hover {
+  border-color: @fg;
+}
+
+#element-number {
+  font-size: 8px;
+  color: @fg;
+  opacity: 0.7;
+}
+
+#element-symbol {
+  font-size: 14px;
+  font-weight: bold;
+  color: @fg0;
+}
+
+/* Element categories (class selectors) */
+#element-cell.alkali-metal {
+  background: alpha(@red, 0.3);
+  border-color: alpha(@red, 0.5);
+}
+
+#element-cell.alkaline-earth {
+  background: alpha(@orange, 0.3);
+  border-color: alpha(@orange, 0.5);
+}
+
+#element-cell.transition-metal {
+  background: alpha(@yellow, 0.25);
+  border-color: alpha(@yellow, 0.4);
+}
+
+#element-cell.post-transition {
+  background: alpha(@blue, 0.25);
+  border-color: alpha(@blue, 0.4);
+}
+
+#element-cell.metalloid {
+  background: alpha(@aqua, 0.25);
+  border-color: alpha(@aqua, 0.4);
+}
+
+#element-cell.nonmetal {
+  background: alpha(@green, 0.25);
+  border-color: alpha(@green, 0.4);
+}
+
+#element-cell.halogen {
+  background: alpha(@purple, 0.3);
+  border-color: alpha(@purple, 0.5);
+}
+
+#element-cell.noble-gas {
+  background: alpha(@blue, 0.4);
+  border-color: alpha(@blue, 0.6);
+}
+
+#element-cell.lanthanide {
+  background: alpha(@aqua, 0.35);
+  border-color: alpha(@aqua, 0.5);
+}
+
+#element-cell.actinide {
+  background: alpha(@purple, 0.35);
+  border-color: alpha(@purple, 0.5);
+}
+
+#periodic-separator {
+  min-height: 12px;
+}
+
+#lanthanide-row,
+#actinide-row {
+  margin-left: 42px;
+}
+
+#series-label {
+  min-width: 28px;
+  min-height: 42px;
+  padding: 2px;
+}
+
+#series-label label {
+  font-size: 12px;
+  color: @fg;
+  opacity: 0.6;
+}
+
+/* Legend */
+#periodic-legend {
+  margin-top: 12px;
+  padding: 8px;
+  background: @bg1;
+  border-radius: 8px;
+}
+
+#legend-item {
+  margin: 2px 8px;
+}
+
+#legend-color {
+  min-width: 12px;
+  min-height: 12px;
+  border-radius: 2px;
+  margin-right: 6px;
+}
+
+#legend-color.alkali-metal {
+  background: alpha(@red, 0.5);
+}
+
+#legend-color.alkaline-earth {
+  background: alpha(@orange, 0.5);
+}
+
+#legend-color.transition-metal {
+  background: alpha(@yellow, 0.4);
+}
+
+#legend-color.post-transition {
+  background: alpha(@blue, 0.4);
+}
+
+#legend-color.metalloid {
+  background: alpha(@aqua, 0.4);
+}
+
+#legend-color.nonmetal {
+  background: alpha(@green, 0.4);
+}
+
+#legend-color.halogen {
+  background: alpha(@purple, 0.5);
+}
+
+#legend-color.noble-gas {
+  background: alpha(@blue, 0.6);
+}
+
+#legend-color.lanthanide {
+  background: alpha(@aqua, 0.5);
+}
+
+#legend-color.actinide {
+  background: alpha(@purple, 0.5);
+}
+
+#legend-label {
+  font-size: 10px;
+  color: @fg;
+}
