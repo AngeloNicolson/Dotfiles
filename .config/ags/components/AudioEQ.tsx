@@ -24,7 +24,6 @@ const EQ_PRESETS: Record<string, { label: string, gains: number[] }> = {
 }
 
 const SEGMENTS = 20
-const PIXEL_COLS = 10
 const VOL_SEGMENTS = 16
 const GAIN_MIN = -12
 const GAIN_MAX = 12
@@ -212,11 +211,7 @@ function EQColumn({ value, label, onSet, disabled }: {
             if (v > 0 && segIdx === v - 1) return "peak"
             return segIdx < v ? "lit" : "unlit"
           })}
-        >
-          {Array(PIXEL_COLS).fill(0).map(() => (
-            <box name="eq-pixel" />
-          ))}
-        </box>
+        />
       ))}
     </box>
   )
@@ -294,7 +289,7 @@ export default function AudioEQ() {
         <box hexpand />
         <label name="control-value" label={localVol.as((v) => `${Math.round(v * 100)}%`)} />
       </box>
-      <box name="eq-columns">
+      <box name="eq-columns" homogeneous>
         {EQ_BANDS.map((band, i) => (
           <EQColumn
             value={bandSegments.as((segs) => segs[i])}
