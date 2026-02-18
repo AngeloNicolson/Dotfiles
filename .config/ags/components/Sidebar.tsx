@@ -5,6 +5,7 @@ import ThemeSwitcher from "./ThemeSwitcher"
 import AppLauncher from "./AppLauncher"
 import PowerIndicator from "./PowerIndicator"
 import WallpaperSelector from "./WallpaperSelector"
+import Pomodoro, { secondsRemaining, phase } from "./Pomodoro"
 
 const tabs = [
   { id: "page1", icon: "", label: "HOME" },
@@ -12,6 +13,7 @@ const tabs = [
   { id: "page3", icon: "", label: "THM" },
   { id: "page4", icon: "", label: "WALL" },
   { id: "page5", icon: "", label: "PWR" },
+  { id: "page6", icon: "", label: "POMO" },
 ]
 
 export default function Sidebar({ monitorName }: { monitorName: string }) {
@@ -29,12 +31,14 @@ export default function Sidebar({ monitorName }: { monitorName: string }) {
   const appPage = <AppLauncher />
 
   const wallpaperPage = <WallpaperSelector />
+  const pomodoroPage = <Pomodoro />
 
   stack.add_named(homePage, "page1")
   stack.add_named(appPage, "page2")
   stack.add_named(themePage, "page3")
   stack.add_named(wallpaperPage, "page4")
   stack.add_named(powerPage, "page5")
+  stack.add_named(pomodoroPage, "page6")
   stack.set_visible_child_name("page1")
   stack.show_all()
 
@@ -53,7 +57,16 @@ export default function Sidebar({ monitorName }: { monitorName: string }) {
           >
             <box vertical>
               <label name="tab-icon" label={tab.icon} />
-              <label name="tab-label" label={tab.label} />
+              <label name="tab-label" label={tab.id === "page6"
+                ? secondsRemaining.as((s) => {
+                    const p = phase.get()
+                    if (p === "idle") return "POMO"
+                    const m = Math.floor(s / 60)
+                    const sec = s % 60
+                    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`
+                  })
+                : tab.label
+              } />
             </box>
           </button>
         ))}

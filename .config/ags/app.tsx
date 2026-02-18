@@ -1,9 +1,11 @@
 import app from "ags/gtk3/app"
-import { toggleBar, cyclePage, removeSidebarStack, toggleDestination, toggleGalaxy } from "./state"
+import { toggleBar, cyclePage, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable } from "./state"
 import { initTheme, applyTheme } from "./theme"
 import Bar from "./components/Bar"
 import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
+import PeriodicTableWindow from "./components/PeriodicTableWindow"
+import BreakPopupWindow from "./components/BreakPopupWindow"
 import AstalHyprland from "gi://AstalHyprland"
 import { Gdk } from "ags/gtk3"
 
@@ -27,6 +29,9 @@ app.start({
     } else if (cmd === "toggle-galaxy") {
       toggleGalaxy()
       response("galaxy toggled")
+    } else if (cmd === "toggle-periodic-table") {
+      togglePeriodicTable()
+      response("periodic table toggled")
     } else if (cmd === "debug-stacks") {
       const { getSidebarStacks } = require("./state")
       const stacks = getSidebarStacks()
@@ -134,5 +139,7 @@ app.start({
     // Create destination menu and galaxy overlay windows on primary monitor
     DestinationWindow(0)
     GalaxyWindow(0)
+    PeriodicTableWindow(0)
+    BreakPopupWindow(0)
   },
 })

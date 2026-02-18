@@ -28,6 +28,7 @@ tmux
 ttf-jetbrains-mono-nerd
 ttf-font-awesome
 nerd-fonts-complete
+noto-fonts-cjk                  # Japanese/Chinese/Korean character support
 
 # Shell Utilities
 polkit-kde-agent
@@ -73,6 +74,10 @@ firefox
 kitty
 ktouch
 rnote                        # Note-taking and sketching app
+
+# Display controls (AGS sidebar)
+wl-gammarelay-rs             # AUR: color temperature & gamma via D-Bus
+hyprshade                    # AUR: Hyprland screen shaders (RGB tint)
 
 # AUR packages (install with yay)
 # video2x-git                 # AI video upscaling (Real-ESRGAN)

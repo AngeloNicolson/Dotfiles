@@ -84,6 +84,7 @@ const DESTINATIONS: Destination[] = [
     id: "tools", label: "TOOLS", icon: "◯", x: 0.76, y: 0.56, size: 1.0, ringStyle: "icon",
     subItems: [
       { id: "galaxy", label: "GALAXY", icon: "◯", command: "ags request toggle-galaxy" },
+      { id: "periodic", label: "PERIODIC", icon: "󰎔", command: "ags request toggle-periodic-table" },
     ]
   },
 

@@ -69,6 +69,12 @@ else
     print_success "Firefox customization installed"
 fi
 
+# Setup PipeWire EQ and display controls
+print_status "Setting up audio EQ and display controls..."
+mkdir -p "$HOME/.config/pipewire/filter-chain.conf.d"
+mkdir -p "$HOME/.config/hypr/shaders"
+print_success "PipeWire filter-chain and shader directories created"
+
 # Setup Hyprland
 print_status "Setting up Hyprland..."
 if [ -d "$HOME/.config/hypr" ]; then

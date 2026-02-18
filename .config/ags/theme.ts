@@ -375,14 +375,15 @@ function generateCSS(c: ThemeColors): string {
       letter-spacing: 1px;
     }
     #control-bar-container {
+      min-height: 140px;
+      padding: 4px 0;
     }
     #control-segment {
-      min-width: 9px;
-      min-height: 6px;
+      min-height: 5px;
       border-radius: 1px;
       border: none;
       padding: 0;
-      margin: 0 1px;
+      margin: 1px 0;
     }
     #control-segment.unlit {
       background: alpha(#2a3a45, 0.5);
@@ -430,6 +431,42 @@ function generateCSS(c: ThemeColors): string {
       background: alpha(#2a4050, 0.6);
       padding: 2px 6px;
       border-radius: 2px;
+    }
+
+    /* Tools Row */
+    #tools-row {
+      margin-bottom: 12px;
+    }
+    #tool-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin: 0 4px;
+      min-width: 64px;
+      transition: all 150ms linear;
+    }
+    #tool-btn:hover {
+      background: alpha(#1a3040, 0.8);
+      border-color: #60c0d0;
+      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+    }
+    #tool-btn-icon {
+      font-size: 20px;
+      color: #5a8090;
+      margin-bottom: 4px;
+    }
+    #tool-btn:hover #tool-btn-icon {
+      color: #80e0f0;
+    }
+    #tool-btn-label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+    }
+    #tool-btn:hover #tool-btn-label {
+      color: #80e0f0;
     }
 
     /* Wallpaper selector styles */
@@ -961,6 +998,435 @@ function generateCSS(c: ThemeColors): string {
       color: #70c0d0;
       font-size: 10px;
       font-weight: 600;
+    }
+
+    /* ============ POMODORO PAGE - Holographic Style ============ */
+    #pomo-page {
+      padding: 12px;
+      background: #040608;
+    }
+
+    /* Timer display panel */
+    #pomo-timer-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    #pomo-phase-label {
+      color: #5090a0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    #pomo-time-display {
+      color: #70c0d0;
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+    }
+    #pomo-progress-bar {
+      margin-top: 4px;
+    }
+
+    /* Mode toggle row */
+    #pomo-mode-row {
+      margin-bottom: 8px;
+    }
+    #pomo-mode-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+    }
+    #pomo-mode-row #sys-toggle.active #pomo-mode-label {
+      color: #80e0f0;
+    }
+    #pomo-mode-row #sys-toggle:hover #pomo-mode-label {
+      color: #6080a0;
+    }
+
+    /* Ratio presets row */
+    #pomo-presets-row {
+      margin-bottom: 8px;
+    }
+    #pomo-preset-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 6px 8px;
+      margin: 0 3px;
+      min-width: 44px;
+    }
+    #pomo-preset-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #pomo-preset-btn.active {
+      background: alpha(#1a3040, 0.8);
+      border: 1px solid #60c0d0;
+      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+    }
+    #pomo-preset-btn label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+    }
+    #pomo-preset-btn:hover label {
+      color: #6080a0;
+    }
+    #pomo-preset-btn.active label {
+      color: #80e0f0;
+    }
+
+    /* Time adjusters */
+    #pomo-adjusters {
+      margin-bottom: 8px;
+    }
+    #pomo-adjuster-row {
+      padding: 4px 0;
+    }
+    #pomo-adj-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #5090a0;
+      min-width: 50px;
+    }
+    #pomo-adj-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 4px 10px;
+      margin: 0 2px;
+      min-width: 28px;
+    }
+    #pomo-adj-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #pomo-adj-btn label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #5a8090;
+    }
+    #pomo-adj-btn:hover label {
+      color: #80e0f0;
+    }
+    #pomo-adj-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: #70c0d0;
+      letter-spacing: 1px;
+      min-width: 40px;
+    }
+
+    /* Study block dots */
+    #pomo-blocks-row {
+      margin-bottom: 8px;
+      padding: 6px 0;
+    }
+    #pomo-block-dot {
+      min-width: 10px;
+      min-height: 10px;
+      border-radius: 5px;
+      margin: 0 4px;
+    }
+    #pomo-block-dot.completed {
+      background: #60c0d0;
+      box-shadow: 0 0 8px alpha(#60d0e0, 0.6);
+    }
+    #pomo-block-dot.pending {
+      background: alpha(#2a3a45, 0.5);
+      border: 1px solid #3a5060;
+    }
+    #pomo-block-dot.hidden {
+      opacity: 0;
+      min-width: 0;
+      min-height: 0;
+      margin: 0;
+    }
+
+    /* Control buttons */
+    #pomo-controls-row {
+      margin-bottom: 10px;
+    }
+    #pomo-start-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a4a35;
+      border-radius: 4px;
+      padding: 10px 14px;
+      margin: 0 4px;
+    }
+    #pomo-start-btn:hover {
+      background: alpha(#1a3020, 0.8);
+      border-color: #50c070;
+      box-shadow: inset 0 0 12px alpha(#50c070, 0.3);
+    }
+    #pomo-start-btn label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #50a060;
+    }
+    #pomo-start-btn:hover label {
+      color: #80e0a0;
+    }
+    #pomo-start-btn.running label {
+      color: #c0a050;
+    }
+    #pomo-stop-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #4a2a2a;
+      border-radius: 4px;
+      padding: 10px 14px;
+      margin: 0 4px;
+    }
+    #pomo-stop-btn:hover {
+      background: alpha(#301a1a, 0.8);
+      border-color: #c05050;
+      box-shadow: inset 0 0 12px alpha(#c05050, 0.3);
+    }
+    #pomo-stop-btn label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #a05050;
+    }
+    #pomo-stop-btn:hover label {
+      color: #e08080;
+    }
+
+    /* Maintain focus row */
+    #pomo-focus-row {
+      margin-bottom: 10px;
+    }
+
+    /* Audio section */
+    #pomo-audio-row {
+      margin-bottom: 8px;
+    }
+    #pomo-theme-name {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #70c0d0;
+      margin: 0 8px;
+      min-width: 80px;
+    }
+    #pomo-volume-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+
+    /* Vim focus highlight */
+    .focused {
+      box-shadow: 0 0 6px alpha(#60c0d0, 0.8), inset 0 0 4px alpha(#60c0d0, 0.3);
+      border-color: #80e0f0;
+    }
+
+    /* ============ EQ PANELS (Audio & Display) ============ */
+    #eq-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    #eq-panel #control-header {
+      margin-bottom: 6px;
+    }
+    #eq-columns {
+      margin-top: 4px;
+    }
+    #eq-col {
+      min-width: 0;
+      padding: 0;
+      margin: 0 3px;
+    }
+    #eq-col.disabled {
+      opacity: 0.3;
+    }
+    /* Segment row — transparent container for pixel grid */
+    #eq-seg {
+      min-height: 0;
+      min-width: 0;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    /* Individual pixel cell — hard-coded square */
+    #eq-pixel {
+      min-width: 4px;
+      min-height: 4px;
+      border-radius: 1px;
+      border: 1px solid rgba(4, 6, 8, 0.85);
+    }
+    /* Unlit pixels */
+    #eq-seg.unlit #eq-pixel {
+      background: alpha(#2a3a45, 0.3);
+    }
+    /* Default lit pixels (cyan) */
+    #eq-seg.lit #eq-pixel {
+      background: #60c0d0;
+      box-shadow: inset 0 0 2px alpha(#80e0f0, 0.3);
+    }
+    #eq-seg.peak #eq-pixel {
+      background: #e0f8ff;
+      box-shadow: inset 0 0 3px alpha(#ffffff, 0.5), 0 0 4px alpha(#60c0d0, 0.4);
+    }
+    /* Warm (temperature) */
+    #eq-seg.lit.eq-warm #eq-pixel {
+      background: #d0a060;
+      box-shadow: inset 0 0 2px alpha(#e0b870, 0.3);
+    }
+    #eq-seg.peak.eq-warm #eq-pixel {
+      background: #ffe0a0;
+      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#d0a060, 0.4);
+    }
+    /* Gamma (purple) */
+    #eq-seg.lit.eq-gamma #eq-pixel {
+      background: #a080d0;
+      box-shadow: inset 0 0 2px alpha(#b090e0, 0.3);
+    }
+    #eq-seg.peak.eq-gamma #eq-pixel {
+      background: #d0b0ff;
+      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#a080d0, 0.4);
+    }
+    /* Red */
+    #eq-seg.lit.eq-red #eq-pixel {
+      background: #d06060;
+      box-shadow: inset 0 0 2px alpha(#e08080, 0.3);
+    }
+    #eq-seg.peak.eq-red #eq-pixel {
+      background: #ff9090;
+      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#d06060, 0.4);
+    }
+    /* Green */
+    #eq-seg.lit.eq-green #eq-pixel {
+      background: #60d070;
+      box-shadow: inset 0 0 2px alpha(#80e090, 0.3);
+    }
+    #eq-seg.peak.eq-green #eq-pixel {
+      background: #a0ffa0;
+      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#60d070, 0.4);
+    }
+    /* Blue */
+    #eq-seg.lit.eq-blue #eq-pixel {
+      background: #6080d0;
+      box-shadow: inset 0 0 2px alpha(#80a0e0, 0.3);
+    }
+    #eq-seg.peak.eq-blue #eq-pixel {
+      background: #a0c0ff;
+      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#6080d0, 0.4);
+    }
+    #eq-label {
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+      margin-top: 4px;
+    }
+    /* Horizontal volume/brightness bar */
+    #eq-hbar {
+      margin-top: 8px;
+      min-height: 14px;
+    }
+    #eq-hseg {
+      min-width: 0;
+      min-height: 14px;
+      border-radius: 1px;
+      border: 1px solid rgba(4, 6, 8, 0.85);
+      padding: 0;
+      margin: 0;
+    }
+    #eq-hseg.unlit {
+      background: alpha(#2a3a45, 0.3);
+    }
+    #eq-hseg.lit {
+      background: #60c0d0;
+      box-shadow: inset 0 0 2px alpha(#80e0f0, 0.3);
+    }
+    /* Preset buttons */
+    #eq-presets {
+      margin-top: 8px;
+    }
+    #eq-preset-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 3px;
+      padding: 4px 6px;
+      margin: 0 2px;
+    }
+    #eq-preset-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #eq-preset-btn.active {
+      background: alpha(#1a3040, 0.8);
+      border: 1px solid #60c0d0;
+      box-shadow: inset 0 0 8px alpha(#60d0e0, 0.3);
+    }
+    #eq-preset-label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+    }
+    #eq-preset-btn:hover #eq-preset-label {
+      color: #6080a0;
+    }
+    #eq-preset-btn.active #eq-preset-label {
+      color: #80e0f0;
+    }
+
+    /* ============ BREAK POPUP OVERLAY ============ */
+    #break-popup-overlay {
+      background: alpha(#040608, 0.85);
+    }
+    #break-popup-panel {
+      background: alpha(#0a1520, 0.95);
+      border: 2px solid #60c0d0;
+      border-radius: 8px;
+      padding: 40px 50px;
+      box-shadow: 0 0 40px alpha(#60d0e0, 0.3),
+                  0 0 80px alpha(#60d0e0, 0.1);
+    }
+    #break-popup-title {
+      color: #80e0f0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      margin-bottom: 16px;
+    }
+    #break-popup-timer {
+      color: #70c0d0;
+      font-size: 56px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      margin-bottom: 12px;
+    }
+    #break-popup-block-label {
+      color: #5090a0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+    #break-popup-hint {
+      color: #3a5060;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
     }
   `
 }

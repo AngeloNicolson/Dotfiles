@@ -9,8 +9,22 @@ sudo pacman -S bluez bluez-utils brightnessctl dunst gammastep
 # Wallpaper system
 sudo pacman -S swww mpvpaper ffmpeg socat
 
+# Audio EQ (PipeWire filter-chain)
+sudo pacman -S pipewire wireplumber
+
+# Display controls (color temperature, gamma, RGB shaders)
+yay -S wl-gammarelay-rs hyprshade
+
 # Enable bluetooth
 sudo systemctl enable --now bluetooth.service
+
+# Create PipeWire filter-chain config directory
+mkdir -p ~/.config/pipewire/filter-chain.conf.d
+```
+
+### Hyprland exec-once (add to ~/.config/hypr/custom/execs.conf)
+```
+exec-once = wl-gammarelay-rs
 ```
 
 ### Optional: AI Video Upscaling
