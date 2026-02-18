@@ -8,7 +8,6 @@ import Gdk from "gi://Gdk"
 import Gtk from "gi://Gtk"
 
 const SEGMENTS = 20
-const PIXEL_COLS = 10
 const BRI_SEGMENTS = 16
 const TEMP_MIN = 2500
 const TEMP_MAX = 6500
@@ -273,11 +272,7 @@ function EQColumn({ value, label, onSet, litClass, disabled }: {
             if (v > 0 && segIdx === v - 1) return cls ? `peak ${cls}` : "peak"
             return cls ? `${segIdx < v ? "lit" : "unlit"} ${cls}` : (segIdx < v ? "lit" : "unlit")
           })}
-        >
-          {Array(PIXEL_COLS).fill(0).map(() => (
-            <box name="eq-pixel" />
-          ))}
-        </box>
+        />
       ))}
     </box>
   )
@@ -308,7 +303,7 @@ export default function DisplayEQ() {
         <box hexpand />
         <label name="control-value" label={brightness.as((b) => `${Math.round(b * 100)}%`)} />
       </box>
-      <box name="eq-columns">
+      <box name="eq-columns" homogeneous>
         <EQColumn value={tempSegments} label="TEMP" onSet={(seg) => setTemp(TEMP_MIN + (seg / SEGMENTS) * TEMP_RANGE)} litClass="eq-warm" disabled={relayAvailable.as((a) => !a)} />
         <EQColumn value={gamSegments} label="GAM" onSet={(seg) => setGam(GAMMA_MIN + (seg / SEGMENTS) * GAMMA_RANGE)} litClass="eq-gamma" disabled={relayAvailable.as((a) => !a)} />
         <EQColumn value={rSegments} label="R" onSet={(seg) => setRChannel(RGB_MIN + (seg / SEGMENTS) * RGB_RANGE)} litClass="eq-red" />

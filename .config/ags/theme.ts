@@ -1008,28 +1008,22 @@ function generateCSS(c: ThemeColors): string {
 
     /* Timer display panel */
     #pomo-timer-panel {
-      background: alpha(#1a2530, 0.6);
-      border: 1px solid #2a3a45;
-      border-radius: 4px;
-      padding: 14px;
+      background: transparent;
+      border: none;
       margin-bottom: 10px;
+    }
+    #pomo-time-display {
+      color: #f0f2f4;
+      font-size: 56px;
+      font-weight: 700;
+      letter-spacing: 4px;
     }
     #pomo-phase-label {
       color: #5090a0;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      margin-bottom: 4px;
-    }
-    #pomo-time-display {
-      color: #70c0d0;
-      font-size: 42px;
-      font-weight: 700;
-      letter-spacing: 4px;
-      margin-bottom: 8px;
-    }
-    #pomo-progress-bar {
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     /* Mode toggle row */
@@ -1254,78 +1248,70 @@ function generateCSS(c: ThemeColors): string {
     #eq-col.disabled {
       opacity: 0.3;
     }
-    /* Segment row — transparent container for pixel grid */
+    /* Segment row — single styled bar per segment */
     #eq-seg {
-      min-height: 0;
+      min-height: 4px;
       min-width: 0;
       padding: 0;
       margin: 0;
-      background: transparent;
-      border: none;
-      box-shadow: none;
-    }
-    /* Individual pixel cell — hard-coded square */
-    #eq-pixel {
-      min-width: 4px;
-      min-height: 4px;
       border-radius: 1px;
       border: 1px solid rgba(4, 6, 8, 0.85);
     }
-    /* Unlit pixels */
-    #eq-seg.unlit #eq-pixel {
+    /* Unlit */
+    #eq-seg.unlit {
       background: alpha(#2a3a45, 0.3);
     }
-    /* Default lit pixels (cyan) */
-    #eq-seg.lit #eq-pixel {
+    /* Default lit (cyan) */
+    #eq-seg.lit {
       background: #60c0d0;
       box-shadow: inset 0 0 2px alpha(#80e0f0, 0.3);
     }
-    #eq-seg.peak #eq-pixel {
+    #eq-seg.peak {
       background: #e0f8ff;
       box-shadow: inset 0 0 3px alpha(#ffffff, 0.5), 0 0 4px alpha(#60c0d0, 0.4);
     }
     /* Warm (temperature) */
-    #eq-seg.lit.eq-warm #eq-pixel {
+    #eq-seg.lit.eq-warm {
       background: #d0a060;
       box-shadow: inset 0 0 2px alpha(#e0b870, 0.3);
     }
-    #eq-seg.peak.eq-warm #eq-pixel {
+    #eq-seg.peak.eq-warm {
       background: #ffe0a0;
       box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#d0a060, 0.4);
     }
     /* Gamma (purple) */
-    #eq-seg.lit.eq-gamma #eq-pixel {
+    #eq-seg.lit.eq-gamma {
       background: #a080d0;
       box-shadow: inset 0 0 2px alpha(#b090e0, 0.3);
     }
-    #eq-seg.peak.eq-gamma #eq-pixel {
+    #eq-seg.peak.eq-gamma {
       background: #d0b0ff;
       box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#a080d0, 0.4);
     }
     /* Red */
-    #eq-seg.lit.eq-red #eq-pixel {
+    #eq-seg.lit.eq-red {
       background: #d06060;
       box-shadow: inset 0 0 2px alpha(#e08080, 0.3);
     }
-    #eq-seg.peak.eq-red #eq-pixel {
+    #eq-seg.peak.eq-red {
       background: #ff9090;
       box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#d06060, 0.4);
     }
     /* Green */
-    #eq-seg.lit.eq-green #eq-pixel {
+    #eq-seg.lit.eq-green {
       background: #60d070;
       box-shadow: inset 0 0 2px alpha(#80e090, 0.3);
     }
-    #eq-seg.peak.eq-green #eq-pixel {
+    #eq-seg.peak.eq-green {
       background: #a0ffa0;
       box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#60d070, 0.4);
     }
     /* Blue */
-    #eq-seg.lit.eq-blue #eq-pixel {
+    #eq-seg.lit.eq-blue {
       background: #6080d0;
       box-shadow: inset 0 0 2px alpha(#80a0e0, 0.3);
     }
-    #eq-seg.peak.eq-blue #eq-pixel {
+    #eq-seg.peak.eq-blue {
       background: #a0c0ff;
       box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#6080d0, 0.4);
     }
