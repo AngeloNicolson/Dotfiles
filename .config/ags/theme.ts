@@ -206,35 +206,209 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 12px;
     }
 
-    /* Theme Switcher - Holographic Style (matches Home) */
-    #theme-title {
-      color: #5090a0;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      margin-bottom: 12px;
+    /* ============ PLANNER PAGE ============ */
+    #planner-page {
+      padding: 12px;
+      background: #040608;
     }
-    #theme-button {
+    #planner-header {
+      margin-bottom: 8px;
+    }
+    #planner-reload-btn {
       background: alpha(#1a2530, 0.6);
       border: 1px solid #2a3a45;
       border-radius: 4px;
-      padding: 12px 16px;
-      margin: 4px 0;
-      min-width: 220px;
+      padding: 4px 8px;
     }
-    #theme-button:hover {
+    #planner-reload-btn:hover {
       background: alpha(#253540, 0.7);
-      border-color: #3a5060;
-    }
-    #theme-button:active {
-      background: alpha(#1a3040, 0.8);
       border-color: #60c0d0;
     }
-    #theme-button label {
+    #planner-reload-btn label {
+      color: #5a8090;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    #planner-reload-btn:hover label {
+      color: #80e0f0;
+    }
+    #planner-date-nav {
+      margin-bottom: 6px;
+      padding: 4px 0;
+    }
+    #planner-nav-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 4px 10px;
+      margin: 0 4px;
+    }
+    #planner-nav-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #60c0d0;
+    }
+    #planner-nav-btn label {
+      color: #5a8090;
+      font-size: 12px;
+    }
+    #planner-nav-btn:hover label {
+      color: #80e0f0;
+    }
+    #planner-date {
       color: #70c0d0;
       font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin: 0 8px;
+    }
+
+    /* ── Day calendar grid ── */
+    #plan-grid {
+      padding: 0;
+    }
+
+    /* Horizontal grid line between each hour */
+    #plan-gridline {
+      background: #3a5565;
+      min-height: 1px;
+    }
+
+    /* Half-hour line (faint) */
+    #plan-halfline {
+      background: #253540;
+      min-height: 1px;
+    }
+
+    /* Vertical divider between hour label and cell */
+    #plan-divider {
+      background: #3a5565;
+      min-width: 1px;
+    }
+
+    #plan-row {
+      padding: 0;
+      margin: 0;
+    }
+
+    /* Hour label on the left */
+    #plan-hour-label {
+      color: #7aabb8;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 6px 0 4px;
+      min-width: 32px;
+    }
+
+    /* Cell area right of divider */
+    #plan-cell {
+      padding: 2px 4px;
+    }
+
+    /* Event block */
+    #plan-event {
+      background: #1a3248;
+      border-left: 3px solid #50b8d0;
+      border-radius: 3px;
+      padding: 3px 8px;
+      margin: 1px 0;
+    }
+    #plan-event-time {
+      color: #80a8b8;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    #plan-event-text {
+      color: #c0e4f0;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Inline entry for adding/editing events */
+    #plan-entry {
+      background: #1a3248;
+      color: #c0e4f0;
+      border: 1px solid #50b8d0;
+      border-radius: 3px;
+      padding: 2px 8px;
+      font-size: 10px;
+      caret-color: #50b8d0;
+    }
+
+    /* Drag guide line — grey dotted, full pane width */
+    #plan-drag-guide {
+      background: transparent;
+      border-top: 1px dotted #808080;
+      min-height: 1px;
+    }
+
+    /* Burgundy now-line */
+    #plan-now-line {
+      background: #cc2244;
+    }
+
+    /* Empty state */
+    #planner-empty {
+      padding: 30px 20px;
+    }
+    #planner-empty-title {
+      color: #5090a0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 14px;
+    }
+    #planner-empty-path {
+      color: #70c0d0;
+      font-size: 10px;
       font-weight: 600;
       letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    #planner-empty-hint {
+      color: #4a6070;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    #planner-panel {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    #planner-create-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a4a35;
+      border-radius: 4px;
+      padding: 10px 20px;
+      margin-top: 16px;
+    }
+    #planner-create-btn:hover {
+      background: alpha(#1a3020, 0.8);
+      border-color: #50c070;
+      box-shadow: inset 0 0 12px alpha(#50c070, 0.3);
+    }
+    #planner-create-btn label {
+      color: #50a060;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    #planner-create-btn:hover label {
+      color: #80e0a0;
+    }
+    #planner-footer {
+      color: #3a5060;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 4px 0;
     }
 
     /* ============ HOME PAGE - Holographic Star Citizen Style ============ */
@@ -407,19 +581,19 @@ function generateCSS(c: ThemeColors): string {
     }
     #status-icon {
       font-size: 14px;
-      color: #5a8090;
+      color: #90c0d0;
       margin-right: 8px;
     }
     #status-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #4a6070;
+      color: #80a0b0;
     }
     #status-value {
       font-size: 12px;
       font-weight: 700;
-      color: #70c0d0;
+      color: #a0e0f0;
       letter-spacing: 1px;
       margin-right: 8px;
     }
@@ -427,7 +601,7 @@ function generateCSS(c: ThemeColors): string {
       font-size: 8px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #80e0f0;
+      color: #c0f0ff;
       background: alpha(#2a4050, 0.6);
       padding: 2px 6px;
       border-radius: 2px;
@@ -858,13 +1032,13 @@ function generateCSS(c: ThemeColors): string {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #5090a0;
+      color: #90d0e0;
     }
     #power-panel-data {
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 1px;
-      color: #70c0d0;
+      color: #a0e0f0;
     }
 
     /* Power bar container */
@@ -881,7 +1055,7 @@ function generateCSS(c: ThemeColors): string {
     #power-scale-mark {
       font-size: 9px;
       font-weight: 600;
-      color: #5a8090;
+      color: #90b0c0;
       letter-spacing: 1px;
     }
 
@@ -916,7 +1090,7 @@ function generateCSS(c: ThemeColors): string {
     #power-indicator {
       font-size: 9px;
       font-weight: 700;
-      color: #5a8090;
+      color: #90b0c0;
       letter-spacing: 1px;
     }
 
@@ -924,7 +1098,7 @@ function generateCSS(c: ThemeColors): string {
     #power-big-percent {
       font-size: 56px;
       font-weight: 700;
-      color: #70c0d0;
+      color: #e0f4f8;
       letter-spacing: 4px;
       margin-top: 10px;
       margin-bottom: 6px;
@@ -938,7 +1112,7 @@ function generateCSS(c: ThemeColors): string {
     #power-footer-data {
       font-size: 9px;
       font-weight: 600;
-      color: #4a6070;
+      color: #90b0c0;
       letter-spacing: 2px;
     }
 
@@ -1250,7 +1424,7 @@ function generateCSS(c: ThemeColors): string {
     }
     /* Segment row — single styled bar per segment */
     #eq-seg {
-      min-height: 4px;
+      min-height: 7px;
       min-width: 0;
       padding: 0;
       margin: 0;
@@ -1261,14 +1435,33 @@ function generateCSS(c: ThemeColors): string {
     #eq-seg.unlit {
       background: alpha(#2a3a45, 0.3);
     }
-    /* Default lit (cyan) */
+    /* Default lit (cyan) — fallback */
     #eq-seg.lit {
       background: #60c0d0;
       box-shadow: inset 0 0 2px alpha(#80e0f0, 0.3);
     }
+    /* Visualizer tiers — famicom red, fades up */
+    #eq-seg.lit-hi {
+      background: #c02030;
+      box-shadow: inset 0 0 2px alpha(#e03040, 0.3);
+    }
+    #eq-seg.lit-mid {
+      background: alpha(#b01828, 0.7);
+    }
+    #eq-seg.lit-lo {
+      background: alpha(#a01020, 0.45);
+    }
+    #eq-seg.lit-dim {
+      background: alpha(#901020, 0.3);
+    }
+    /* Peak head — bright red */
     #eq-seg.peak {
-      background: #e0f8ff;
-      box-shadow: inset 0 0 3px alpha(#ffffff, 0.5), 0 0 4px alpha(#60c0d0, 0.4);
+      background: #e83030;
+      box-shadow: inset 0 0 3px alpha(#ff5050, 0.5), 0 0 4px alpha(#e83030, 0.5);
+    }
+    /* Gain setting — faded white marker */
+    #eq-seg.gain-mark {
+      background: alpha(#d0d0d0, 0.5);
     }
     /* Warm (temperature) */
     #eq-seg.lit.eq-warm {
@@ -1373,6 +1566,104 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-preset-btn.active #eq-preset-label {
       color: #80e0f0;
+    }
+
+    /* Muted state — dims header, red icon */
+    #eq-panel #control-header.muted {
+      opacity: 0.7;
+    }
+    #eq-panel #control-header.muted #control-icon {
+      color: #c04040;
+    }
+    #eq-panel #control-header.muted #control-label {
+      color: #6a3030;
+    }
+    #eq-panel #control-header.muted #control-value {
+      opacity: 0;
+    }
+    #control-muted-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #c04040;
+    }
+
+    /* Output device selector button */
+    #eq-output-selector {
+      background: alpha(#1a2530, 0.4);
+      border: 1px solid #2a3a45;
+      border-radius: 3px;
+      padding: 6px 10px;
+      margin-bottom: 4px;
+    }
+    #eq-output-selector:hover {
+      background: alpha(#253540, 0.6);
+      border-color: #3a5060;
+    }
+    #eq-output-icon {
+      font-size: 12px;
+      color: #5a8090;
+      margin-right: 8px;
+    }
+    #eq-output-name {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #5a8090;
+    }
+    #eq-output-selector:hover #eq-output-name {
+      color: #80e0f0;
+    }
+    #eq-output-arrow {
+      font-size: 10px;
+      color: #4a6070;
+      margin-left: 6px;
+    }
+
+    /* Output device overlay dropdown */
+    #eq-output-scroll {
+      background: #0a1520;
+      border: 1px solid #2a4a5a;
+      border-radius: 4px;
+      min-width: 216px;
+    }
+    #eq-output-list {
+      background: transparent;
+      padding: 3px;
+    }
+    #eq-output-btn {
+      background: #10202e;
+      border: 1px solid #2a3a45;
+      border-radius: 3px;
+      padding: 4px 10px;
+      margin: 1px 0;
+      box-shadow: none;
+      transition: none;
+    }
+    #eq-output-btn:hover {
+      background: #1a3040;
+      border-color: #3a5060;
+    }
+    #eq-output-btn.active {
+      background: #1a3040;
+      border-color: #60c0d0;
+    }
+    #eq-output-btn label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #70b0c0;
+      transition: none;
+    }
+    #eq-output-btn:hover label {
+      color: #80e0f0;
+    }
+    #eq-output-btn.active label {
+      color: #80e0f0;
+    }
+    #eq-output-list,
+    #eq-output-list * {
+      transition: none;
     }
 
     /* ============ BREAK POPUP OVERLAY ============ */

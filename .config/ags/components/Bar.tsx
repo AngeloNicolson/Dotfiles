@@ -12,6 +12,7 @@ export default function Bar(gdkMonitor: number, monitorName: string) {
       monitor={gdkMonitor}
       anchor={TOP | LEFT | BOTTOM}
       application={app}
+      keymode={Astal.Keymode.ON_DEMAND}
     >
       <box>
         <revealer
