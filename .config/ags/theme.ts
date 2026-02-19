@@ -214,6 +214,37 @@ function generateCSS(c: ThemeColors): string {
     #planner-header {
       margin-bottom: 8px;
     }
+    #planner-info-btn {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin-right: 4px;
+    }
+    #planner-info-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #60c0d0;
+    }
+    #planner-info-btn label {
+      color: #5a8090;
+      font-size: 10px;
+      font-weight: 700;
+      font-style: italic;
+    }
+    #planner-info-btn:hover label {
+      color: #80e0f0;
+    }
+    #planner-info-panel {
+      background: alpha(#0a1520, 0.8);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin: 4px 8px 8px 8px;
+    }
+    #planner-info-text {
+      color: #5a8090;
+      font-size: 10px;
+    }
     #planner-reload-btn {
       background: alpha(#1a2530, 0.6);
       border: 1px solid #2a3a45;
