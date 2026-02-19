@@ -116,6 +116,7 @@ Original config archived at: `dotfiles/archive/ags-v2/`
 - `tsconfig.json` - TypeScript config
 - `package.json` - Dependencies
 - `style.css` - Styles (currently using inline CSS)
+- `components/Planner.tsx` - Day planner with recurring schedule support
 - `components/WallpaperSelector.tsx` - Wallpaper selection with live/static tabs
 
 ## Wallpaper System
@@ -149,6 +150,77 @@ video2x -i input.mp4 -o output_4k.mp4 -p realesrgan -s 3 -c libx264
 ```
 - `-s 2` = 2x scale (1080p → 4K needs `-s 2` or 720p → 4K needs `-s 3`)
 - Uses Real-ESRGAN model for quality upscaling
+
+## Plan Tracker
+
+Interactive day planner with recurring event scheduling. Accessible from the **PLAN** tab in the sidebar.
+
+### Location
+- **Plans directory**: `~/.config/plans/`
+- **Daily plans**: `~/.config/plans/YYYY-MM-DD.plan` (e.g. `2026-02-19.plan`)
+- **Recurring schedule**: `~/.config/plans/schedule.plan`
+
+### Daily Plan Format (`YYYY-MM-DD.plan`)
+```
+# Comments start with #
+09:00-10:30  Morning focus block
+12:00-13:00  Lunch
+14:00  Quick standup (15-min default)
+```
+- `HH:MM-HH:MM  Description` — timed range event
+- `HH:MM  Description` — single 15-minute slot
+
+### Recurring Schedule Format (`schedule.plan`)
+```
+@daily
+07:00-07:30  Morning routine
+12:00-12:30  Lunch
+
+@mon-fri
+09:00-10:30  Deep work block
+
+@mon,wed,fri
+14:00  Standup
+
+@tue,thu
+15:00-16:00  Gym
+
+# ── Date-specific variations ──
+
+@2026-02-23
++10:00-11:00  Dentist appointment
+-14:00  Standup
+```
+
+**Selectors:**
+| Selector | Matches |
+|----------|---------|
+| `@daily` | Every day |
+| `@mon-fri` | Day range (supports wrap e.g. `@fri-mon`) |
+| `@mon,wed,fri` | Day list |
+| `@tue` | Single day |
+| `@YYYY-MM-DD` | Exact date (for variations) |
+
+**Date variations** (in `@YYYY-MM-DD` sections):
+- `+HH:MM-HH:MM  Desc` — add an event for that date
+- `-HH:MM  Desc` — cancel a recurring event for that date
+
+### Merge Order
+```
+schedule.plan recurring → schedule.plan date variations → YYYY-MM-DD.plan
+```
+
+### Interaction
+- **Click** empty space → create event at that time
+- **Drag** on empty space → create event spanning the drag range
+- **Click** an event → edit inline
+- **Drag** an event → move it
+- **Drag edges** of an event → resize
+- **Ctrl+Scroll** → zoom in/out (change row height)
+
+### Styling
+- **Regular events** — bright blue cards
+- **Recurring events** (from `schedule.plan`) — dimmer teal cards
 
 ## Destination Menu (Director)
 
