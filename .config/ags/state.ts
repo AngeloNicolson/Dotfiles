@@ -51,7 +51,7 @@ export function toggleBar() {
 
   if (newVisible) {
     // Set page BEFORE showing bar to avoid flicker
-    const targetPage = pomoMaintainFocus.get() ? "page6" : "page1"
+    const targetPage = pomoMaintainFocus.get() ? "page3" : "page1"
     const targetIndex = pages.indexOf(targetPage)
     sidebarStacks.forEach((stack, monitorName) => {
       stack.set_visible_child_name(targetPage)

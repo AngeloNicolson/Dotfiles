@@ -1,7 +1,7 @@
 import Gtk from "gi://Gtk?version=3.0"
 import { setSidebarStack, getPageState, setPage } from "../state"
 import Home from "./Home"
-import ThemeSwitcher from "./ThemeSwitcher"
+import Planner from "./Planner"
 import AppLauncher from "./AppLauncher"
 import PowerIndicator from "./PowerIndicator"
 import WallpaperSelector from "./WallpaperSelector"
@@ -9,11 +9,11 @@ import Pomodoro, { secondsRemaining, phase } from "./Pomodoro"
 
 const tabs = [
   { id: "page1", icon: "", label: "HOME" },
-  { id: "page2", icon: "", label: "APPS" },
-  { id: "page3", icon: "", label: "THM" },
-  { id: "page4", icon: "", label: "WALL" },
-  { id: "page5", icon: "", label: "PWR" },
-  { id: "page6", icon: "", label: "POMO" },
+  { id: "page2", icon: "", label: "PLAN" },
+  { id: "page3", icon: "", label: "POMO" },
+  { id: "page4", icon: "", label: "APPS" },
+  { id: "page5", icon: "", label: "WALL" },
+  { id: "page6", icon: "", label: "PWR" },
 ]
 
 export default function Sidebar({ monitorName }: { monitorName: string }) {
@@ -27,18 +27,18 @@ export default function Sidebar({ monitorName }: { monitorName: string }) {
 
   const homePage = <Home />
   const powerPage = <PowerIndicator />
-  const themePage = <ThemeSwitcher />
+  const plannerPage = <Planner />
   const appPage = <AppLauncher />
 
   const wallpaperPage = <WallpaperSelector />
   const pomodoroPage = <Pomodoro />
 
   stack.add_named(homePage, "page1")
-  stack.add_named(appPage, "page2")
-  stack.add_named(themePage, "page3")
-  stack.add_named(wallpaperPage, "page4")
-  stack.add_named(powerPage, "page5")
-  stack.add_named(pomodoroPage, "page6")
+  stack.add_named(plannerPage, "page2")
+  stack.add_named(pomodoroPage, "page3")
+  stack.add_named(appPage, "page4")
+  stack.add_named(wallpaperPage, "page5")
+  stack.add_named(powerPage, "page6")
   stack.set_visible_child_name("page1")
   stack.show_all()
 
@@ -57,7 +57,7 @@ export default function Sidebar({ monitorName }: { monitorName: string }) {
           >
             <box vertical>
               <label name="tab-icon" label={tab.icon} />
-              <label name="tab-label" label={tab.id === "page6"
+              <label name="tab-label" label={tab.id === "page3"
                 ? secondsRemaining.as((s) => {
                     const p = phase.get()
                     if (p === "idle") return "POMO"
