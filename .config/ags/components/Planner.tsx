@@ -54,6 +54,23 @@ interface PlanEvent {
   startMin: number
   endMin: number
   desc: string
+  recurring?: boolean
+}
+
+function parseEventLine(text: string): PlanEvent | null {
+  const rangeMatch = text.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s+(.+)$/)
+  if (rangeMatch) {
+    const [h1, m1] = rangeMatch[1].split(":").map(Number)
+    const [h2, m2] = rangeMatch[2].split(":").map(Number)
+    return { startMin: h1 * 60 + m1, endMin: h2 * 60 + m2, desc: rangeMatch[3] }
+  }
+  const singleMatch = text.match(/^(\d{1,2}:\d{2})\s+(.+)$/)
+  if (singleMatch) {
+    const [h, m] = singleMatch[1].split(":").map(Number)
+    const sm = h * 60 + m
+    return { startMin: sm, endMin: sm + 15, desc: singleMatch[2] }
+  }
+  return null
 }
 
 function parsePlanFile(dateStr: string): PlanEvent[] {
@@ -66,22 +83,119 @@ function parsePlanFile(dateStr: string): PlanEvent[] {
     for (const line of content.split("\n")) {
       const trimmed = line.trim()
       if (trimmed === "" || trimmed.startsWith("#")) continue
-      const rangeMatch = trimmed.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s+(.+)$/)
-      if (rangeMatch) {
-        const [h1, m1] = rangeMatch[1].split(":").map(Number)
-        const [h2, m2] = rangeMatch[2].split(":").map(Number)
-        events.push({ startMin: h1 * 60 + m1, endMin: h2 * 60 + m2, desc: rangeMatch[3] })
-        continue
-      }
-      const singleMatch = trimmed.match(/^(\d{1,2}:\d{2})\s+(.+)$/)
-      if (singleMatch) {
-        const [h, m] = singleMatch[1].split(":").map(Number)
-        const sm = h * 60 + m
-        events.push({ startMin: sm, endMin: sm + 15, desc: singleMatch[2] })
-      }
+      const ev = parseEventLine(trimmed)
+      if (ev) events.push(ev)
     }
     return events
   } catch { return [] }
+}
+
+interface ScheduleSection {
+  selector: string
+  events: PlanEvent[]
+  additions: PlanEvent[]
+  removals: PlanEvent[]
+}
+
+const SCHEDULE_FILE = `${PLANS_DIR}/schedule.plan`
+
+function parseScheduleFile(): ScheduleSection[] {
+  if (!GLib.file_test(SCHEDULE_FILE, GLib.FileTest.EXISTS)) return []
+  try {
+    const content = readFile(SCHEDULE_FILE)
+    if (!content) return []
+    const sections: ScheduleSection[] = []
+    let current: ScheduleSection | null = null
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim()
+      if (trimmed === "" || trimmed.startsWith("#")) continue
+      const selectorMatch = trimmed.match(/^@(.+)$/)
+      if (selectorMatch) {
+        current = { selector: selectorMatch[1].trim(), events: [], additions: [], removals: [] }
+        sections.push(current)
+        continue
+      }
+      if (!current) continue
+      if (trimmed.startsWith("+")) {
+        const ev = parseEventLine(trimmed.slice(1).trim())
+        if (ev) current.additions.push(ev)
+      } else if (trimmed.startsWith("-")) {
+        const ev = parseEventLine(trimmed.slice(1).trim())
+        if (ev) current.removals.push(ev)
+      } else {
+        const ev = parseEventLine(trimmed)
+        if (ev) { ev.recurring = true; current.events.push(ev) }
+      }
+    }
+    return sections
+  } catch { return [] }
+}
+
+const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+
+function matchesDate(selector: string, date: Date): boolean {
+  const sel = selector.toLowerCase().trim()
+  if (sel === "daily") return true
+
+  // Exact date: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(sel)) {
+    return sel === getDateStr(date)
+  }
+
+  const dow = date.getDay() // 0=sun..6=sat
+
+  // Range: mon-fri
+  const rangeMatch = sel.match(/^([a-z]{3})-([a-z]{3})$/)
+  if (rangeMatch) {
+    const start = DAY_NAMES.indexOf(rangeMatch[1])
+    const end = DAY_NAMES.indexOf(rangeMatch[2])
+    if (start < 0 || end < 0) return false
+    if (start <= end) return dow >= start && dow <= end
+    // Wraps: fri-mon means fri,sat,sun,mon
+    return dow >= start || dow <= end
+  }
+
+  // List: mon,wed,fri
+  if (sel.includes(",")) {
+    const days = sel.split(",").map(s => DAY_NAMES.indexOf(s.trim()))
+    return days.includes(dow)
+  }
+
+  // Single day name
+  const single = DAY_NAMES.indexOf(sel)
+  if (single >= 0) return dow === single
+
+  return false
+}
+
+function eventMatchesRemoval(ev: PlanEvent, removal: PlanEvent): boolean {
+  if (ev.startMin !== removal.startMin) return false
+  if (ev.desc.toLowerCase() !== removal.desc.toLowerCase()) return false
+  // If removal specifies a range, also match endMin
+  if (removal.endMin - removal.startMin > 15 && ev.endMin !== removal.endMin) return false
+  return true
+}
+
+function getScheduleEventsForDate(sections: ScheduleSection[], dateStr: string, date: Date): PlanEvent[] {
+  // Phase 1: collect recurring events from non-date selectors
+  let events: PlanEvent[] = []
+  for (const sec of sections) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(sec.selector)) continue
+    if (matchesDate(sec.selector, date)) {
+      events.push(...sec.events.map(e => ({ ...e, recurring: true })))
+    }
+  }
+
+  // Phase 2: apply date-specific variations
+  for (const sec of sections) {
+    if (sec.selector !== dateStr) continue
+    // Remove cancelled events
+    events = events.filter(ev => !sec.removals.some(r => eventMatchesRemoval(ev, r)))
+    // Add additions (not marked recurring)
+    events.push(...sec.additions)
+  }
+
+  return events
 }
 
 function getHeaderComments(dateStr: string): string {
@@ -147,12 +261,20 @@ export default function Planner() {
   let scrollableRef: Gtk.Widget | null = null
   let eventOverlays: Gtk.Widget[] = []
 
+  function loadEventsForDate(date: Date): PlanEvent[] {
+    const dateStr = getDateStr(date)
+    const sections = parseScheduleFile()
+    const scheduleEvents = getScheduleEventsForDate(sections, dateStr, date)
+    const dateEvents = parsePlanFile(dateStr)
+    return [...scheduleEvents, ...dateEvents]
+  }
+
   function reload() {
     const exists = dirExists(PLANS_DIR)
     setPlansExist(exists)
     if (exists) {
       setFileList(loadPlanFiles())
-      setEvents(parsePlanFile(getDateStr(currentDate.get())))
+      setEvents(loadEventsForDate(currentDate.get()))
     } else {
       setEvents([])
     }
@@ -199,12 +321,20 @@ export default function Planner() {
   }
 
   function updateExistingEvent(oldEv: PlanEvent, newStartMin: number, newEndMin: number, newDesc: string) {
-    const evts = events.get().map(e =>
-      (e.startMin === oldEv.startMin && e.endMin === oldEv.endMin && e.desc === oldEv.desc)
-        ? { startMin: newStartMin, endMin: newEndMin, desc: newDesc }
-        : e
-    )
-    saveEventsToFile(getDateStr(currentDate.get()), evts)
+    if (oldEv.recurring) {
+      // For recurring events, append the modified version to the date file
+      const dateStr = getDateStr(currentDate.get())
+      const dateEvents = parsePlanFile(dateStr)
+      dateEvents.push({ startMin: newStartMin, endMin: newEndMin, desc: newDesc })
+      saveEventsToFile(dateStr, dateEvents)
+    } else {
+      const evts = events.get().filter(e => !e.recurring).map(e =>
+        (e.startMin === oldEv.startMin && e.endMin === oldEv.endMin && e.desc === oldEv.desc)
+          ? { startMin: newStartMin, endMin: newEndMin, desc: newDesc }
+          : e
+      )
+      saveEventsToFile(getDateStr(currentDate.get()), evts)
+    }
   }
 
   function hideEntry() {
@@ -407,8 +537,8 @@ export default function Planner() {
     for (let idx = 0; idx < evList.length; idx++) {
       const ev = evList[idx]
       const { col, total } = columns[idx]
-      const topY = Math.round(minToY(ev.startMin))
-      const botY = Math.round(minToY(ev.endMin))
+      const topY = Math.round(minToY(ev.startMin)) + 2
+      const botY = Math.round(minToY(ev.endMin)) - 2
       const cardH = Math.max(18, botY - topY)
       const duration = ev.endMin - ev.startMin
 
@@ -422,13 +552,22 @@ export default function Planner() {
       const cardVisual = (<box name="plan-event" vertical hexpand={true}>
         <label name="plan-event-time" label={timeStr} halign={1} valign={1} $={(self) => {
           timeLabelRef = self
-          self.set_ellipsize(3)
         }} />
         <label name="plan-event-text" label={ev.desc} halign={1} valign={1} hexpand={true} $={(self) => {
           self.set_ellipsize(3)
         }} />
       </box>) as Gtk.Widget
       cardVisual.set_size_request(-1, cardH)
+      cardVisual.set_hexpand(true)
+      if (ev.recurring) cardVisual.get_style_context().add_class("recurring")
+
+      // Clip container — prevents GTK from expanding card beyond cardH
+      const clipScroll = new Gtk.ScrolledWindow({
+        hscrollbar_policy: Gtk.PolicyType.NEVER,
+        vscrollbar_policy: Gtk.PolicyType.NEVER,
+      })
+      clipScroll.set_size_request(-1, cardH)
+      clipScroll.add(cardVisual)
 
       // EventBox — visible_window for own GdkWindow (events + cursor)
       const eb = new Gtk.EventBox({ visible_window: true })
@@ -452,7 +591,7 @@ export default function Planner() {
         eb.set_margin_end(2)
       }
 
-      eb.add(cardVisual)
+      eb.add(clipScroll)
       eb.add_events(
         Gdk.EventMask.BUTTON_PRESS_MASK |
         Gdk.EventMask.BUTTON_RELEASE_MASK |
@@ -767,11 +906,11 @@ export default function Planner() {
   function handleCreate() { createPlansDir(); reload() }
   function prevDay() {
     const d = new Date(currentDate.get()); d.setDate(d.getDate() - 1)
-    setCurrentDate(d); setEvents(parsePlanFile(getDateStr(d)))
+    setCurrentDate(d); setEvents(loadEventsForDate(d))
   }
   function nextDay() {
     const d = new Date(currentDate.get()); d.setDate(d.getDate() + 1)
-    setCurrentDate(d); setEvents(parsePlanFile(getDateStr(d)))
+    setCurrentDate(d); setEvents(loadEventsForDate(d))
   }
 
   const innerStack = new Gtk.Stack({

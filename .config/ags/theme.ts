@@ -311,21 +311,26 @@ function generateCSS(c: ThemeColors): string {
       background: #1a3248;
       border-left: 3px solid #50b8d0;
       border-radius: 3px;
-      padding: 3px 8px;
-      margin: 1px 0;
+      padding: 1px 8px;
     }
     #plan-event-time {
       color: #80a8b8;
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 1px;
     }
     #plan-event-text {
       color: #c0e4f0;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
-      letter-spacing: 0.5px;
     }
+
+    /* Recurring event (from schedule.plan) */
+    #plan-event.recurring {
+      background: #152838;
+      border-left: 3px solid #3a8898;
+    }
+    #plan-event.recurring #plan-event-time { color: #6a8898; }
+    #plan-event.recurring #plan-event-text { color: #90b8c8; }
 
     /* Inline entry for adding/editing events */
     #plan-entry {
@@ -523,15 +528,15 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 8px;
     }
     #control-icon {
-      font-size: 12px;
+      font-size: 14px;
       color: #5a8090;
-      margin-right: 8px;
+      margin-right: 4px;
     }
     #control-icon-btn {
       background: transparent;
       border: none;
-      padding: 0;
-      margin-right: 8px;
+      padding: 2px 4px;
+      margin-right: 4px;
     }
     #control-icon-btn:hover #control-icon {
       color: #80e0f0;
@@ -1519,6 +1524,14 @@ function generateCSS(c: ThemeColors): string {
     #eq-hbar {
       margin-top: 8px;
       min-height: 14px;
+    }
+    /* Inline bar inside header row */
+    #eq-hbar-inline {
+      margin: 0 8px;
+      min-height: 10px;
+    }
+    #eq-hbar-inline #eq-hseg {
+      min-height: 10px;
     }
     #eq-hseg {
       min-width: 0;
