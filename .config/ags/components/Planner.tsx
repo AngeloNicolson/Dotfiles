@@ -225,20 +225,30 @@ function isToday(date: Date): boolean {
     date.getDate() === now.getDate()
 }
 
+const PLAN_HEADER = [
+  "# ── .plan format ──────────────────────",
+  "#",
+  "# Daily:   ~/.config/plans/YYYY-MM-DD.plan",
+  "# Weekly:  ~/.config/plans/schedule.plan",
+  "#",
+  "# EVENTS",
+  "#   HH:MM-HH:MM  Description    (time range)",
+  "#   HH:MM  Description           (15-min slot)",
+  "#",
+  "# SCHEDULE.PLAN",
+  "#   @daily              every day",
+  "#   @mon @tue ...        weekday",
+  "#   @YYYY-MM-DD          specific date",
+  "#   +HH:MM-HH:MM  Desc  add event",
+  "#   -HH:MM-HH:MM  Desc  remove event",
+  "#",
+  "# Lines starting with # are comments.",
+  "# Daily .plan events override schedule.",
+  "#",
+].join("\n")
+
 function generateTemplate(): string {
-  return [
-    "# -- .plan file -------------------------",
-    "# YYYY-MM-DD.plan  |  Edit with neovim",
-    "#",
-    "#   HH:MM-HH:MM  Event (time range)",
-    "#   HH:MM  Event (single 15-min slot)",
-    "#",
-    "# Example:",
-    "#   09:00-10:30  Morning focus block",
-    "#   12:00-13:00  Lunch",
-    "#   14:00  Quick standup",
-    "",
-  ].join("\n") + "\n"
+  return PLAN_HEADER + "\n"
 }
 
 function createPlansDir() {
@@ -260,6 +270,7 @@ export default function Planner() {
   let gridOverlay: Gtk.Overlay | null = null
   let scrollableRef: Gtk.Widget | null = null
   let eventOverlays: Gtk.Widget[] = []
+  let nowLineWidget: Gtk.Widget | null = null
 
   function loadEventsForDate(date: Date): PlanEvent[] {
     const dateStr = getDateStr(date)
@@ -300,7 +311,8 @@ export default function Planner() {
 
   function saveEventsToFile(dateStr: string, evts: PlanEvent[]) {
     GLib.mkdir_with_parents(PLANS_DIR, 0o755)
-    const header = getHeaderComments(dateStr)
+    const existing = getHeaderComments(dateStr)
+    const header = existing || PLAN_HEADER + "\n"
     const sorted = [...evts].sort((a, b) => a.startMin - b.startMin)
     const lines: string[] = []
     for (const ev of sorted) {
@@ -740,6 +752,27 @@ export default function Planner() {
     gridOverlay.show_all()
   }
 
+  function placeNowLine() {
+    if (!gridOverlay) return
+    if (nowLineWidget) {
+      gridOverlay.remove(nowLineWidget)
+      nowLineWidget.destroy()
+      nowLineWidget = null
+    }
+    if (!isToday(currentDate.get())) return
+    const now = new Date()
+    const nowMin = now.getHours() * 60 + now.getMinutes()
+    const y = Math.round(minToY(nowMin))
+    const line = (<box name="plan-now-line" hexpand={true} $={(self) => {
+      self.set_size_request(-1, 2)
+      self.set_valign(Gtk.Align.START)
+      self.set_margin_top(y)
+    }} />) as Gtk.Widget
+    nowLineWidget = line
+    gridOverlay.add_overlay(line)
+    gridOverlay.show_all()
+  }
+
   function buildGrid(): Gtk.Widget {
     const grid = (<box vertical name="plan-grid" $={(gridSelf) => {
       let buildVersion = 0
@@ -803,7 +836,6 @@ export default function Planner() {
         const today = isToday(currentDate.get())
         const now = new Date()
         const nowHour = now.getHours()
-        const nowMin = now.getMinutes()
         const h = rowH.get()
         let scrollTarget: Gtk.Widget | null = null
 
@@ -833,21 +865,9 @@ export default function Planner() {
           rowOverlay.show_all()
           const row = rowOverlay as Gtk.Widget
 
+          gridSelf.pack_start(row, false, false, 0)
           if (today && hr === nowHour) {
-            const nowOverlay = new Gtk.Overlay()
-            nowOverlay.set_size_request(-1, h)
-            nowOverlay.add(row)
-            const nowLine = (<box name="plan-now-line" hexpand={true} $={(self) => {
-              self.set_size_request(-1, 2)
-              self.set_valign(Gtk.Align.START)
-              self.set_margin_top(Math.round((nowMin / 60) * h))
-            }} />) as Gtk.Widget
-            nowOverlay.add_overlay(nowLine)
-            nowOverlay.show_all()
-            gridSelf.pack_start(nowOverlay, false, false, 0)
-            scrollTarget = nowOverlay as any
-          } else {
-            gridSelf.pack_start(row, false, false, 0)
+            scrollTarget = row
           }
         }
 
@@ -859,6 +879,7 @@ export default function Planner() {
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
           if (buildVersion !== thisVersion) return GLib.SOURCE_REMOVE
           placeEventOverlays()
+          placeNowLine()
           return GLib.SOURCE_REMOVE
         })
 
@@ -898,6 +919,13 @@ export default function Planner() {
       events.subscribe(rebuild)
       rowH.subscribe(rebuild)
       rebuild()
+
+      // Update now-line every 60 seconds
+      const timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 60000, () => {
+        placeNowLine()
+        return GLib.SOURCE_CONTINUE
+      })
+      gridSelf.connect("destroy", () => GLib.source_remove(timerId))
     }} />) as Gtk.Widget
 
     return grid
@@ -938,14 +966,31 @@ export default function Planner() {
     </box>
   ) as Gtk.Widget
 
+  let infoPanelRef: Gtk.Widget | null = null
   const contentView = (
     <box vertical name="planner-page" vexpand={true}>
       <box name="planner-header">
         <label name="section-header" label="//PLANNER" />
         <box hexpand={true} />
+        <button name="planner-info-btn" onClicked={() => {
+          if (infoPanelRef) infoPanelRef.set_visible(!infoPanelRef.get_visible())
+        }}>
+          <label label="i" />
+        </button>
         <button name="planner-reload-btn" onClicked={() => reload()}>
           <label label="RELOAD" />
         </button>
+      </box>
+
+      <box name="planner-info-panel" vertical $={(self) => {
+        infoPanelRef = self
+        self.set_no_show_all(true)
+        self.set_visible(false)
+      }}>
+        <label name="planner-info-text" halign={1} $={(self) => {
+          self.set_markup(PLAN_HEADER.replace(/^# ?/gm, "").trim())
+          self.set_selectable(true)
+        }} />
       </box>
 
       <box name="planner-date-nav" halign={3}>
@@ -987,6 +1032,7 @@ export default function Planner() {
             lastAllocW = newW
             GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
               placeEventOverlays()
+              placeNowLine()
               return GLib.SOURCE_REMOVE
             })
           }
