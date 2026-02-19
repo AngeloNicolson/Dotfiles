@@ -1,12 +1,12 @@
 import { createPoll } from "ags/time"
 import { createState, type State } from "ags"
-import { execAsync, createSubprocess } from "ags/process"
+import { execAsync } from "ags/process"
 import { createBinding, type Accessor } from "gnim"
 import Network from "gi://AstalNetwork"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
 import { togglePeriodicTable } from "../state"
-import AudioEQ from "./AudioEQ"
+import AudioEQ, { toggleHwMute, localMuted } from "./AudioEQ"
 import DisplayEQ from "./DisplayEQ"
 
 // System toggle button - Star Citizen style
@@ -187,49 +187,6 @@ function ToolButton({
   )
 }
 
-// Battery status panel
-function BatteryPanel() {
-  const bat = createSubprocess(
-    { level: 100, status: "Unknown", watts: "--W", time: "" },
-    ["bash", "-c", 'while true; do read -r cap < /sys/class/power_supply/BAT0/capacity; read -r st < /sys/class/power_supply/BAT0/status; read -r vo < /sys/class/power_supply/BAT0/voltage_now; read -r cu < /sys/class/power_supply/BAT0/current_now; read -r cn < /sys/class/power_supply/BAT0/charge_now; read -r cf < /sys/class/power_supply/BAT0/charge_full; echo "$cap|$st|$vo|$cu|$cn|$cf"; sleep 5; done'],
-    (line) => {
-      const [cap, st, vo, cu, cn, cf] = line.split("|")
-      const level = parseInt(cap) || 0
-      const status = st || "Unknown"
-      const v = parseInt(vo) || 0
-      const c = parseInt(cu) || 0
-      const watts = (v * c) / 1e12
-      let time = ""
-      if (c > 0) {
-        let hours = 0
-        if (status === "Discharging") hours = parseInt(cn) / c
-        else if (status === "Charging") hours = (parseInt(cf) - parseInt(cn)) / c
-        if (hours > 0) {
-          const h = Math.floor(hours)
-          const m = Math.round((hours - h) * 60)
-          time = `${h}h${m.toString().padStart(2, "0")}m`
-        }
-      }
-      return { level, status, watts: watts > 0 ? `${watts.toFixed(1)}W` : "0W", time }
-    },
-  )
-
-  return (
-    <box name="status-panel">
-      <label name="status-icon" label={bat.as((d) => d.status === "Charging" ? "" : "")} />
-      <label name="status-label" label="PWR" />
-      <box hexpand />
-      <label name="status-value" label={bat.as((d) => d.watts)} />
-      <label name="status-value" label={bat.as((d) => `${d.level}%`)} />
-      <label name="status-value" label={bat.as((d) => d.time)} />
-      <label
-        name="status-indicator"
-        label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
-      />
-    </box>
-  )
-}
-
 export default function Home() {
   return (
     <box vertical name="home-page">
@@ -242,6 +199,12 @@ export default function Home() {
         <BluetoothToggle />
         <DNDToggle />
         <NightLightToggle />
+        <SystemToggle
+          active={localMuted}
+          icon="󰝟"
+          label="MUTE"
+          onClick={toggleHwMute}
+        />
       </box>
 
       {/* Clock panel */}
@@ -257,8 +220,6 @@ export default function Home() {
         <ToolButton icon="" label="PTABLE" onClick={togglePeriodicTable} />
       </box>
 
-      {/* Status bar */}
-      <BatteryPanel />
     </box>
   )
 }

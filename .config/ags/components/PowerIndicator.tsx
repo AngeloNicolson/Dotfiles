@@ -121,6 +121,20 @@ export default function PowerIndicator() {
           <label name="power-footer-data" label={bat.as((d) => d.time !== "--" ? `ETA:${d.time}` : "")} />
         </box>
       </box>
+
+      {/* Compact status bar */}
+      <box name="status-panel">
+        <label name="status-icon" label={bat.as((d) => d.status === "Charging" ? "" : "")} />
+        <label name="status-label" label="PWR" />
+        <box hexpand />
+        <label name="status-value" label={bat.as((d) => d.watts)} />
+        <label name="status-value" label={bat.as((d) => `${d.level}%`)} />
+        <label name="status-value" label={bat.as((d) => d.time !== "--" ? d.time : "")} />
+        <label
+          name="status-indicator"
+          label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
+        />
+      </box>
     </box>
   )
 }

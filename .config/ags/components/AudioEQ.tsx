@@ -1,14 +1,16 @@
 import { createState } from "ags"
 import { createPoll } from "ags/time"
 import { type Accessor } from "gnim"
-import { execAsync } from "ags/process"
+import { execAsync, createSubprocess } from "ags/process"
 import { writeFile, readFile } from "ags/file"
 import GLib from "gi://GLib"
 import Gdk from "gi://Gdk"
 import Gtk from "gi://Gtk"
+import Wp from "gi://AstalWp"
 
 const EQ_BANDS = [
-  { label: "100", type: "bq_lowshelf", freq: 100 },
+  { label: "60", type: "bq_lowshelf", freq: 60 },
+  { label: "100", type: "bq_peaking", freq: 100 },
   { label: "250", type: "bq_peaking", freq: 250 },
   { label: "1K", type: "bq_peaking", freq: 1000 },
   { label: "2K", type: "bq_peaking", freq: 2000 },
@@ -16,11 +18,13 @@ const EQ_BANDS = [
   { label: "10K", type: "bq_highshelf", freq: 10000 },
 ]
 
+const NUM_BANDS = EQ_BANDS.length
+
 const EQ_PRESETS: Record<string, { label: string, gains: number[] }> = {
-  flat:   { label: "FLAT", gains: [0, 0, 0, 0, 0, 0] },
-  bass:   { label: "BASS", gains: [6, 4, 0, 0, 0, 0] },
-  vocal:  { label: "VOCL", gains: [-2, 0, 3, 4, 2, 0] },
-  bright: { label: "BRIT", gains: [0, 0, 0, 2, 4, 6] },
+  flat:   { label: "FLAT", gains: [0, 0, 0, 0, 0, 0, 0] },
+  bass:   { label: "BASS", gains: [8, 6, 4, 0, 0, 0, 0] },
+  vocal:  { label: "VOCL", gains: [-2, -2, 0, 3, 4, 2, 0] },
+  bright: { label: "BRIT", gains: [0, 0, 0, 0, 2, 4, 6] },
 }
 
 const SEGMENTS = 20
@@ -30,13 +34,44 @@ const GAIN_MAX = 12
 const GAIN_RANGE = GAIN_MAX - GAIN_MIN
 
 const CONF_DIR = GLib.get_home_dir() + "/.config/pipewire/filter-chain.conf.d"
-const CONF_PATH = CONF_DIR + "/sink-eq6.conf"
+const CONF_PATH = CONF_DIR + "/sink-eq7.conf"
 
-const [gains, setGains] = createState<number[]>([0, 0, 0, 0, 0, 0])
+const [gains, setGains] = createState<number[]>(new Array(NUM_BANDS).fill(0))
 const [eqAvailable, setEqAvailable] = createState(true)
 const [activePreset, setActivePreset] = createState("flat")
 
 let reloadTimer: number | null = null
+
+// Cava visualizer — 6 bars matching EQ bands, raw ASCII output
+const CAVA_CONF_PATH = "/tmp/ags-cava.conf"
+const CAVA_BARS = NUM_BANDS % 2 === 0 ? NUM_BANDS : NUM_BANDS + 1
+try {
+  writeFile(CAVA_CONF_PATH, `[general]
+bars = ${CAVA_BARS}
+framerate = 24
+
+[output]
+method = raw
+raw_target = /dev/stdout
+data_format = ascii
+ascii_max_range = ${SEGMENTS}
+`)
+} catch {}
+
+const ZERO_LEVELS = new Array(NUM_BANDS).fill(0)
+let cavaLevels: ReturnType<typeof createSubprocess<number[]>> | null = null
+try {
+  cavaLevels = createSubprocess(
+    ZERO_LEVELS,
+    ["cava", "-p", CAVA_CONF_PATH],
+    (line) => {
+      const vals = line.split(";").filter(s => s.length > 0).map(Number)
+      return vals.length >= NUM_BANDS ? vals.slice(0, NUM_BANDS) : ZERO_LEVELS
+    },
+  )
+} catch {
+  cavaLevels = null
+}
 
 // Load saved gains
 try {
@@ -45,7 +80,7 @@ try {
     const match = saved.match(/# gains: (.+)/)
     if (match) {
       const parsed = JSON.parse(match[1])
-      if (Array.isArray(parsed) && parsed.length === 6) {
+      if (Array.isArray(parsed) && parsed.length === NUM_BANDS) {
         setGains(parsed)
         const presetMatch = Object.entries(EQ_PRESETS).find(([_, p]) =>
           p.gains.every((g, i) => g === parsed[i])
@@ -107,29 +142,52 @@ function clearEqDefault() {
     .catch(() => {})
 }
 
+function updateGainsRuntime(g: number[]) {
+  const params = g.map((gain, i) => `"eq_band_${i}:Gain" ${gain.toFixed(1)}`).join(" ")
+  return execAsync(["bash", "-c",
+    `ID=$(wpctl status | grep -oP '\\d+(?=\\. effect_input\\.eq6)' | head -1) && [ -n "$ID" ] && pw-cli set-param $ID Props "{ params = [ ${params} ] }"`
+  ])
+}
+
+function startFilterChain(g: number[]) {
+  clearEqDefault()
+  execAsync(["pkill", "-f", "pipewire -c filter-chain.conf"]).catch(() => {})
+  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+    print("EQ: starting filter chain...")
+    try {
+      GLib.spawn_command_line_async("pipewire -c filter-chain.conf")
+    } catch (e) { print(`EQ: failed to start: ${e}`); setEqAvailable(false); return GLib.SOURCE_REMOVE }
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1200, () => {
+      setEqAsDefault()
+      return GLib.SOURCE_REMOVE
+    })
+    return GLib.SOURCE_REMOVE
+  })
+}
+
 function reloadFilterChain() {
   if (reloadTimer) GLib.source_remove(reloadTimer)
   reloadTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
     reloadTimer = null
     const g = gains.get()
     try { writeFile(CONF_PATH, buildConfFile(g)) } catch { setEqAvailable(false); return GLib.SOURCE_REMOVE }
-    // Kill old filter chain
-    clearEqDefault()
-    execAsync(["pkill", "-f", "pipewire -c filter-chain.conf"]).catch(() => {})
-    if (g.every((v) => v === 0)) { print("EQ: flat, filter chain stopped"); return GLib.SOURCE_REMOVE }
-    // Wait for old to die, then start new
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-      print("EQ: starting filter chain...")
-      try {
-        GLib.spawn_command_line_async("pipewire -c filter-chain.conf")
-      } catch (e) { print(`EQ: failed to start: ${e}`); setEqAvailable(false); return GLib.SOURCE_REMOVE }
-      // Wait for sink to appear, then route audio through it
-      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1200, () => {
-        setEqAsDefault()
-        return GLib.SOURCE_REMOVE
-      })
+
+    if (g.every((v) => v === 0)) {
+      clearEqDefault()
+      execAsync(["pkill", "-f", "pipewire -c filter-chain.conf"]).catch(() => {})
+      print("EQ: flat, filter chain stopped")
       return GLib.SOURCE_REMOVE
-    })
+    }
+
+    // Try runtime update first (no audio interruption)
+    updateGainsRuntime(g)
+      .then(() => print("EQ: updated gains at runtime"))
+      .catch(() => {
+        // Filter chain not running — full restart needed
+        print("EQ: runtime update failed, starting filter chain")
+        startFilterChain(g)
+      })
+
     return GLib.SOURCE_REMOVE
   })
 }
@@ -191,8 +249,8 @@ function makeDraggable(eb: any, onDrag: (y: number, h: number) => void) {
   })
 }
 
-function EQColumn({ value, label, onSet, disabled }: {
-  value: Accessor<number>, label: string, onSet: (seg: number) => void, disabled?: Accessor<boolean>
+function EQColumn({ bandIndex, label, onSet, disabled }: {
+  bandIndex: number, label: string, onSet: (seg: number) => void, disabled?: Accessor<boolean>
 }) {
   function calcSeg(y: number, h: number) {
     const seg = SEGMENTS - Math.floor((y / h) * SEGMENTS)
@@ -202,14 +260,58 @@ function EQColumn({ value, label, onSet, disabled }: {
   const eb = new Gtk.EventBox({ visible: true })
   makeDraggable(eb, (y, h) => onSet(calcSeg(y, h)))
 
+  // Use cava audio levels if available, otherwise fall back to static gain display
+  const driver = cavaLevels ?? gains
+
+  // Peak hold state for this column
+  let peakLevel = 0
+  let peakHoldTimer = 0
+  let peakUpdatedFrame = 0
+
   const segBox = (
     <box name="eq-segments" vertical>
       {Array(SEGMENTS).fill(0).map((_, i) => (
         <box name="eq-seg" hexpand
-          class={value.as((v) => {
+          class={driver.as((data: any) => {
+            const gv = gainToSegments(gains.get()[bandIndex])
+            const al = cavaLevels ? (data as number[])[bandIndex] : 0
             const segIdx = SEGMENTS - 1 - i
-            if (v > 0 && segIdx === v - 1) return "peak"
-            return segIdx < v ? "lit" : "unlit"
+
+            // Scale audio to fit within gain ceiling (one below gain marker)
+            const maxFill = Math.max(0, gv - 1)
+            const audioFill = maxFill > 0 && al > 0
+              ? Math.round((al / SEGMENTS) * maxFill)
+              : 0
+
+            // Update peak hold once per frame (use i===0 as trigger)
+            const frame = Date.now()
+            if (i === 0 && frame !== peakUpdatedFrame) {
+              peakUpdatedFrame = frame
+              if (audioFill >= peakLevel) {
+                peakLevel = audioFill
+                peakHoldTimer = 48  // hold ~2 seconds at 24fps
+              } else if (peakHoldTimer > 0) {
+                peakHoldTimer--
+              } else {
+                peakLevel = Math.max(1, Math.max(audioFill, peakLevel - 0.6))
+              }
+            }
+            const peakSeg = Math.max(Math.round(peakLevel), audioFill)
+
+            if (segIdx >= gv) return "unlit"
+            // Peak hold — red, overrides gain marker
+            if (peakSeg > 0 && segIdx === peakSeg - 1) return "peak"
+            // Gain setting — white marker
+            if (segIdx === gv - 1) return "gain-mark"
+            // Audio fill — bounces with music
+            if (segIdx < audioFill) {
+              const ratio = segIdx / (gv || 1)
+              if (ratio < 0.25) return "lit-hi"
+              if (ratio < 0.5) return "lit-mid"
+              if (ratio < 0.75) return "lit-lo"
+              return "lit-dim"
+            }
+            return "unlit"
           })}
         />
       ))}
@@ -226,136 +328,264 @@ function EQColumn({ value, label, onSet, disabled }: {
   )
 }
 
-// Capture hardware sink ID at startup (before EQ changes default)
-let hwSinkId = ""
-execAsync(["bash", "-c", "wpctl status | grep -oP '\\d+(?=\\..+Headphones)' | head -1"])
-  .then((id) => {
-    hwSinkId = id.trim()
-    if (hwSinkId) {
-      execAsync(["wpctl", "get-volume", hwSinkId])
-        .then((out) => {
-          const parts = out.trim().split(" ")
-          setLocalVol(parseFloat(parts[1]) || 0)
-          setLocalMuted(out.includes("[MUTED]"))
-        })
-        .catch(() => {})
-    }
-  })
-  .catch(() => {})
+// Use AstalWp to manage audio sinks
+const wp = Wp.get_default()!
+const wpAudio = wp.audio
 
 const [localVol, setLocalVol] = createState(0)
 const [localMuted, setLocalMuted] = createState(false)
+const [activeSinkName, setActiveSinkName] = createState("")
+
+// Track selected hw sink by ID (not the EQ sink)
+let selectedSinkId = 0
+// Known sink IDs — used to detect newly plugged devices
+let knownSinkIds = new Set<number>()
+let initialSyncDone = false
+
+function isEqSink(s: any): boolean {
+  return s.description === "Equalizer Sink" || s.name === "effect_input.eq6" || s.name === "effect_output.eq6"
+}
+
+function getHwSpeakers(): any[] {
+  return (wpAudio.get_speakers() as any[]).filter((s: any) => !isEqSink(s))
+}
+
+function sinkDesc(s: any): string {
+  const raw = s.description || s.name || `Sink ${s.id}`
+  // Strip common device prefix — e.g. "800 Series ACE (Audio Context Engine) Headphones" → "Headphones"
+  return raw.replace(/^.+\)\s*/, "") || raw
+}
+
+// Inline dropdown for output device selection
+let outputListBox: Gtk.Box | null = null
+let dropdownArrow: Gtk.Label | null = null
+let dropdownVisible = false
+
+function rebuildOutputList() {
+  if (!outputListBox) return
+  outputListBox.get_children().forEach((c: any) => c.destroy())
+  const speakers = getHwSpeakers()
+  for (const sink of speakers) {
+    const desc = sinkDesc(sink)
+    const btn = (
+      <button name="eq-output-btn" hexpand
+        class={sink.id === selectedSinkId ? "active" : ""}
+        onClicked={() => {
+          selectSink(sink.id)
+          toggleDropdown()
+        }}
+      >
+        <label label={desc} wrap={false} />
+      </button>
+    ) as Gtk.Widget
+    outputListBox.add(btn)
+  }
+  outputListBox.show_all()
+  const scroll = (outputListBox as any)._scrollParent as Gtk.ScrolledWindow | null
+  if (scroll) {
+    // Size scroll to fit content, capped at 180px
+    const perItem = 30
+    const height = Math.min(speakers.length * perItem + 10, 180)
+    scroll.set_min_content_height(height)
+    scroll.visible = dropdownVisible
+  }
+}
+
+function toggleDropdown() {
+  if (!outputListBox) return
+  dropdownVisible = !dropdownVisible
+  if (dropdownVisible) rebuildOutputList()
+  const scroll = (outputListBox as any)._scrollParent
+  if (scroll) scroll.visible = dropdownVisible
+  if (dropdownArrow) dropdownArrow.label = dropdownVisible ? "" : ""
+}
+
+function syncFromSink(sink: any) {
+  selectedSinkId = sink.id
+  setActiveSinkName(sinkDesc(sink))
+  // Query wpctl for accurate volume/mute (AstalWp properties can be stale at startup)
+  execAsync(["wpctl", "get-volume", String(sink.id)])
+    .then((out) => {
+      const parts = out.trim().split(" ")
+      setLocalVol(parseFloat(parts[1]) || 0)
+      setLocalMuted(out.includes("[MUTED]"))
+    })
+    .catch(() => {
+      setLocalVol(sink.volume)
+      setLocalMuted(sink.mute)
+    })
+}
+
+function selectSink(sinkId: number) {
+  const speakers = getHwSpeakers()
+  const sink = speakers.find((s: any) => s.id === sinkId)
+  if (!sink) return
+  syncFromSink(sink)
+  execAsync(["wpctl", "set-default", String(sinkId)]).catch(() => {})
+  rebuildOutputList()
+}
+
+// Initial sync — delayed to let WirePlumber finish enumerating
+GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+  const speakers = getHwSpeakers()
+  knownSinkIds = new Set(speakers.map((s: any) => s.id))
+  const def = wpAudio.get_default_speaker()
+  const initial = (def && def.id && !isEqSink(def)) ? def : speakers.find((s: any) => s.id)
+  if (initial && initial.id) {
+    syncFromSink(initial)
+  }
+  initialSyncDone = true
+  rebuildOutputList()
+  return GLib.SOURCE_REMOVE
+})
+
+// Auto-switch on hot-plug only (not during initial enumeration)
+wpAudio.connect("speaker-added", (_audio: any, speaker: any) => {
+  if (isEqSink(speaker)) return
+  knownSinkIds.add(speaker.id)
+  rebuildOutputList()
+  if (initialSyncDone) selectSink(speaker.id)
+})
+wpAudio.connect("speaker-removed", (_audio: any, speaker: any) => {
+  if (isEqSink(speaker)) return
+  knownSinkIds.delete(speaker.id)
+  rebuildOutputList()
+  // Fall back if our selected sink was removed
+  if (speaker.id === selectedSinkId) {
+    const remaining = getHwSpeakers()
+    if (remaining.length > 0) selectSink(remaining[0].id)
+  }
+})
 
 function setHwVolume(vol: number) {
-  if (!hwSinkId) return
+  if (!selectedSinkId) return
   const clamped = Math.max(0, Math.min(1, vol))
   setLocalVol(clamped)
-  execAsync(["wpctl", "set-volume", hwSinkId, String(clamped.toFixed(2))]).catch(() => {})
+  execAsync(["wpctl", "set-volume", String(selectedSinkId), String(clamped.toFixed(2))]).catch(() => {})
 }
-function toggleHwMute() {
-  if (!hwSinkId) return
-  execAsync(["wpctl", "set-mute", hwSinkId, "toggle"]).catch(() => {})
+export function toggleHwMute() {
+  if (!selectedSinkId) return
+  setLocalMuted(!localMuted.get())
+  execAsync(["wpctl", "set-mute", String(selectedSinkId), "toggle"]).catch(() => {})
 }
+
+export { localMuted }
 
 export default function AudioEQ() {
   // Poll hardware sink volume, sync into local state for instant display
-  createPoll(0, 1000, () => {
-    if (!hwSinkId) return 0
-    return execAsync(["wpctl", "get-volume", hwSinkId])
+  createPoll(0, 2000, () => {
+    if (!selectedSinkId) return 0
+    return execAsync(["wpctl", "get-volume", String(selectedSinkId)])
       .then((out) => {
         const parts = out.trim().split(" ")
-        const vol = parseFloat(parts[1]) || 0
-        const muted = out.includes("[MUTED]")
-        setLocalVol(vol)
-        setLocalMuted(muted)
+        setLocalVol(parseFloat(parts[1]) || 0)
+        setLocalMuted(out.includes("[MUTED]"))
         return 0
       })
       .catch(() => 0)
   })
 
   const volSegments = localVol.as((v) => Math.round(v * VOL_SEGMENTS))
-  const bandSegments = gains.as((g) => g.map(gainToSegments))
 
   const g = gains.get()
   if (g.some((v) => v !== 0)) reloadFilterChain()
 
   return (
     <box name="eq-panel" vertical>
-      <box name="control-header">
-        <button name="control-icon-btn" onClicked={() => toggleHwMute()}>
-          <label name="control-icon" label={localMuted.as((m) => m ? "" : "")} />
-        </button>
+      <box name="control-header" class={localMuted.as((m) => m ? "muted" : "")}>
         <label name="control-label" label="AUDIO" />
-        <box hexpand />
-        <label name="control-value" label={localVol.as((v) => `${Math.round(v * 100)}%`)} />
-      </box>
-      <box name="eq-columns" homogeneous>
-        {EQ_BANDS.map((band, i) => (
-          <EQColumn
-            value={bandSegments.as((segs) => segs[i])}
-            label={band.label}
-            onSet={(seg) => setBandGain(i, segmentToGain(seg))}
-            disabled={eqAvailable.as((a) => !a)}
-          />
-        ))}
-      </box>
-      {(() => {
-        const hbarEb = new Gtk.EventBox({ visible: true })
-        let dragging = false
-        let lastY = 0
-        hbarEb.add_events(
-          Gdk.EventMask.BUTTON_PRESS_MASK |
-          Gdk.EventMask.BUTTON_RELEASE_MASK |
-          Gdk.EventMask.POINTER_MOTION_MASK |
-          Gdk.EventMask.SCROLL_MASK
-        )
-        hbarEb.connect("button-press-event", (_w: any, event: any) => {
-          dragging = true
-          hbarEb.grab_add()
-          const [, x, y] = event.get_coords()
-          lastY = y
-          const w = hbarEb.get_allocated_width()
-          setHwVolume(x / w)
-          return true
-        })
-        hbarEb.connect("button-release-event", () => {
-          dragging = false
-          hbarEb.grab_remove()
-          return true
-        })
-        hbarEb.connect("motion-notify-event", (_w: any, event: any) => {
-          if (!dragging) return false
-          const [, x, y] = event.get_coords()
-          const w = hbarEb.get_allocated_width()
-          const h = hbarEb.get_allocated_height()
-          const dy = lastY - y
-          lastY = y
-          if (Math.abs(dy) > 1) {
+        {(() => {
+          const eb = new Gtk.EventBox({ visible: true, hexpand: true })
+          let dragging = false
+          eb.add_events(
+            Gdk.EventMask.BUTTON_PRESS_MASK |
+            Gdk.EventMask.BUTTON_RELEASE_MASK |
+            Gdk.EventMask.POINTER_MOTION_MASK |
+            Gdk.EventMask.SCROLL_MASK
+          )
+          eb.connect("button-press-event", (_w: any, event: any) => {
+            dragging = true
+            eb.grab_add()
+            const [, x] = event.get_coords()
+            setHwVolume(x / eb.get_allocated_width())
+            return true
+          })
+          eb.connect("button-release-event", () => {
+            dragging = false
+            eb.grab_remove()
+            return true
+          })
+          eb.connect("motion-notify-event", (_w: any, event: any) => {
+            if (!dragging) return false
+            const [, x] = event.get_coords()
+            setHwVolume(x / eb.get_allocated_width())
+            return true
+          })
+          eb.connect("scroll-event", (_w: any, event: any) => {
+            const [hasDir, dir] = event.get_scroll_direction()
             const cur = localVol.get()
-            setHwVolume(cur + dy / (h * 3))
-          } else {
-            setHwVolume(x / w)
-          }
-          return true
-        })
-        hbarEb.connect("scroll-event", (_w: any, event: any) => {
-          const dir = event.get_scroll_direction()[1]
-          const cur = localVol.get()
-          if (dir === Gdk.ScrollDirection.UP) setHwVolume(cur + 0.05)
-          else if (dir === Gdk.ScrollDirection.DOWN) setHwVolume(cur - 0.05)
-          return true
-        })
-        const hbar = (
-          <box name="eq-hbar">
+            if (hasDir && dir === Gdk.ScrollDirection.UP) setHwVolume(cur + 0.05)
+            else if (hasDir && dir === Gdk.ScrollDirection.DOWN) setHwVolume(cur - 0.05)
+            else {
+              const [, , dy] = event.get_scroll_deltas()
+              if (dy < 0) setHwVolume(cur + 0.03)
+              else if (dy > 0) setHwVolume(cur - 0.03)
+            }
+            return true
+          })
+          eb.add((<box name="eq-hbar-inline" hexpand>
             {Array(VOL_SEGMENTS).fill(0).map((_, i) => (
               <box name="eq-hseg" hexpand
                 class={volSegments.as((v) => i < v ? "lit" : "unlit")}
               />
             ))}
+          </box>) as Gtk.Widget)
+          return eb
+        })()}
+        <label name="control-value" label={localVol.as((v) => `${Math.round(v * 100)}%`)} />
+        <label name="control-muted-label" label={localMuted.as(m => m ? "MUTED" : "")} />
+      </box>
+      <button name="eq-output-selector" onClicked={() => toggleDropdown()}>
+        <box>
+          <label name="eq-output-icon" label="" />
+          <label name="eq-output-name" label={activeSinkName.as((n) => n || "No output")} />
+          <box hexpand />
+          <label name="eq-output-arrow" label="" $={(self: any) => { dropdownArrow = self }} />
+        </box>
+      </button>
+      {(() => {
+        const overlay = new Gtk.Overlay({ visible: true })
+        const columns = (
+          <box name="eq-columns" homogeneous>
+        {EQ_BANDS.map((band, i) => (
+          <EQColumn
+            bandIndex={i}
+            label={band.label}
+            onSet={(seg) => setBandGain(i, segmentToGain(seg))}
+            disabled={eqAvailable.as((a) => !a)}
+          />
+        ))}
           </box>
-        )
-        hbarEb.add(hbar)
-        return hbarEb
+        ) as Gtk.Widget
+        overlay.add(columns)
+
+        const listBox = (<box name="eq-output-list" vertical homogeneous />) as Gtk.Box
+        outputListBox = listBox
+
+        const scroll = new Gtk.ScrolledWindow({
+          visible: false,
+          hscrollbar_policy: Gtk.PolicyType.NEVER,
+          vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+          valign: Gtk.Align.START,
+          hexpand: true,
+        })
+        scroll.set_name("eq-output-scroll")
+        scroll.add(listBox)
+        overlay.add_overlay(scroll)
+
+        ;(outputListBox as any)._scrollParent = scroll
+
+        return overlay
       })()}
       <box name="eq-presets">
         {Object.entries(EQ_PRESETS).map(([key, preset]) => (
