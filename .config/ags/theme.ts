@@ -355,13 +355,13 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 600;
     }
 
-    /* Recurring event (from schedule.plan) */
-    #plan-event.recurring {
-      background: #152838;
-      border-left: 3px solid #3a8898;
+    /* Schedule event (from schedule.plan — read-only, muted template) */
+    #plan-event.schedule {
+      background: #0c1820;
+      border-left: 2px solid #1e3a48;
     }
-    #plan-event.recurring #plan-event-time { color: #6a8898; }
-    #plan-event.recurring #plan-event-text { color: #90b8c8; }
+    #plan-event.schedule #plan-event-time { color: #304858; }
+    #plan-event.schedule #plan-event-text { color: #4a6878; }
 
     /* Inline entry for adding/editing events */
     #plan-entry {
@@ -445,6 +445,196 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 600;
       letter-spacing: 2px;
       padding: 4px 0;
+    }
+
+    /* ── Inner tabs (CAL / BOARD) ── */
+    #planner-inner-tabs {
+      padding: 2px 0 6px 0;
+    }
+    #planner-inner-tab {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 5px 12px;
+      margin: 0 3px;
+      min-width: 40px;
+    }
+    #planner-inner-tab:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #planner-inner-tab.active {
+      background: alpha(#1a3040, 0.8);
+      border: 1px solid #60c0d0;
+    }
+    #planner-inner-tab label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #5a7888;
+    }
+    #planner-inner-tab:hover label {
+      color: #90d0e0;
+    }
+    #planner-inner-tab.active label {
+      color: #a0f0ff;
+    }
+
+    /* ── Kanban subpane tabs (TODO / DOING / DONE) ── */
+    #kanban-subpane-tabs {
+      padding: 2px 0 6px 0;
+    }
+    #kanban-subpane-tab {
+      background: alpha(#1a2530, 0.4);
+      border: 1px solid #2a3a45;
+      border-radius: 3px;
+      padding: 4px 8px;
+      margin: 0 2px;
+    }
+    #kanban-subpane-tab:hover {
+      background: alpha(#253540, 0.6);
+      border-color: #3a5060;
+    }
+    #kanban-subpane-tab.active {
+      background: alpha(#1a3040, 0.7);
+      border: 1px solid #60c0d0;
+    }
+    #kanban-subpane-tab label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #5a7888;
+    }
+    #kanban-subpane-tab:hover label {
+      color: #90d0e0;
+    }
+    #kanban-subpane-tab.active label {
+      color: #a0f0ff;
+    }
+
+    /* ── Kanban card ── */
+    #kanban-card {
+      background: #1a3248;
+      border-left: 3px solid #50b8d0;
+      border-radius: 3px;
+      padding: 6px 8px;
+      margin: 3px 4px;
+    }
+    #kanban-card.done {
+      background: #0c1820;
+      border-left: 2px solid #1e3a48;
+    }
+    #kanban-card-title {
+      color: #c0e4f0;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    #kanban-card.done #kanban-card-title {
+      color: #4a6878;
+    }
+    #kanban-card-desc {
+      color: #80a8b8;
+      font-size: 9px;
+      margin-top: 2px;
+    }
+    #kanban-card.done #kanban-card-desc {
+      color: #304858;
+    }
+    #kanban-card-badge {
+      color: #50b8d0;
+      background: alpha(#50b8d0, 0.12);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 1px 6px;
+      border-radius: 2px;
+      margin-top: 4px;
+    }
+    #kanban-card.done #kanban-card-badge {
+      color: #2a4858;
+      background: alpha(#2a4858, 0.12);
+    }
+
+    /* Move / delete buttons on cards */
+    #kanban-move-btn {
+      background: alpha(#1a2530, 0.4);
+      border: 1px solid #2a3a45;
+      border-radius: 3px;
+      padding: 2px 6px;
+      margin: 0 1px;
+    }
+    #kanban-move-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #60c0d0;
+    }
+    #kanban-move-btn label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #5a8090;
+    }
+    #kanban-move-btn:hover label {
+      color: #80e0f0;
+    }
+    #kanban-delete-btn {
+      background: alpha(#2a1a1a, 0.4);
+      border: 1px solid #4a2a2a;
+      border-radius: 3px;
+      padding: 2px 6px;
+      margin: 0 1px;
+    }
+    #kanban-delete-btn:hover {
+      background: alpha(#301a1a, 0.8);
+      border-color: #c05050;
+    }
+    #kanban-delete-btn label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #a05050;
+    }
+    #kanban-delete-btn:hover label {
+      color: #e08080;
+    }
+
+    /* ── Add item button + entry ── */
+    #kanban-add-btn {
+      background: transparent;
+      border: 1px dashed #2a3a45;
+      border-radius: 3px;
+      padding: 6px 8px;
+      margin: 6px 4px;
+    }
+    #kanban-add-btn:hover {
+      background: alpha(#253540, 0.4);
+      border-color: #60c0d0;
+    }
+    #kanban-add-btn label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #5a7888;
+    }
+    #kanban-add-btn:hover label {
+      color: #a0f0ff;
+    }
+    #kanban-add-entry {
+      background: #1a3248;
+      color: #c0e4f0;
+      border: 1px solid #50b8d0;
+      border-radius: 3px;
+      padding: 4px 8px;
+      margin: 4px 4px;
+      font-size: 10px;
+      caret-color: #50b8d0;
+    }
+    #kanban-edit-entry {
+      background: #1a3248;
+      color: #c0e4f0;
+      border: 1px solid #50b8d0;
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-size: 10px;
+      caret-color: #50b8d0;
+      min-width: 60px;
     }
 
     /* ============ HOME PAGE - Holographic Star Citizen Style ============ */

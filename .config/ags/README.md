@@ -222,6 +222,48 @@ schedule.plan recurring → schedule.plan date variations → YYYY-MM-DD.plan
 - **Regular events** — bright blue cards
 - **Recurring events** (from `schedule.plan`) — dimmer teal cards
 
+## Kanban Board
+
+A kanban task board accessible as a second tab (`[BOARD]`) within the Planner pane. Tasks flow through three columns: Todo, Doing, Done. Columns are shown one at a time as switchable subpanes (sidebar is ~260px wide).
+
+### Data
+
+- **File**: `~/.config/plans/kanban.json`
+- Created automatically on first task add
+- Tasks have: `id` (6-char hex), `title`, `description`, `status`, `assignment` (optional free-text), `order`, `createdAt`
+
+### UI Structure
+
+```
+//PLANNER header (shared)
+[CAL] [BOARD]              ← inner tab bar
+  BOARD tab:
+    [TODO (3)] [DOING (1)] [DONE (5)]  ← subpane tabs with counts
+    scrollable card list               ← one column at a time
+    [+ Add item]                       ← inline entry to create tasks
+    N tasks                            ← footer
+```
+
+### Interaction
+
+- **Add task**: Click `+ Add item` → type title → Enter to commit, Escape to cancel
+- **Edit title**: Click card title → inline entry replaces it → Enter/Escape
+- **Move forward**: `>` button on card (todo → doing → done)
+- **Move back**: `<` button on card (done → doing → todo)
+- **Delete**: `X` button on done cards, or right-click any card
+- **Done cards**: Muted styling (like recurring schedule events)
+
+### Integration with Calendar
+
+The CAL and BOARD tabs are independent views. They share the header and reload mechanism but don't cross-reference data. The `assignment` field on tasks is free text with no programmatic link to calendar events.
+
+### Key Code Locations
+
+- **Data model + I/O**: `Planner.tsx` top-level (`KanbanTask` interface, `loadKanban()`, `saveKanban()`)
+- **State + CRUD**: Inside `Planner()` function (`kanbanTasks`, `addTask()`, `moveTaskForward()`, etc.)
+- **UI**: `buildCard()`, `buildCardList()`, `buildBoardPane()` functions
+- **CSS**: `theme.ts` — `#kanban-card`, `#kanban-subpane-tab`, `#planner-inner-tab`, `#kanban-add-btn`
+
 ## Destination Menu (Director)
 
 A Destiny 2-inspired fullscreen app launcher with a space/sci-fi aesthetic.
