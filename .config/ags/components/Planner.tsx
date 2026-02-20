@@ -5,6 +5,43 @@ import GLib from "gi://GLib"
 import { createState } from "ags"
 
 const PLANS_DIR = GLib.get_home_dir() + "/.config/plans"
+const KANBAN_FILE = `${PLANS_DIR}/kanban.json`
+
+interface KanbanTask {
+  id: string
+  title: string
+  description: string
+  status: "todo" | "doing" | "done"
+  assignment: string
+  order: number
+  createdAt: string
+}
+
+function generateId(): string {
+  const hex = "0123456789abcdef"
+  let id = ""
+  for (let i = 0; i < 6; i++) id += hex[Math.floor(Math.random() * 16)]
+  return id
+}
+
+function loadKanban(): KanbanTask[] {
+  if (!GLib.file_test(KANBAN_FILE, GLib.FileTest.EXISTS)) return []
+  try {
+    const content = readFile(KANBAN_FILE)
+    if (!content) return []
+    const data = JSON.parse(content)
+    return data.tasks || []
+  } catch (e) {
+    print(`Error loading kanban: ${e}`)
+    return []
+  }
+}
+
+function saveKanban(tasks: KanbanTask[]) {
+  GLib.mkdir_with_parents(PLANS_DIR, 0o755)
+  writeFile(KANBAN_FILE, JSON.stringify({ version: 1, tasks }, null, 2))
+}
+
 const START_H = 4
 const END_H = 22
 const DEFAULT_ROW_H = 72
@@ -55,6 +92,7 @@ interface PlanEvent {
   endMin: number
   desc: string
   recurring?: boolean
+  fromSchedule?: boolean
 }
 
 function parseEventLine(text: string): PlanEvent | null {
@@ -116,15 +154,21 @@ function parseScheduleFile(): ScheduleSection[] {
         continue
       }
       if (!current) continue
-      if (trimmed.startsWith("+")) {
-        const ev = parseEventLine(trimmed.slice(1).trim())
-        if (ev) current.additions.push(ev)
-      } else if (trimmed.startsWith("-")) {
+      if (trimmed.startsWith("-")) {
         const ev = parseEventLine(trimmed.slice(1).trim())
         if (ev) current.removals.push(ev)
       } else {
-        const ev = parseEventLine(trimmed)
-        if (ev) { ev.recurring = true; current.events.push(ev) }
+        const raw = trimmed.startsWith("+") ? trimmed.slice(1).trim() : trimmed
+        const ev = parseEventLine(raw)
+        if (ev) {
+          const isDateSection = /^\d{4}-\d{2}-\d{2}$/.test(current.selector)
+          if (isDateSection) {
+            current.additions.push(ev)
+          } else {
+            ev.recurring = true
+            current.events.push(ev)
+          }
+        }
       }
     }
     return sections
@@ -182,16 +226,20 @@ function getScheduleEventsForDate(sections: ScheduleSection[], dateStr: string, 
   for (const sec of sections) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(sec.selector)) continue
     if (matchesDate(sec.selector, date)) {
-      events.push(...sec.events.map(e => ({ ...e, recurring: true })))
+      events.push(...sec.events.map(e => ({ ...e, recurring: true, fromSchedule: true })))
     }
   }
 
   // Phase 2: apply date-specific variations
   for (const sec of sections) {
     if (sec.selector !== dateStr) continue
-    // Remove cancelled events
+    // Remove cancelled events (explicit -)
     events = events.filter(ev => !sec.removals.some(r => eventMatchesRemoval(ev, r)))
-    // Add additions (not marked recurring)
+    // Additions auto-replace recurring events at the same time slot
+    for (const add of sec.additions) {
+      events = events.filter(ev => !ev.recurring || ev.startMin !== add.startMin)
+    }
+    // Date additions are editable overrides — NOT fromSchedule
     events.push(...sec.additions)
   }
 
@@ -238,9 +286,9 @@ const PLAN_HEADER = [
   "# SCHEDULE.PLAN",
   "#   @daily              every day",
   "#   @mon @tue ...        weekday",
-  "#   @YYYY-MM-DD          specific date",
-  "#   +HH:MM-HH:MM  Desc  add event",
-  "#   -HH:MM-HH:MM  Desc  remove event",
+  "#   @YYYY-MM-DD          specific date override",
+  "#   Events auto-replace recurring at same time.",
+  "#   -HH:MM-HH:MM  Desc  explicit removal",
   "#",
   "# Lines starting with # are comments.",
   "# Daily .plan events override schedule.",
@@ -262,6 +310,63 @@ export default function Planner() {
   const [events, setEvents] = createState<PlanEvent[]>([])
   const [fileList, setFileList] = createState<string[]>([])
   const [rowH, setRowH] = createState(DEFAULT_ROW_H)
+
+  // Kanban state
+  const [kanbanTasks, setKanbanTasks] = createState<KanbanTask[]>([])
+  const [activeInnerTab, setActiveInnerTab] = createState<"calendar" | "board">("calendar")
+  const [activeSubpane, setActiveSubpane] = createState<"todo" | "doing" | "done">("todo")
+
+  function addTask(title: string, status: "todo" | "doing" | "done") {
+    const tasks = kanbanTasks.get()
+    const sameStatus = tasks.filter(t => t.status === status)
+    const maxOrder = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0
+    const task: KanbanTask = {
+      id: generateId(),
+      title,
+      description: "",
+      status,
+      assignment: "",
+      order: maxOrder,
+      createdAt: new Date().toISOString(),
+    }
+    const updated = [...tasks, task]
+    saveKanban(updated)
+    setKanbanTasks(updated)
+  }
+
+  function updateTask(id: string, changes: Partial<KanbanTask>) {
+    const tasks = kanbanTasks.get().map(t => t.id === id ? { ...t, ...changes } : t)
+    saveKanban(tasks)
+    setKanbanTasks(tasks)
+  }
+
+  function deleteTask(id: string) {
+    const tasks = kanbanTasks.get().filter(t => t.id !== id)
+    saveKanban(tasks)
+    setKanbanTasks(tasks)
+  }
+
+  function moveTaskForward(id: string) {
+    const task = kanbanTasks.get().find(t => t.id === id)
+    if (!task) return
+    const next = task.status === "todo" ? "doing" : task.status === "doing" ? "done" : null
+    if (!next) return
+    const tasks = kanbanTasks.get()
+    const sameStatus = tasks.filter(t => t.status === next)
+    const maxOrder = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0
+    updateTask(id, { status: next as any, order: maxOrder })
+  }
+
+  function moveTaskBack(id: string) {
+    const task = kanbanTasks.get().find(t => t.id === id)
+    if (!task) return
+    const prev = task.status === "done" ? "doing" : task.status === "doing" ? "todo" : null
+    if (!prev) return
+    const tasks = kanbanTasks.get()
+    const sameStatus = tasks.filter(t => t.status === prev)
+    const maxOrder = sameStatus.length > 0 ? Math.max(...sameStatus.map(t => t.order)) + 1 : 0
+    updateTask(id, { status: prev as any, order: maxOrder })
+  }
 
   // Interaction state
   let dragStartMin = -1
@@ -286,8 +391,10 @@ export default function Planner() {
     if (exists) {
       setFileList(loadPlanFiles())
       setEvents(loadEventsForDate(currentDate.get()))
+      setKanbanTasks(loadKanban())
     } else {
       setEvents([])
+      setKanbanTasks([])
     }
   }
 
@@ -309,44 +416,98 @@ export default function Planner() {
     return hourIdx * (h + 1) + 1 + frac * h
   }
 
-  function saveEventsToFile(dateStr: string, evts: PlanEvent[]) {
-    GLib.mkdir_with_parents(PLANS_DIR, 0o755)
-    const existing = getHeaderComments(dateStr)
-    const header = existing || PLAN_HEADER + "\n"
-    const sorted = [...evts].sort((a, b) => a.startMin - b.startMin)
-    const lines: string[] = []
-    for (const ev of sorted) {
-      if (ev.endMin - ev.startMin <= 15) {
-        lines.push(`${formatTime(ev.startMin)}  ${ev.desc}`)
-      } else {
-        lines.push(`${formatTime(ev.startMin)}-${formatTime(ev.endMin)}  ${ev.desc}`)
-      }
+  function formatEventLine(startMin: number, endMin: number, desc: string): string {
+    if (endMin - startMin <= 15) return `${formatTime(startMin)}  ${desc}`
+    return `${formatTime(startMin)}-${formatTime(endMin)}  ${desc}`
+  }
+
+  function findScheduleDateSection(lines: string[], dateStr: string): { start: number, end: number } | null {
+    const header = `@${dateStr}`
+    let start = -1
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim() === header) { start = i; break }
     }
-    const content = header + lines.join("\n") + "\n"
-    writeFile(`${PLANS_DIR}/${dateStr}.plan`, content)
-    reload()
+    if (start < 0) return null
+    let end = start + 1
+    while (end < lines.length) {
+      if (lines[end].trim().startsWith("@")) break
+      end++
+    }
+    return { start, end }
   }
 
   function addNewEvent(startMin: number, endMin: number, desc: string) {
-    const evts = [...events.get(), { startMin, endMin, desc }]
-    saveEventsToFile(getDateStr(currentDate.get()), evts)
+    const dateStr = getDateStr(currentDate.get())
+    if (!GLib.file_test(SCHEDULE_FILE, GLib.FileTest.EXISTS)) return
+    const content = readFile(SCHEDULE_FILE) || ""
+    const lines = content.split("\n")
+    const newLine = formatEventLine(startMin, endMin, desc)
+
+    const section = findScheduleDateSection(lines, dateStr)
+    if (section) {
+      lines.splice(section.end, 0, newLine)
+    } else {
+      // Insert new @date section in chronological order among existing date sections
+      const datePattern = /^@(\d{4}-\d{2}-\d{2})$/
+      let insertBefore = -1
+      for (let i = 0; i < lines.length; i++) {
+        const m = lines[i].trim().match(datePattern)
+        if (m && m[1] > dateStr) { insertBefore = i; break }
+      }
+      if (insertBefore >= 0) {
+        lines.splice(insertBefore, 0, `@${dateStr}`, newLine, "")
+      } else {
+        while (lines.length > 0 && lines[lines.length - 1].trim() === "") lines.pop()
+        lines.push("", `@${dateStr}`, newLine)
+      }
+    }
+    writeFile(SCHEDULE_FILE, lines.join("\n") + "\n")
+    reload()
   }
 
   function updateExistingEvent(oldEv: PlanEvent, newStartMin: number, newEndMin: number, newDesc: string) {
-    if (oldEv.recurring) {
-      // For recurring events, append the modified version to the date file
-      const dateStr = getDateStr(currentDate.get())
-      const dateEvents = parsePlanFile(dateStr)
-      dateEvents.push({ startMin: newStartMin, endMin: newEndMin, desc: newDesc })
-      saveEventsToFile(dateStr, dateEvents)
-    } else {
-      const evts = events.get().filter(e => !e.recurring).map(e =>
-        (e.startMin === oldEv.startMin && e.endMin === oldEv.endMin && e.desc === oldEv.desc)
-          ? { startMin: newStartMin, endMin: newEndMin, desc: newDesc }
-          : e
-      )
-      saveEventsToFile(getDateStr(currentDate.get()), evts)
+    const dateStr = getDateStr(currentDate.get())
+    if (!GLib.file_test(SCHEDULE_FILE, GLib.FileTest.EXISTS)) return
+    const content = readFile(SCHEDULE_FILE) || ""
+    const lines = content.split("\n")
+    const newLine = formatEventLine(newStartMin, newEndMin, newDesc)
+
+    const section = findScheduleDateSection(lines, dateStr)
+    if (!section) return
+    for (let i = section.start + 1; i < section.end; i++) {
+      const trimmed = lines[i].trim()
+      if (trimmed === "" || trimmed.startsWith("#") || trimmed.startsWith("-")) continue
+      const raw = trimmed.startsWith("+") ? trimmed.slice(1).trim() : trimmed
+      const parsed = parseEventLine(raw)
+      if (parsed && parsed.startMin === oldEv.startMin && parsed.endMin === oldEv.endMin && parsed.desc === oldEv.desc) {
+        lines[i] = newLine
+        break
+      }
     }
+    writeFile(SCHEDULE_FILE, lines.join("\n"))
+    reload()
+  }
+
+  function deleteEvent(ev: PlanEvent) {
+    const dateStr = getDateStr(currentDate.get())
+    if (!GLib.file_test(SCHEDULE_FILE, GLib.FileTest.EXISTS)) return
+    const content = readFile(SCHEDULE_FILE) || ""
+    const lines = content.split("\n")
+
+    const section = findScheduleDateSection(lines, dateStr)
+    if (!section) return
+    for (let i = section.start + 1; i < section.end; i++) {
+      const trimmed = lines[i].trim()
+      if (trimmed === "" || trimmed.startsWith("#") || trimmed.startsWith("-")) continue
+      const raw = trimmed.startsWith("+") ? trimmed.slice(1).trim() : trimmed
+      const parsed = parseEventLine(raw)
+      if (parsed && parsed.startMin === ev.startMin && parsed.endMin === ev.endMin && parsed.desc === ev.desc) {
+        lines.splice(i, 1)
+        break
+      }
+    }
+    writeFile(SCHEDULE_FILE, lines.join("\n"))
+    reload()
   }
 
   function hideEntry() {
@@ -383,9 +544,17 @@ export default function Planner() {
     function commit() {
       if (committed) return
       committed = true
-      const text = entry.get_text().trim()
-      hideEntry()
-      if (!text) return
+      let text = ""
+      try { text = entry.get_text().trim() } catch { hideEntry(); return }
+      if (!text) {
+        // Empty text: delete event if editing existing daily event
+        if (!isNew && existingEv && !existingEv.fromSchedule) {
+          deleteEvent(existingEv)
+        } else {
+          hideEntry()
+        }
+        return
+      }
 
       let finalStart = startMin
       let finalEnd = endMin
@@ -409,12 +578,21 @@ export default function Planner() {
       if (isNew) {
         addNewEvent(finalStart, finalEnd, finalDesc)
       } else if (existingEv) {
+        if (finalStart === existingEv.startMin && finalEnd === existingEv.endMin && finalDesc === existingEv.desc) {
+          hideEntry()
+          return
+        }
         updateExistingEvent(existingEv, finalStart, finalEnd, finalDesc)
       }
     }
 
     entry.connect("activate", () => commit())
-    entry.connect("focus-out-event", () => { commit(); return false })
+    entry.connect("focus-out-event", () => {
+      if (committed) return false
+      committed = true
+      hideEntry()
+      return false
+    })
     entry.connect("key-press-event", (_w: any, ev: any) => {
       const keyval = ev.get_keyval()[1]
       if (keyval === Gdk.KEY_Escape) {
@@ -571,7 +749,7 @@ export default function Planner() {
       </box>) as Gtk.Widget
       cardVisual.set_size_request(-1, cardH)
       cardVisual.set_hexpand(true)
-      if (ev.recurring) cardVisual.get_style_context().add_class("recurring")
+      if (ev.fromSchedule) cardVisual.get_style_context().add_class("schedule")
 
       // Clip container — prevents GTK from expanding card beyond cardH
       const clipScroll = new Gtk.ScrolledWindow({
@@ -675,6 +853,9 @@ export default function Planner() {
           activeEntry.activate()
           return true
         }
+        // Schedule events are read-only
+        if (ev.fromSchedule) return true
+
         const [, , localY] = cardEv.get_coords()
         const [, , rootY] = cardEv.get_root_coords()
         pressRootY = rootY
@@ -966,7 +1147,363 @@ export default function Planner() {
     </box>
   ) as Gtk.Widget
 
+  // ── Build card for a kanban task ──
+  function buildCard(task: KanbanTask, container: Gtk.Box) {
+    let titleLabelRef: Gtk.Label | null = null
+    let titleEntryRef: Gtk.Entry | null = null
+    let titleBoxRef: Gtk.Widget | null = null
+    let isEditing = false
+
+    function startEditTitle() {
+      if (isEditing || !titleLabelRef || !titleEntryRef || !titleBoxRef) return
+      isEditing = true
+      titleLabelRef.hide()
+      titleEntryRef.set_text(task.title)
+      titleEntryRef.show()
+      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+        titleEntryRef!.grab_focus()
+        return GLib.SOURCE_REMOVE
+      })
+    }
+
+    function commitEditTitle() {
+      if (!isEditing || !titleLabelRef || !titleEntryRef) return
+      isEditing = false
+      let text = ""
+      try { text = titleEntryRef.get_text().trim() } catch {}
+      titleEntryRef.hide()
+      titleLabelRef.show()
+      if (text && text !== task.title) {
+        updateTask(task.id, { title: text })
+      }
+    }
+
+    function cancelEditTitle() {
+      if (!isEditing || !titleLabelRef || !titleEntryRef) return
+      isEditing = false
+      titleEntryRef.hide()
+      titleLabelRef.show()
+    }
+
+    const card = (<box name="kanban-card" vertical>
+      <box $={(self) => { titleBoxRef = self }}>
+        <eventbox onButtonPressEvent={() => { startEditTitle(); return true }}>
+          <label name="kanban-card-title" halign={1} $={(self) => {
+            titleLabelRef = self as any
+            self.set_label(task.title)
+            self.set_ellipsize(3)
+            self.set_max_width_chars(20)
+          }} />
+        </eventbox>
+        <box hexpand={true} />
+        {task.status !== "todo" ? (
+          <button name="kanban-move-btn" onClicked={() => moveTaskBack(task.id)}>
+            <label label="<" />
+          </button>
+        ) : <box />}
+        {task.status !== "done" ? (
+          <button name="kanban-move-btn" onClicked={() => moveTaskForward(task.id)}>
+            <label label=">" />
+          </button>
+        ) : (
+          <button name="kanban-delete-btn" onClicked={() => deleteTask(task.id)}>
+            <label label="X" />
+          </button>
+        )}
+      </box>
+      {task.description ? (
+        <label name="kanban-card-desc" halign={1} $={(self) => {
+          self.set_label(task.description)
+          self.set_ellipsize(3)
+          self.set_max_width_chars(30)
+        }} />
+      ) : <box />}
+      {task.assignment ? (
+        <label name="kanban-card-badge" halign={1} label={task.assignment} />
+      ) : <box />}
+    </box>) as Gtk.Widget
+
+    if (task.status === "done") card.get_style_context().add_class("done")
+
+    // Inline title edit entry (hidden by default)
+    const titleEntry = new Gtk.Entry()
+    titleEntry.set_name("kanban-edit-entry")
+    titleEntry.set_hexpand(true)
+    titleEntry.set_no_show_all(true)
+    titleEntry.hide()
+    titleEntry.connect("activate", () => commitEditTitle())
+    titleEntry.connect("focus-out-event", () => { commitEditTitle(); return false })
+    titleEntry.connect("key-press-event", (_w: any, ev: any) => {
+      if (ev.get_keyval()[1] === Gdk.KEY_Escape) { cancelEditTitle(); return true }
+      return false
+    })
+    titleEntryRef = titleEntry
+
+    // Insert entry into the title row after the eventbox
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+      if (titleBoxRef) {
+        (titleBoxRef as any).pack_start(titleEntry, false, false, 0)
+        ;(titleBoxRef as any).reorder_child(titleEntry, 1)
+      }
+      return GLib.SOURCE_REMOVE
+    })
+
+    // Right-click to delete any card
+    const eb = new Gtk.EventBox()
+    eb.add(card)
+    eb.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+    eb.connect("button-press-event", (_w: any, ev: any) => {
+      const [, button] = ev.get_button()
+      if (button === 3) { deleteTask(task.id); return true }
+      return false
+    })
+
+    container.pack_start(eb, false, false, 0)
+  }
+
+  // ── Build the card list for a status column ──
+  function buildCardList(status: "todo" | "doing" | "done", container: Gtk.Box) {
+    container.get_children().forEach((c: Gtk.Widget) => c.destroy())
+    const tasks = kanbanTasks.get()
+      .filter(t => t.status === status)
+      .sort((a, b) => a.order - b.order)
+    for (const task of tasks) buildCard(task, container)
+
+    // "+ Add item" button
+    let addEntryActive = false
+    const addBtn = (<button name="kanban-add-btn" onClicked={() => {
+      if (addEntryActive) return
+      addEntryActive = true
+      addBtn.hide()
+      addEntry.show()
+      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+        addEntry.grab_focus()
+        return GLib.SOURCE_REMOVE
+      })
+    }}>
+      <label label="+ Add item" />
+    </button>) as Gtk.Widget
+
+    const addEntry = new Gtk.Entry()
+    addEntry.set_name("kanban-add-entry")
+    addEntry.set_placeholder_text("Task title...")
+    addEntry.set_hexpand(true)
+    addEntry.set_no_show_all(true)
+    addEntry.hide()
+
+    let committed = false
+    function commitAdd() {
+      if (committed) return
+      committed = true
+      let text = ""
+      try { text = addEntry.get_text().trim() } catch {}
+      addEntry.hide()
+      addBtn.show()
+      addEntryActive = false
+      if (text) addTask(text, status)
+      committed = false
+    }
+    addEntry.connect("activate", () => commitAdd())
+    addEntry.connect("focus-out-event", () => {
+      if (!committed) { committed = true; addEntry.hide(); addBtn.show(); addEntryActive = false; committed = false }
+      return false
+    })
+    addEntry.connect("key-press-event", (_w: any, ev: any) => {
+      if (ev.get_keyval()[1] === Gdk.KEY_Escape) {
+        committed = true; addEntry.hide(); addBtn.show(); addEntryActive = false; committed = false
+        return true
+      }
+      return false
+    })
+
+    container.pack_start(addBtn, false, false, 0)
+    container.pack_start(addEntry as Gtk.Widget, false, false, 0)
+    container.show_all()
+    addEntry.hide()
+  }
+
+  // ── Build the board pane ──
+  function buildBoardPane(): Gtk.Widget {
+    const cardContainers: Record<string, Gtk.Box> = {}
+    const subpaneStack = new Gtk.Stack({
+      transition_type: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,
+      transition_duration: 150,
+    })
+
+    for (const status of ["todo", "doing", "done"] as const) {
+      const cardBox = (<box vertical />) as Gtk.Box
+      cardContainers[status] = cardBox
+
+      const scrollable = (<scrollable hscroll={1} vscroll={2} vexpand={true}>
+        {cardBox}
+      </scrollable>) as Gtk.Widget
+
+      subpaneStack.add_named(scrollable, status)
+    }
+
+    // Subpane tab refs for count updates
+    const tabLabelRefs: Record<string, Gtk.Label> = {}
+
+    const subpaneTabs = (<box name="kanban-subpane-tabs" halign={3}>
+      {(["todo", "doing", "done"] as const).map(status => {
+        const displayName = status === "todo" ? "TODO" : status === "doing" ? "DOING" : "DONE"
+        return (
+          <button name="kanban-subpane-tab" onClicked={() => {
+            setActiveSubpane(status)
+          }} $={(self) => {
+            function update() {
+              const isActive = activeSubpane.get() === status
+              const ctx = self.get_style_context()
+              if (isActive) ctx.add_class("active")
+              else ctx.remove_class("active")
+            }
+            activeSubpane.subscribe(update)
+            update()
+          }}>
+            <label $={(self) => {
+              tabLabelRefs[status] = self as any
+              function updateLabel() {
+                const count = kanbanTasks.get().filter(t => t.status === status).length
+                self.set_label(`${displayName} (${count})`)
+              }
+              kanbanTasks.subscribe(updateLabel)
+              updateLabel()
+            }} />
+          </button>
+        )
+      })}
+    </box>) as Gtk.Widget
+
+    // Wire subpane switching
+    activeSubpane.subscribe(() => {
+      subpaneStack.set_visible_child_name(activeSubpane.get())
+    })
+
+    // Rebuild card lists when tasks change
+    kanbanTasks.subscribe(() => {
+      for (const status of ["todo", "doing", "done"] as const) {
+        buildCardList(status, cardContainers[status])
+      }
+    })
+
+    // Initial build
+    for (const status of ["todo", "doing", "done"] as const) {
+      buildCardList(status, cardContainers[status])
+    }
+
+    const boardFooter = (<label name="planner-footer" $={(self) => {
+      function update() { self.set_label(`${kanbanTasks.get().length} tasks`) }
+      kanbanTasks.subscribe(update)
+      update()
+    }} />) as Gtk.Widget
+
+    const pane = (<box vertical vexpand={true}>
+      {subpaneTabs}
+      {subpaneStack as Gtk.Widget}
+      {boardFooter}
+    </box>) as Gtk.Widget
+
+    subpaneStack.show_all()
+    return pane
+  }
+
   let infoPanelRef: Gtk.Widget | null = null
+
+  // ── Calendar pane (extracted from old contentView) ──
+  const calendarPane = (<box vertical vexpand={true}>
+    <box name="planner-date-nav" halign={3}>
+      <button name="planner-nav-btn" onClicked={prevDay}>
+        <label label="<" />
+      </button>
+      <label name="planner-date" $={(self) => {
+        function update() { self.set_label(formatDate(currentDate.get())) }
+        currentDate.subscribe(update)
+        update()
+      }} />
+      <button name="planner-nav-btn" onClicked={nextDay}>
+        <label label=">" />
+      </button>
+    </box>
+
+    <scrollable hscroll={1} vscroll={0} vexpand={true} $={(self) => {
+      scrollableRef = self
+      self.add_events(Gdk.EventMask.SCROLL_MASK)
+      self.connect("scroll-event", (_w: any, ev: any) => {
+        const [, , state] = ev.get_state()
+        if (!(state & Gdk.ModifierType.CONTROL_MASK)) return false
+        const dir = ev.get_scroll_direction()[1]
+        const cur = rowH.get()
+        if (dir === Gdk.ScrollDirection.UP) {
+          setRowH(Math.min(MAX_ROW_H, cur + 8))
+        } else if (dir === Gdk.ScrollDirection.DOWN) {
+          setRowH(Math.max(MIN_ROW_H, cur - 8))
+        }
+        return true
+      })
+
+      const overlay = new Gtk.Overlay()
+      gridOverlay = overlay
+      let lastAllocW = 0
+      overlay.connect("size-allocate", (_w: any, alloc: any) => {
+        const newW = alloc.width
+        if (newW > 50 && newW !== lastAllocW) {
+          lastAllocW = newW
+          GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            placeEventOverlays()
+            placeNowLine()
+            return GLib.SOURCE_REMOVE
+          })
+        }
+      })
+      const grid = buildGrid()
+      overlay.add(grid)
+      self.add(overlay)
+      overlay.show_all()
+    }} />
+
+    <label name="planner-footer" $={(self) => {
+      function update() { self.set_label(`${fileList.get().length} plans`) }
+      fileList.subscribe(update)
+      update()
+    }} />
+  </box>) as Gtk.Widget
+
+  // ── Board pane ──
+  const boardPane = buildBoardPane()
+
+  // ── Inner stack (calendar / board) ──
+  const contentInnerStack = new Gtk.Stack({
+    transition_type: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,
+    transition_duration: 200,
+  })
+  contentInnerStack.add_named(calendarPane, "calendar")
+  contentInnerStack.add_named(boardPane, "board")
+  contentInnerStack.show_all()
+
+  activeInnerTab.subscribe(() => {
+    contentInnerStack.set_visible_child_name(activeInnerTab.get())
+  })
+
+  // ── Inner tab bar ──
+  const innerTabBar = (<box name="planner-inner-tabs" halign={3}>
+    {(["calendar", "board"] as const).map(tab => {
+      const label = tab === "calendar" ? "CAL" : "BOARD"
+      return (
+        <button name="planner-inner-tab" onClicked={() => setActiveInnerTab(tab)} $={(self) => {
+          function update() {
+            const ctx = self.get_style_context()
+            if (activeInnerTab.get() === tab) ctx.add_class("active")
+            else ctx.remove_class("active")
+          }
+          activeInnerTab.subscribe(update)
+          update()
+        }}>
+          <label label={label} />
+        </button>
+      )
+    })}
+  </box>) as Gtk.Widget
+
   const contentView = (
     <box vertical name="planner-page" vexpand={true}>
       <box name="planner-header">
@@ -993,61 +1530,8 @@ export default function Planner() {
         }} />
       </box>
 
-      <box name="planner-date-nav" halign={3}>
-        <button name="planner-nav-btn" onClicked={prevDay}>
-          <label label="<" />
-        </button>
-        <label name="planner-date" $={(self) => {
-          function update() { self.set_label(formatDate(currentDate.get())) }
-          currentDate.subscribe(update)
-          update()
-        }} />
-        <button name="planner-nav-btn" onClicked={nextDay}>
-          <label label=">" />
-        </button>
-      </box>
-
-      <scrollable hscroll={1} vscroll={0} vexpand={true} $={(self) => {
-        scrollableRef = self
-        self.add_events(Gdk.EventMask.SCROLL_MASK)
-        self.connect("scroll-event", (_w: any, ev: any) => {
-          const [, , state] = ev.get_state()
-          if (!(state & Gdk.ModifierType.CONTROL_MASK)) return false
-          const dir = ev.get_scroll_direction()[1]
-          const cur = rowH.get()
-          if (dir === Gdk.ScrollDirection.UP) {
-            setRowH(Math.min(MAX_ROW_H, cur + 8))
-          } else if (dir === Gdk.ScrollDirection.DOWN) {
-            setRowH(Math.max(MIN_ROW_H, cur - 8))
-          }
-          return true
-        })
-
-        const overlay = new Gtk.Overlay()
-        gridOverlay = overlay
-        let lastAllocW = 0
-        overlay.connect("size-allocate", (_w: any, alloc: any) => {
-          const newW = alloc.width
-          if (newW > 50 && newW !== lastAllocW) {
-            lastAllocW = newW
-            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-              placeEventOverlays()
-              placeNowLine()
-              return GLib.SOURCE_REMOVE
-            })
-          }
-        })
-        const grid = buildGrid()
-        overlay.add(grid)
-        self.add(overlay)
-        overlay.show_all()
-      }} />
-
-      <label name="planner-footer" $={(self) => {
-        function update() { self.set_label(`${fileList.get().length} plans`) }
-        fileList.subscribe(update)
-        update()
-      }} />
+      {innerTabBar}
+      {contentInnerStack as Gtk.Widget}
     </box>
   ) as Gtk.Widget
 
