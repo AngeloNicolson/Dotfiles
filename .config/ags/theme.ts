@@ -69,7 +69,6 @@ function generateCSS(c: ThemeColors): string {
 
     * {
       font-family: "JetBrainsMono Nerd Font", "CaskaydiaCove Nerd Font", monospace;
-      transition: 150ms linear;
     }
 
     window {
@@ -145,7 +144,7 @@ function generateCSS(c: ThemeColors): string {
       padding: 6px 6px;
     }
     #tab-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 8px 6px;
@@ -153,11 +152,11 @@ function generateCSS(c: ThemeColors): string {
       min-width: 46px;
     }
     #tab-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #tab-btn.active {
-      background: alpha(#1a3040, 0.8);
+      background: #152834;
       border: 1px solid #60c0d0;
       box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
     }
@@ -215,14 +214,14 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 8px;
     }
     #planner-info-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 4px 8px;
       margin-right: 4px;
     }
     #planner-info-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #60c0d0;
     }
     #planner-info-btn label {
@@ -246,13 +245,13 @@ function generateCSS(c: ThemeColors): string {
       font-size: 10px;
     }
     #planner-reload-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 4px 8px;
     }
     #planner-reload-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #60c0d0;
     }
     #planner-reload-btn label {
@@ -269,14 +268,14 @@ function generateCSS(c: ThemeColors): string {
       padding: 4px 0;
     }
     #planner-nav-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 4px 10px;
       margin: 0 4px;
     }
     #planner-nav-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #60c0d0;
     }
     #planner-nav-btn label {
@@ -480,21 +479,21 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 2px;
     }
     #planner-panel {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
     }
     #planner-create-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a4a35;
       border-radius: 4px;
       padding: 10px 20px;
       margin-top: 16px;
     }
     #planner-create-btn:hover {
-      background: alpha(#1a3020, 0.8);
+      background: #15281c;
       border-color: #50c070;
       box-shadow: inset 0 0 12px alpha(#50c070, 0.3);
     }
@@ -523,7 +522,7 @@ function generateCSS(c: ThemeColors): string {
       padding: 0;
     }
     #planner-inner-tab {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 5px 12px;
@@ -531,11 +530,11 @@ function generateCSS(c: ThemeColors): string {
       min-width: 40px;
     }
     #planner-inner-tab:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #planner-inner-tab.active {
-      background: alpha(#1a3040, 0.8);
+      background: #152834;
       border: 1px solid #60c0d0;
     }
     #planner-inner-tab label {
@@ -589,7 +588,7 @@ function generateCSS(c: ThemeColors): string {
       min-height: 28px;
     }
     button#kanban-board-selector {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 2px 10px;
@@ -597,7 +596,7 @@ function generateCSS(c: ThemeColors): string {
       min-width: 40px;
     }
     button#kanban-board-selector:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #60c0d0;
     }
     button#kanban-board-selector label {
@@ -687,7 +686,7 @@ function generateCSS(c: ThemeColors): string {
       margin: 0 1px;
     }
     #kanban-move-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #60c0d0;
     }
     #kanban-move-btn label {
@@ -706,7 +705,7 @@ function generateCSS(c: ThemeColors): string {
       margin: 0 1px;
     }
     #kanban-delete-btn:hover {
-      background: alpha(#301a1a, 0.8);
+      background: #271616;
       border-color: #c05050;
     }
     #kanban-delete-btn label {
@@ -1117,7 +1116,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 12px;
     }
     #sys-toggle {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 9999px;
       padding: 12px;
@@ -1126,11 +1125,11 @@ function generateCSS(c: ThemeColors): string {
       min-height: 52px;
     }
     #sys-toggle:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #sys-toggle.active {
-      background: alpha(#3a2a00, 0.8);
+      background: #302200;
       border: 1px solid #f5c842;
       box-shadow: inset 0 0 12px alpha(#f5c842, 0.3);
     }
@@ -1149,7 +1148,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* Clock Panel */
     #clock-panel {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 14px;
@@ -1189,7 +1188,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* Control Panels (Brightness/Volume) */
     #control-panel {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 10px 12px;
@@ -1250,7 +1249,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* Status Panel (Battery) */
     #status-panel {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 10px 12px;
@@ -1288,7 +1287,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 12px;
     }
     #tool-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 10px 12px;
@@ -1297,7 +1296,7 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms linear;
     }
     #tool-btn:hover {
-      background: alpha(#1a3040, 0.8);
+      background: #152834;
       border-color: #60c0d0;
       box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
     }
@@ -1332,7 +1331,7 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms linear;
     }
     #core-reload-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #60c0d0;
     }
     #core-reload-btn label {
@@ -1393,7 +1392,7 @@ function generateCSS(c: ThemeColors): string {
       color: #80e0f0;
     }
     #wallpaper-tab-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 8px 12px;
@@ -1401,11 +1400,11 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms linear;
     }
     #wallpaper-tab-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #wallpaper-tab-btn.active {
-      background: alpha(#1a3040, 0.8);
+      background: #152834;
       border: 1px solid #60c0d0;
       box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
     }
@@ -1490,7 +1489,7 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms linear;
     }
     #movie-folder-header:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #folder-arrow {
@@ -1793,7 +1792,7 @@ function generateCSS(c: ThemeColors): string {
       background: #040608;
     }
     #power-panel {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 12px;
@@ -1896,7 +1895,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 10px;
     }
     #app-search {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 10px 14px;
@@ -1906,7 +1905,7 @@ function generateCSS(c: ThemeColors): string {
       letter-spacing: 1px;
     }
     #app-search:focus {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #60c0d0;
     }
     #app-page-scroll,
@@ -1921,7 +1920,7 @@ function generateCSS(c: ThemeColors): string {
       margin-top: 10px;
     }
     #app-item {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: none;
       border-radius: 4px;
       padding: 8px 10px;
@@ -1997,7 +1996,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 8px;
     }
     #pomo-preset-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 6px 8px;
@@ -2005,16 +2004,16 @@ function generateCSS(c: ThemeColors): string {
       min-width: 44px;
     }
     #pomo-preset-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #pomo-preset-btn.active {
-      background: alpha(#1a3040, 0.8);
+      background: #152834;
       border: 1px solid #60c0d0;
       box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
     }
     #pomo-preset-btn label {
-      font-size: 9px;
+      font-size: 12px;
       font-weight: 700;
       letter-spacing: 1px;
       color: #4a6070;
@@ -2041,7 +2040,7 @@ function generateCSS(c: ThemeColors): string {
       min-width: 50px;
     }
     #pomo-adj-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 4px 10px;
@@ -2049,7 +2048,7 @@ function generateCSS(c: ThemeColors): string {
       min-width: 28px;
     }
     #pomo-adj-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #pomo-adj-btn label {
@@ -2073,25 +2072,33 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 8px;
       padding: 6px 0;
     }
+    #pomo-block-dot-btn {
+      padding: 2px;
+      margin: 0 1px;
+      background: transparent;
+      border: none;
+      min-width: 0;
+      min-height: 0;
+    }
+    #pomo-block-dot-btn:hover #pomo-block-dot {
+      border-color: #c03030;
+    }
     #pomo-block-dot {
       min-width: 10px;
       min-height: 10px;
       border-radius: 5px;
-      margin: 0 4px;
+      background: alpha(#2a3a45, 0.3);
+      border: 1px solid #2a3a45;
     }
-    #pomo-block-dot.completed {
-      background: #60c0d0;
-      box-shadow: 0 0 8px alpha(#60d0e0, 0.6);
+    #pomo-block-dot-btn.selected #pomo-block-dot {
+      background: #8b0000;
+      border: 1px solid #c03030;
+      box-shadow: 0 0 6px alpha(#c03030, 0.5);
     }
-    #pomo-block-dot.pending {
-      background: alpha(#2a3a45, 0.5);
-      border: 1px solid #3a5060;
-    }
-    #pomo-block-dot.hidden {
-      opacity: 0;
-      min-width: 0;
-      min-height: 0;
-      margin: 0;
+    #pomo-block-dot-btn.completed #pomo-block-dot {
+      background: alpha(#1a2530, 0.2);
+      border: 1px solid alpha(#2a3a45, 0.2);
+      box-shadow: none;
     }
 
     /* Control buttons */
@@ -2099,14 +2106,14 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 10px;
     }
     #pomo-start-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a4a35;
       border-radius: 4px;
       padding: 10px 14px;
       margin: 0 4px;
     }
     #pomo-start-btn:hover {
-      background: alpha(#1a3020, 0.8);
+      background: #15281c;
       border-color: #50c070;
       box-shadow: inset 0 0 12px alpha(#50c070, 0.3);
     }
@@ -2123,14 +2130,14 @@ function generateCSS(c: ThemeColors): string {
       color: #c0a050;
     }
     #pomo-stop-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #4a2a2a;
       border-radius: 4px;
       padding: 10px 14px;
       margin: 0 4px;
     }
     #pomo-stop-btn:hover {
-      background: alpha(#301a1a, 0.8);
+      background: #271616;
       border-color: #c05050;
       box-shadow: inset 0 0 12px alpha(#c05050, 0.3);
     }
@@ -2162,7 +2169,7 @@ function generateCSS(c: ThemeColors): string {
       min-width: 80px;
     }
     #pomo-volume-panel {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 10px 12px;
@@ -2177,7 +2184,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* ============ EQ PANELS (Audio & Display) ============ */
     #eq-panel {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 4px;
       padding: 10px 12px;
@@ -2323,18 +2330,18 @@ function generateCSS(c: ThemeColors): string {
       margin-top: 8px;
     }
     #eq-preset-btn {
-      background: alpha(#1a2530, 0.6);
+      background: #101820;
       border: 1px solid #2a3a45;
       border-radius: 3px;
       padding: 4px 6px;
       margin: 0 2px;
     }
     #eq-preset-btn:hover {
-      background: alpha(#253540, 0.7);
+      background: #1b2730;
       border-color: #3a5060;
     }
     #eq-preset-btn.active {
-      background: alpha(#1a3040, 0.8);
+      background: #152834;
       border: 1px solid #60c0d0;
       box-shadow: inset 0 0 8px alpha(#60d0e0, 0.3);
     }

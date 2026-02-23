@@ -12,7 +12,7 @@ const tabs = [
   { id: "page2", icon: "", label: "PLAN" },
   { id: "page3", icon: "", label: "POMO" },
   { id: "page4", icon: "", label: "APPS" },
-  { id: "page5", icon: "", label: "WALL" },
+  { id: "page5", icon: "", label: "CORE" },
   { id: "page6", icon: "", label: "PWR" },
 ]
 

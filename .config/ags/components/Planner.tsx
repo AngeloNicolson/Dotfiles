@@ -709,8 +709,15 @@ export default function Planner() {
     }
   }
 
-  // Initialize without popup on first load
+  // Suppress popup during startup — wait for events to settle
+  let startupDone = false
   lastActiveTaskDesc = getCurrentTaskDesc()
+
+  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5000, () => {
+    lastActiveTaskDesc = getCurrentTaskDesc()
+    startupDone = true
+    return GLib.SOURCE_REMOVE
+  })
 
   // Check every 30 seconds
   GLib.timeout_add(GLib.PRIORITY_DEFAULT, 30000, () => {
@@ -719,7 +726,7 @@ export default function Planner() {
   })
 
   // Also re-check when events change (e.g. file edit)
-  events.subscribe(() => { checkTaskSwitch() })
+  events.subscribe(() => { if (startupDone) checkTaskSwitch() })
 
   // Y coordinate to minutes (snapped to 15min)
   function yToMin(y: number): number {
