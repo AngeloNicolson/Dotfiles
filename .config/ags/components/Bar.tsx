@@ -1,6 +1,6 @@
 import app from "ags/gtk3/app"
 import { Astal } from "ags/gtk3"
-import { barVisible } from "../state"
+import { barVisible, sidebarPinned } from "../state"
 import Sidebar from "./Sidebar"
 
 export default function Bar(gdkMonitor: number, monitorName: string) {
@@ -11,6 +11,7 @@ export default function Bar(gdkMonitor: number, monitorName: string) {
       visible
       monitor={gdkMonitor}
       anchor={TOP | LEFT | BOTTOM}
+      exclusivity={sidebarPinned.as((p) => p ? Astal.Exclusivity.EXCLUSIVE : Astal.Exclusivity.NORMAL)}
       application={app}
       keymode={Astal.Keymode.ON_DEMAND}
     >

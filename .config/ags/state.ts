@@ -17,6 +17,13 @@ export const [periodicTableVisible, setPeriodicTableVisible] = createState(false
 // Break popup visibility state (Pomodoro)
 export const [breakPopupVisible, setBreakPopupVisible] = createState(false)
 
+// Task popup visibility state (Planner — shown when calendar event switches)
+export const [taskPopupVisible, setTaskPopupVisible] = createState(false)
+export const [taskPopupTitle, setTaskPopupTitle] = createState("")
+
+// Sidebar pinned — when on, bar has exclusive zone and pushes windows away
+export const [sidebarPinned, setSidebarPinned] = createState(true)
+
 // Pomodoro maintain focus — when on, bar always opens to POMO page
 export const [pomoMaintainFocus, setPomoMaintainFocus] = createState(false)
 
@@ -144,6 +151,28 @@ export function cyclePage() {
     setPage(pages[nextIndex])
   } else {
     console.error(`cyclePage: No stack found for monitor ${monitorName}`)
+  }
+}
+
+export function cyclePageBack() {
+  const hyprland = AstalHyprland.get_default()
+  const focusedWorkspace = hyprland.get_focused_workspace()
+  if (!focusedWorkspace) return
+
+  const focusedMonitor = focusedWorkspace.get_monitor()
+  if (!focusedMonitor) return
+
+  const monitorName = focusedMonitor.get_name()
+  const stack = sidebarStacks.get(monitorName)
+
+  if (stack) {
+    const currentIndex = pageIndices.get(monitorName) || 0
+    const prevIndex = (currentIndex - 1 + pages.length) % pages.length
+    pageIndices.set(monitorName, prevIndex)
+    stack.set_visible_child_name(pages[prevIndex])
+
+    const [, setPage] = getPageState(monitorName)
+    setPage(pages[prevIndex])
   }
 }
 

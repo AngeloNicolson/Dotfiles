@@ -3,21 +3,20 @@ import { createState, type State } from "ags"
 import { execAsync } from "ags/process"
 import { createBinding, type Accessor } from "gnim"
 import Network from "gi://AstalNetwork"
+import Gtk from "gi://Gtk?version=3.0"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
-import { togglePeriodicTable } from "../state"
+import { togglePeriodicTable, sidebarPinned, setSidebarPinned } from "../state"
 import AudioEQ, { toggleHwMute, localMuted } from "./AudioEQ"
 import DisplayEQ from "./DisplayEQ"
 
 // System toggle button - Star Citizen style
 function SystemToggle({
   active,
-  icon,
   label,
   onClick,
 }: {
   active: Accessor<boolean> | State<boolean>,
-  icon: string,
   label: string,
   onClick: () => void,
 }) {
@@ -27,10 +26,7 @@ function SystemToggle({
       class={active.as((a) => a ? "active" : "")}
       onClicked={onClick}
     >
-      <box vertical>
-        <label name="sys-toggle-icon" label={icon} />
-        <label name="sys-toggle-label" label={label} />
-      </box>
+      <label name="sys-toggle-label" label={label} />
     </button>
   )
 }
@@ -88,7 +84,6 @@ function WiFiToggle() {
   return (
     <SystemToggle
       active={wifiOn}
-      icon=""
       label="WIFI"
       onClick={() => {
         if (wifi) {
@@ -110,7 +105,6 @@ function BluetoothToggle() {
   return (
     <SystemToggle
       active={btOn}
-      icon=""
       label="BT"
       onClick={() => {
         const newState = !btOn.get()
@@ -133,7 +127,6 @@ function DNDToggle() {
   return (
     <SystemToggle
       active={dndOn}
-      icon=""
       label="DND"
       onClick={() => {
         execAsync("dunstctl set-paused toggle").catch(() => {})
@@ -151,7 +144,6 @@ function NightLightToggle() {
   return (
     <SystemToggle
       active={nightOn}
-      icon=""
       label="NITE"
       onClick={() => {
         if (nightOn.get()) {
@@ -194,18 +186,35 @@ export default function Home() {
       <label name="section-header" label="//SYSTEMS" />
 
       {/* System toggles row */}
-      <box name="sys-toggles-row">
-        <WiFiToggle />
-        <BluetoothToggle />
-        <DNDToggle />
-        <NightLightToggle />
-        <SystemToggle
-          active={localMuted}
-          icon="󰝟"
-          label="MUTE"
-          onClick={toggleHwMute}
-        />
-      </box>
+      <box name="sys-toggles-row" $={(self) => {
+        const flow = new Gtk.FlowBox({
+          selection_mode: Gtk.SelectionMode.NONE,
+          homogeneous: true,
+          row_spacing: 4,
+          column_spacing: 4,
+          max_children_per_line: 5,
+          min_children_per_line: 3,
+        })
+        const toggles = [
+          <SystemToggle
+            active={sidebarPinned}
+            label="DOCK"
+            onClick={() => setSidebarPinned(!sidebarPinned.get())}
+          />,
+          <WiFiToggle />,
+          <BluetoothToggle />,
+          <DNDToggle />,
+          <NightLightToggle />,
+          <SystemToggle
+            active={localMuted}
+            label="MUTE"
+            onClick={toggleHwMute}
+          />,
+        ]
+        for (const t of toggles) flow.add(t)
+        flow.show_all()
+        self.pack_start(flow, true, true, 0)
+      }} />
 
       {/* Clock panel */}
       <Clock />

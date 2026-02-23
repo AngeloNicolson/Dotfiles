@@ -1,11 +1,12 @@
 import app from "ags/gtk3/app"
-import { toggleBar, cyclePage, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable } from "./state"
+import { toggleBar, cyclePage, cyclePageBack, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable } from "./state"
 import { initTheme, applyTheme } from "./theme"
 import Bar from "./components/Bar"
 import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
 import PeriodicTableWindow from "./components/PeriodicTableWindow"
 import BreakPopupWindow from "./components/BreakPopupWindow"
+import TaskPopupWindow from "./components/TaskPopupWindow"
 import AstalHyprland from "gi://AstalHyprland"
 import { Gdk } from "ags/gtk3"
 
@@ -23,6 +24,9 @@ app.start({
     } else if (cmd === "cycle-sidebar") {
       cyclePage()
       response("cycled")
+    } else if (cmd === "cycle-sidebar-back") {
+      cyclePageBack()
+      response("cycled back")
     } else if (cmd === "toggle-destination") {
       toggleDestination()
       response("destination toggled")
@@ -141,5 +145,6 @@ app.start({
     GalaxyWindow(0)
     PeriodicTableWindow(0)
     BreakPopupWindow(0)
+    TaskPopupWindow(0)
   },
 })

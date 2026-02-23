@@ -1,11 +1,16 @@
 import Gtk from "gi://Gtk?version=3.0"
 import Gdk from "gi://Gdk"
+import Gio from "gi://Gio"
+import { Astal } from "ags/gtk3"
+import app from "ags/gtk3/app"
 import { readFile, writeFile } from "ags/file"
 import GLib from "gi://GLib"
 import { createState } from "ags"
+import { setTaskPopupVisible, setTaskPopupTitle } from "../state"
 
 const PLANS_DIR = GLib.get_home_dir() + "/.config/plans"
-const KANBAN_FILE = `${PLANS_DIR}/kanban.json`
+const BOARDS_DIR = PLANS_DIR + "/boards"
+const DEFAULT_BOARD = "main"
 
 interface KanbanTask {
   id: string
@@ -17,6 +22,62 @@ interface KanbanTask {
   createdAt: string
 }
 
+interface ChecklistItem {
+  checked: boolean
+  text: string
+}
+
+function parseChecklist(description: string): ChecklistItem[] {
+  if (!description) return []
+  const items: ChecklistItem[] = []
+  for (const line of description.split("\n")) {
+    const m = line.match(/^- \[([ xX])\] (.*)$/)
+    if (m) items.push({ checked: m[1] !== " ", text: m[2] })
+  }
+  return items
+}
+
+function serializeChecklist(items: ChecklistItem[]): string {
+  return items.map(i => `- [${i.checked ? "x" : " "}] ${i.text}`).join("\n")
+}
+
+function parseDescription(description: string): { notes: string, checklist: ChecklistItem[] } {
+  if (!description) return { notes: "", checklist: [] }
+  const lines = description.split("\n")
+  const noteLines: string[] = []
+  const checklist: ChecklistItem[] = []
+  for (const line of lines) {
+    const m = line.match(/^- \[([ xX])\] (.*)$/)
+    if (m) checklist.push({ checked: m[1] !== " ", text: m[2] })
+    else noteLines.push(line)
+  }
+  while (noteLines.length > 0 && noteLines[noteLines.length - 1].trim() === "") noteLines.pop()
+  return { notes: noteLines.join("\n"), checklist }
+}
+
+function serializeDescription(notes: string, checklist: ChecklistItem[]): string {
+  const parts: string[] = []
+  if (notes.trim()) parts.push(notes.trim())
+  if (checklist.length > 0) parts.push(serializeChecklist(checklist))
+  return parts.join("\n\n")
+}
+
+function gtkRGBA(r: number, g: number, b: number, a: number = 1) {
+  const c = new Gdk.RGBA()
+  c.red = r; c.green = g; c.blue = b; c.alpha = a
+  return c
+}
+
+const CD_BG = gtkRGBA(0x0d / 255, 0x11 / 255, 0x17 / 255)
+const CD_WHITE = gtkRGBA(0xe6 / 255, 0xed / 255, 0xf3 / 255)
+const CD_DIM = gtkRGBA(0x8b / 255, 0x94 / 255, 0x9e / 255)
+const CD_DIMMER = gtkRGBA(0x48 / 255, 0x4f / 255, 0x58 / 255)
+
+function forceColor(w: Gtk.Widget, fg?: any, bg?: any) {
+  if (fg) w.override_color(Gtk.StateFlags.NORMAL, fg)
+  if (bg) w.override_background_color(Gtk.StateFlags.NORMAL, bg)
+}
+
 function generateId(): string {
   const hex = "0123456789abcdef"
   let id = ""
@@ -24,22 +85,151 @@ function generateId(): string {
   return id
 }
 
-function loadKanban(): KanbanTask[] {
-  if (!GLib.file_test(KANBAN_FILE, GLib.FileTest.EXISTS)) return []
+function boardFilePath(name: string): string {
+  return `${PLANS_DIR}/${name}_kanban.plan`
+}
+
+function listBoards(): string[] {
+  if (!dirExists(PLANS_DIR)) return []
   try {
-    const content = readFile(KANBAN_FILE)
+    const dir = GLib.Dir.open(PLANS_DIR, 0)
+    const names: string[] = []
+    let name: string | null
+    while ((name = dir.read_name()) !== null) {
+      if (name.endsWith("_kanban.plan")) names.push(name.replace(/_kanban\.plan$/, ""))
+    }
+    names.sort()
+    return names
+  } catch (e) {
+    print(`Error reading plans dir: ${e}`)
+    return []
+  }
+}
+
+function deleteBoard(name: string) {
+  GLib.unlink(boardFilePath(name))
+}
+
+function parseKanbanPlan(content: string): KanbanTask[] {
+  const tasks: KanbanTask[] = []
+  let currentStatus: "todo" | "doing" | "done" | null = null
+  let currentTask: Partial<KanbanTask> | null = null
+  let descLines: string[] = []
+  let orderCounter = 0
+  let idCounter = 0
+
+  function finishTask() {
+    if (currentTask && currentTask.title) {
+      while (descLines.length > 0 && descLines[0].trim() === "") descLines.shift()
+      while (descLines.length > 0 && descLines[descLines.length - 1].trim() === "") descLines.pop()
+      currentTask.description = descLines.join("\n")
+      tasks.push(currentTask as KanbanTask)
+    }
+    currentTask = null
+    descLines = []
+  }
+
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim()
+    if (/^##\s+TODO\s*$/i.test(trimmed)) { finishTask(); currentStatus = "todo"; orderCounter = 0; continue }
+    if (/^##\s+DOING\s*$/i.test(trimmed)) { finishTask(); currentStatus = "doing"; orderCounter = 0; continue }
+    if (/^##\s+DONE\s*$/i.test(trimmed)) { finishTask(); currentStatus = "done"; orderCounter = 0; continue }
+
+    if (trimmed.startsWith("### ") && currentStatus) {
+      finishTask()
+      currentTask = {
+        id: `p${idCounter++}`,
+        title: trimmed.slice(4).trim(),
+        description: "",
+        status: currentStatus,
+        assignment: "",
+        order: orderCounter++,
+        createdAt: new Date().toISOString(),
+      }
+      continue
+    }
+
+    if (currentTask) {
+      if (/^@\S+/.test(trimmed)) {
+        currentTask.assignment = trimmed.slice(1).trim()
+        continue
+      }
+      descLines.push(line.trimEnd())
+    }
+  }
+  finishTask()
+  return tasks
+}
+
+function serializeKanbanPlan(tasks: KanbanTask[]): string {
+  const lines: string[] = []
+  for (const status of ["todo", "doing", "done"] as const) {
+    lines.push(`## ${status.toUpperCase()}`)
+    lines.push("")
+    const statusTasks = tasks.filter(t => t.status === status).sort((a, b) => a.order - b.order)
+    for (const task of statusTasks) {
+      lines.push(`### ${task.title}`)
+      if (task.description.trim()) lines.push(task.description.trim())
+      if (task.assignment) lines.push(`@${task.assignment}`)
+      lines.push("")
+    }
+  }
+  return lines.join("\n")
+}
+
+function loadKanban(boardName: string): KanbanTask[] {
+  const path = boardFilePath(boardName)
+  if (!GLib.file_test(path, GLib.FileTest.EXISTS)) return []
+  try {
+    const content = readFile(path)
     if (!content) return []
-    const data = JSON.parse(content)
-    return data.tasks || []
+    return parseKanbanPlan(content)
   } catch (e) {
     print(`Error loading kanban: ${e}`)
     return []
   }
 }
 
-function saveKanban(tasks: KanbanTask[]) {
+function saveKanban(boardName: string, tasks: KanbanTask[]) {
   GLib.mkdir_with_parents(PLANS_DIR, 0o755)
-  writeFile(KANBAN_FILE, JSON.stringify({ version: 1, tasks }, null, 2))
+  writeFile(boardFilePath(boardName), serializeKanbanPlan(tasks))
+}
+
+function migrateKanbanIfNeeded() {
+  // Migrate from old single kanban.json
+  const oldFile = `${PLANS_DIR}/kanban.json`
+  if (GLib.file_test(oldFile, GLib.FileTest.EXISTS)) {
+    const newPath = boardFilePath(DEFAULT_BOARD)
+    if (!GLib.file_test(newPath, GLib.FileTest.EXISTS)) {
+      try {
+        const content = readFile(oldFile)
+        if (content) {
+          const data = JSON.parse(content)
+          saveKanban(DEFAULT_BOARD, data.tasks || [])
+          print(`Migrated kanban.json to ${DEFAULT_BOARD}_kanban.plan`)
+        }
+      } catch (e) { print(`Error migrating kanban.json: ${e}`) }
+    }
+  }
+  // Migrate from old boards/*.json format
+  if (!dirExists(BOARDS_DIR)) return
+  try {
+    const dir = GLib.Dir.open(BOARDS_DIR, 0)
+    let name: string | null
+    while ((name = dir.read_name()) !== null) {
+      if (!name.endsWith(".json")) continue
+      const boardName = name.replace(/\.json$/, "")
+      const newPath = boardFilePath(boardName)
+      if (GLib.file_test(newPath, GLib.FileTest.EXISTS)) continue
+      try {
+        const content = readFile(`${BOARDS_DIR}/${name}`)
+        if (!content) continue
+        const data = JSON.parse(content)
+        saveKanban(boardName, data.tasks || [])
+        print(`Migrated board: ${boardName}`)
+      } catch (e) { print(`Error migrating board ${boardName}: ${e}`) }
+    }
+  } catch (e) { print(`Error reading old boards dir: ${e}`) }
 }
 
 const START_H = 4
@@ -315,6 +505,15 @@ export default function Planner() {
   const [kanbanTasks, setKanbanTasks] = createState<KanbanTask[]>([])
   const [activeInnerTab, setActiveInnerTab] = createState<"calendar" | "board">("calendar")
   const [activeSubpane, setActiveSubpane] = createState<"todo" | "doing" | "done">("todo")
+  const [activeBoard, setActiveBoard] = createState(DEFAULT_BOARD)
+  const [boardList, setBoardList] = createState<string[]>([])
+
+  // Track our own writes to avoid re-triggering file watcher
+  let selfWriteTimestamp = 0
+  function trackedSave(board: string, tasks: KanbanTask[]) {
+    selfWriteTimestamp = Date.now()
+    saveKanban(board, tasks)
+  }
 
   function addTask(title: string, status: "todo" | "doing" | "done") {
     const tasks = kanbanTasks.get()
@@ -330,19 +529,19 @@ export default function Planner() {
       createdAt: new Date().toISOString(),
     }
     const updated = [...tasks, task]
-    saveKanban(updated)
+    trackedSave(activeBoard.get(), updated)
     setKanbanTasks(updated)
   }
 
   function updateTask(id: string, changes: Partial<KanbanTask>) {
     const tasks = kanbanTasks.get().map(t => t.id === id ? { ...t, ...changes } : t)
-    saveKanban(tasks)
+    trackedSave(activeBoard.get(), tasks)
     setKanbanTasks(tasks)
   }
 
   function deleteTask(id: string) {
     const tasks = kanbanTasks.get().filter(t => t.id !== id)
-    saveKanban(tasks)
+    trackedSave(activeBoard.get(), tasks)
     setKanbanTasks(tasks)
   }
 
@@ -368,6 +567,44 @@ export default function Planner() {
     updateTask(id, { status: prev as any, order: maxOrder })
   }
 
+  function switchBoard(name: string) {
+    setActiveBoard(name)
+    setKanbanTasks(loadKanban(name))
+  }
+
+  function createBoard(name: string) {
+    const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase()
+    if (!sanitized) return
+    GLib.mkdir_with_parents(PLANS_DIR, 0o755)
+    trackedSave(sanitized, [])
+    setBoardList(listBoards())
+    switchBoard(sanitized)
+  }
+
+  const SUBPANES = ["todo", "doing", "done"] as const
+  function nextSubpane() {
+    const cur = SUBPANES.indexOf(activeSubpane.get())
+    setActiveSubpane(SUBPANES[(cur + 1) % SUBPANES.length])
+  }
+  function prevSubpane() {
+    const cur = SUBPANES.indexOf(activeSubpane.get())
+    setActiveSubpane(SUBPANES[(cur - 1 + SUBPANES.length) % SUBPANES.length])
+  }
+
+  function removeBoardAndSwitch(name: string) {
+    selfWriteTimestamp = Date.now()
+    deleteBoard(name)
+    const remaining = listBoards()
+    if (remaining.length === 0) {
+      trackedSave(DEFAULT_BOARD, [])
+      setBoardList([DEFAULT_BOARD])
+      switchBoard(DEFAULT_BOARD)
+    } else {
+      setBoardList(remaining)
+      switchBoard(remaining[0])
+    }
+  }
+
   // Interaction state
   let dragStartMin = -1
   let isDragging = false
@@ -389,14 +626,100 @@ export default function Planner() {
     const exists = dirExists(PLANS_DIR)
     setPlansExist(exists)
     if (exists) {
+      migrateKanbanIfNeeded()
       setFileList(loadPlanFiles())
       setEvents(loadEventsForDate(currentDate.get()))
-      setKanbanTasks(loadKanban())
+      const boards = listBoards()
+      if (boards.length === 0) {
+        trackedSave(DEFAULT_BOARD, [])
+        setBoardList([DEFAULT_BOARD])
+        setActiveBoard(DEFAULT_BOARD)
+      } else {
+        setBoardList(boards)
+        if (!boards.includes(activeBoard.get())) {
+          setActiveBoard(boards[0])
+        }
+      }
+      setKanbanTasks(loadKanban(activeBoard.get()))
     } else {
       setEvents([])
       setKanbanTasks([])
+      setBoardList([])
     }
   }
+
+  // ── File watching: auto-reload when .plan files edited externally ──
+  let fileMonitor: any = null
+  let monitorDebounce = 0
+
+  function setupFileWatcher() {
+    if (fileMonitor) { try { fileMonitor.cancel() } catch {} }
+    if (!dirExists(PLANS_DIR)) return
+
+    try {
+      const dir = Gio.File.new_for_path(PLANS_DIR)
+      fileMonitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null)
+      fileMonitor.set_rate_limit(500)
+      fileMonitor.connect("changed", (_m: any, file: any, _o: any, eventType: any) => {
+        const name = file.get_basename()
+        if (!name || !name.endsWith("_kanban.plan")) return
+        // Ignore our own writes (within 2s)
+        if (Date.now() - selfWriteTimestamp < 2000) return
+        // Debounce rapid changes
+        if (monitorDebounce) GLib.source_remove(monitorDebounce)
+        monitorDebounce = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+          monitorDebounce = 0
+          const boardName = name.replace(/_kanban\.plan$/, "")
+          if (boardName === activeBoard.get()) {
+            setKanbanTasks(loadKanban(boardName))
+          }
+          // Also refresh board list in case new boards were added/removed
+          setBoardList(listBoards())
+          return GLib.SOURCE_REMOVE
+        })
+      })
+    } catch (e) {
+      print(`File watcher setup failed: ${e}`)
+    }
+  }
+
+  // ── Task-switch popup: detect when the current calendar event changes ──
+  let lastActiveTaskDesc = ""
+
+  function getCurrentTaskDesc(): string {
+    if (!isToday(currentDate.get())) return ""
+    const now = new Date()
+    const nowMin = now.getHours() * 60 + now.getMinutes()
+    const evList = events.get()
+    // Find the event whose time range contains "now"
+    for (const ev of evList) {
+      if (nowMin >= ev.startMin && nowMin < ev.endMin) return ev.desc
+    }
+    return ""
+  }
+
+  function checkTaskSwitch() {
+    const desc = getCurrentTaskDesc()
+    if (desc && desc !== lastActiveTaskDesc) {
+      lastActiveTaskDesc = desc
+      setTaskPopupTitle(desc)
+      setTaskPopupVisible(true)
+    } else if (!desc) {
+      lastActiveTaskDesc = ""
+    }
+  }
+
+  // Initialize without popup on first load
+  lastActiveTaskDesc = getCurrentTaskDesc()
+
+  // Check every 30 seconds
+  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 30000, () => {
+    checkTaskSwitch()
+    return GLib.SOURCE_CONTINUE
+  })
+
+  // Also re-check when events change (e.g. file edit)
+  events.subscribe(() => { checkTaskSwitch() })
 
   // Y coordinate to minutes (snapped to 15min)
   function yToMin(y: number): number {
@@ -586,9 +909,15 @@ export default function Planner() {
       }
     }
 
+    let focusReady = false
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+      focusReady = true
+      return GLib.SOURCE_REMOVE
+    })
+
     entry.connect("activate", () => commit())
     entry.connect("focus-out-event", () => {
-      if (committed) return false
+      if (committed || !focusReady) return false
       committed = true
       hideEntry()
       return false
@@ -739,10 +1068,55 @@ export default function Planner() {
       // Ref for live time updates during drag
       let timeLabelRef: any = null
 
+      // Build popover with imperative widgets (avoids JSX tracking context errors)
+      function buildEventPopover(relativeTo: Gtk.Widget): Gtk.Popover {
+        const popover = new Gtk.Popover({ relative_to: relativeTo, position: Gtk.PositionType.BOTTOM })
+        popover.set_name("planner-popover")
+        const menu = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+        menu.set_name("planner-popover-menu")
+
+        const editBtn = new Gtk.Button()
+        editBtn.set_name("planner-popover-item")
+        const editLabel = new Gtk.Label({ label: "Edit" })
+        editLabel.set_halign(Gtk.Align.START)
+        editBtn.add(editLabel)
+        editBtn.connect("clicked", () => {
+          popover.popdown()
+          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            showEntry(ev.startMin, ev.endMin, ev.desc, false, ev)
+            return GLib.SOURCE_REMOVE
+          })
+        })
+        menu.pack_start(editBtn, false, false, 0)
+
+        const delBtn = new Gtk.Button()
+        delBtn.set_name("planner-popover-item-danger")
+        const delLabel = new Gtk.Label({ label: "Delete" })
+        delLabel.set_halign(Gtk.Align.START)
+        delBtn.add(delLabel)
+        delBtn.connect("clicked", () => { popover.popdown(); deleteEvent(ev) })
+        menu.pack_start(delBtn, false, false, 0)
+
+        popover.add(menu)
+        menu.show_all()
+        return popover
+      }
+
       const cardVisual = (<box name="plan-event" vertical hexpand={true}>
-        <label name="plan-event-time" label={timeStr} halign={1} valign={1} $={(self) => {
-          timeLabelRef = self
-        }} />
+        <box>
+          <label name="plan-event-time" label={timeStr} halign={1} valign={1} $={(self) => {
+            timeLabelRef = self
+          }} />
+          <box hexpand={true} />
+          {!ev.fromSchedule ? (
+            <button name="planner-dots-btn" $={(self) => {
+              const popover = buildEventPopover(self)
+              self.connect("clicked", () => popover.popup())
+            }}>
+              <label label="..." />
+            </button>
+          ) : <box />}
+        </box>
         <label name="plan-event-text" label={ev.desc} halign={1} valign={1} hexpand={true} $={(self) => {
           self.set_ellipsize(3)
         }} />
@@ -901,7 +1275,6 @@ export default function Planner() {
         if (timeLabelRef) timeLabelRef.set_label(timeStr)
 
         if (!hasMoved) {
-          showEntry(ev.startMin, ev.endMin, ev.desc, false, ev)
           return true
         }
 
@@ -1149,75 +1522,61 @@ export default function Planner() {
 
   // ── Build card for a kanban task ──
   function buildCard(task: KanbanTask, container: Gtk.Box) {
-    let titleLabelRef: Gtk.Label | null = null
-    let titleEntryRef: Gtk.Entry | null = null
-    let titleBoxRef: Gtk.Widget | null = null
-    let isEditing = false
-
-    function startEditTitle() {
-      if (isEditing || !titleLabelRef || !titleEntryRef || !titleBoxRef) return
-      isEditing = true
-      titleLabelRef.hide()
-      titleEntryRef.set_text(task.title)
-      titleEntryRef.show()
-      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
-        titleEntryRef!.grab_focus()
-        return GLib.SOURCE_REMOVE
-      })
-    }
-
-    function commitEditTitle() {
-      if (!isEditing || !titleLabelRef || !titleEntryRef) return
-      isEditing = false
-      let text = ""
-      try { text = titleEntryRef.get_text().trim() } catch {}
-      titleEntryRef.hide()
-      titleLabelRef.show()
-      if (text && text !== task.title) {
-        updateTask(task.id, { title: text })
-      }
-    }
-
-    function cancelEditTitle() {
-      if (!isEditing || !titleLabelRef || !titleEntryRef) return
-      isEditing = false
-      titleEntryRef.hide()
-      titleLabelRef.show()
-    }
-
     const card = (<box name="kanban-card" vertical>
-      <box $={(self) => { titleBoxRef = self }}>
-        <eventbox onButtonPressEvent={() => { startEditTitle(); return true }}>
-          <label name="kanban-card-title" halign={1} $={(self) => {
-            titleLabelRef = self as any
-            self.set_label(task.title)
-            self.set_ellipsize(3)
-            self.set_max_width_chars(20)
-          }} />
-        </eventbox>
-        <box hexpand={true} />
-        {task.status !== "todo" ? (
-          <button name="kanban-move-btn" onClicked={() => moveTaskBack(task.id)}>
-            <label label="<" />
-          </button>
-        ) : <box />}
-        {task.status !== "done" ? (
-          <button name="kanban-move-btn" onClicked={() => moveTaskForward(task.id)}>
-            <label label=">" />
-          </button>
-        ) : (
-          <button name="kanban-delete-btn" onClicked={() => deleteTask(task.id)}>
-            <label label="X" />
-          </button>
-        )}
-      </box>
-      {task.description ? (
-        <label name="kanban-card-desc" halign={1} $={(self) => {
-          self.set_label(task.description)
+      <box>
+        <label name="kanban-card-title" halign={1} $={(self) => {
+          self.set_label(task.title)
           self.set_ellipsize(3)
-          self.set_max_width_chars(30)
+          self.set_max_width_chars(20)
         }} />
-      ) : <box />}
+        <box hexpand={true} />
+        <button name="planner-dots-btn" $={(self) => {
+          const popover = new Gtk.Popover({ relative_to: self, position: Gtk.PositionType.BOTTOM })
+          popover.set_name("planner-popover")
+          const menu = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+          menu.set_name("planner-popover-menu")
+
+          function addItem(label: string, name: string, cb: () => void) {
+            const btn = new Gtk.Button()
+            btn.set_name(name)
+            const lbl = new Gtk.Label({ label })
+            lbl.set_halign(Gtk.Align.START)
+            btn.add(lbl)
+            btn.connect("clicked", () => { popover.popdown(); cb() })
+            menu.pack_start(btn, false, false, 0)
+          }
+
+          if (task.status !== "todo")
+            addItem(`Move to ${task.status === "done" ? "DOING" : "TODO"}`, "planner-popover-item", () => moveTaskBack(task.id))
+          if (task.status !== "done")
+            addItem(`Move to ${task.status === "todo" ? "DOING" : "DONE"}`, "planner-popover-item", () => moveTaskForward(task.id))
+          addItem("Delete", "planner-popover-item-danger", () => deleteTask(task.id))
+
+          popover.add(menu)
+          menu.show_all()
+          self.connect("clicked", () => popover.popup())
+        }}>
+          <label label="..." />
+        </button>
+      </box>
+      {(() => {
+        const items = parseChecklist(task.description)
+        if (items.length === 0) return <box />
+        return <box vertical name="kanban-card-checklist-box">
+          {items.map(item => (
+            <box name="kanban-card-check-row">
+              <label name="kanban-card-check-icon" halign={1}
+                label={item.checked ? "[x]" : "[ ]"} />
+              <label name="kanban-card-check-label" halign={1} $={(self) => {
+                self.set_label(item.text)
+                self.set_ellipsize(3)
+                self.set_max_width_chars(18)
+                if (item.checked) self.get_style_context().add_class("checked")
+              }} />
+            </box>
+          ))}
+        </box>
+      })()}
       {task.assignment ? (
         <label name="kanban-card-badge" halign={1} label={task.assignment} />
       ) : <box />}
@@ -1225,39 +1584,15 @@ export default function Planner() {
 
     if (task.status === "done") card.get_style_context().add_class("done")
 
-    // Inline title edit entry (hidden by default)
-    const titleEntry = new Gtk.Entry()
-    titleEntry.set_name("kanban-edit-entry")
-    titleEntry.set_hexpand(true)
-    titleEntry.set_no_show_all(true)
-    titleEntry.hide()
-    titleEntry.connect("activate", () => commitEditTitle())
-    titleEntry.connect("focus-out-event", () => { commitEditTitle(); return false })
-    titleEntry.connect("key-press-event", (_w: any, ev: any) => {
-      if (ev.get_keyval()[1] === Gdk.KEY_Escape) { cancelEditTitle(); return true }
-      return false
-    })
-    titleEntryRef = titleEntry
-
-    // Insert entry into the title row after the eventbox
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-      if (titleBoxRef) {
-        (titleBoxRef as any).pack_start(titleEntry, false, false, 0)
-        ;(titleBoxRef as any).reorder_child(titleEntry, 1)
-      }
-      return GLib.SOURCE_REMOVE
-    })
-
-    // Right-click to delete any card
+    // Click card to open detail modal
     const eb = new Gtk.EventBox()
     eb.add(card)
     eb.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
     eb.connect("button-press-event", (_w: any, ev: any) => {
       const [, button] = ev.get_button()
-      if (button === 3) { deleteTask(task.id); return true }
+      if (button === 1) { openCardDetail(task.id); return true }
       return false
     })
-
     container.pack_start(eb, false, false, 0)
   }
 
@@ -1322,6 +1657,650 @@ export default function Planner() {
     addEntry.hide()
   }
 
+  // ── Card detail modal ──
+  const [cardDetailVisible, setCardDetailVisible] = createState(false)
+  const [cardDetailTaskId, setCardDetailTaskId] = createState("")
+
+  function openCardDetail(id: string) {
+    setCardDetailTaskId(id)
+    setCardDetailVisible(true)
+  }
+
+  function closeCardDetail() {
+    setCardDetailVisible(false)
+  }
+
+  // ── Board modal (new / delete) ──
+  const [boardModalVisible, setBoardModalVisible] = createState(false)
+  const [boardModalMode, setBoardModalMode] = createState<"new" | "delete">("new")
+  let boardModalEntryRef: Gtk.Entry | null = null
+
+  function showBoardModal(mode: "new" | "delete") {
+    setBoardModalMode(mode)
+    setBoardModalVisible(true)
+    if (mode === "new" && boardModalEntryRef) {
+      boardModalEntryRef.set_text("")
+      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+        boardModalEntryRef?.grab_focus()
+        return GLib.SOURCE_REMOVE
+      })
+    }
+  }
+
+  function closeBoardModal() {
+    setBoardModalVisible(false)
+  }
+
+  const boardModal = (
+    <window
+      visible={boardModalVisible}
+      monitor={0}
+      anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.LEFT | Astal.WindowAnchor.BOTTOM | Astal.WindowAnchor.RIGHT}
+      exclusivity={Astal.Exclusivity.IGNORE}
+      keymode={Astal.Keymode.EXCLUSIVE}
+      application={app}
+      layer={Astal.Layer.OVERLAY}
+      onKeyPressEvent={(_: any, event: any) => {
+        if (event.get_keyval()[1] === Gdk.KEY_Escape) { closeBoardModal(); return true }
+        return false
+      }}
+    >
+      <box name="board-modal-backdrop" expand hexpand vexpand $={(self) => {
+        const eb = new Gtk.EventBox({ visible_window: false })
+        eb.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        eb.connect("button-press-event", () => { closeBoardModal(); return true })
+
+        const center = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, halign: Gtk.Align.CENTER, valign: Gtk.Align.CENTER })
+        const modal = (<box name="board-modal" vertical halign={3} valign={3} $={(modalSelf) => {
+          modalSelf.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+          modalSelf.connect("button-press-event", () => true)
+        }}>
+              <label name="board-modal-title" $={(self) => {
+                boardModalMode.subscribe(() => {
+                  self.set_label(boardModalMode.get() === "new" ? "NEW BOARD" : "DELETE BOARD")
+                })
+                self.set_label("NEW BOARD")
+              }} />
+
+              <box name="board-modal-content" vertical $={(self) => {
+                function rebuild() {
+                  self.get_children().forEach((c: Gtk.Widget) => c.destroy())
+                  if (boardModalMode.get() === "new") {
+                    const entry = new Gtk.Entry()
+                    entry.set_name("kanban-add-entry")
+                    entry.set_placeholder_text("Board name...")
+                    entry.set_width_chars(20)
+                    boardModalEntryRef = entry
+                    entry.connect("activate", () => {
+                      let text = ""
+                      try { text = entry.get_text().trim() } catch {}
+                      if (text) { closeBoardModal(); createBoard(text) }
+                    })
+                    self.pack_start(entry as Gtk.Widget, false, false, 0)
+
+                    const btnRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+                    btnRow.set_halign(Gtk.Align.CENTER)
+                    const cancelBtn = (<button name="planner-nav-btn" onClicked={closeBoardModal}><label label="Cancel" /></button>) as Gtk.Widget
+                    const createBtn = (<button name="planner-inner-tab" onClicked={() => {
+                      let text = ""
+                      try { text = entry.get_text().trim() } catch {}
+                      if (text) { closeBoardModal(); createBoard(text) }
+                    }}><label label="Create" /></button>) as Gtk.Widget
+                    btnRow.pack_start(cancelBtn, false, false, 4)
+                    btnRow.pack_start(createBtn, false, false, 4)
+                    self.pack_start(btnRow, false, false, 8)
+                  } else {
+                    const msg = new Gtk.Label({ label: `Are you sure you want to delete "${activeBoard.get()}"?` })
+                    msg.set_name("board-modal-msg")
+                    self.pack_start(msg, false, false, 8)
+
+                    const btnRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+                    btnRow.set_halign(Gtk.Align.CENTER)
+                    const cancelBtn = (<button name="planner-nav-btn" onClicked={closeBoardModal}><label label="Cancel" /></button>) as Gtk.Widget
+                    const delBtn = (<button name="planner-popover-item-danger" onClicked={() => {
+                      closeBoardModal()
+                      removeBoardAndSwitch(activeBoard.get())
+                    }}><label label="Delete" /></button>) as Gtk.Widget
+                    btnRow.pack_start(cancelBtn, false, false, 4)
+                    btnRow.pack_start(delBtn, false, false, 4)
+                    self.pack_start(btnRow, false, false, 0)
+                  }
+                  self.show_all()
+                }
+                boardModalMode.subscribe(rebuild)
+                rebuild()
+              }} />
+            </box>) as Gtk.Widget
+        center.pack_start(modal, false, false, 0)
+        eb.add(center)
+        self.pack_start(eb as Gtk.Widget, true, true, 0)
+        self.show_all()
+      }} />
+    </window>
+  )
+
+  const cardDetailModal = (
+    <window
+      visible={cardDetailVisible}
+      monitor={0}
+      anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.LEFT | Astal.WindowAnchor.BOTTOM | Astal.WindowAnchor.RIGHT}
+      exclusivity={Astal.Exclusivity.IGNORE}
+      keymode={Astal.Keymode.EXCLUSIVE}
+      application={app}
+      layer={Astal.Layer.OVERLAY}
+      onKeyPressEvent={(_: any, event: any) => {
+        if (event.get_keyval()[1] === Gdk.KEY_Escape) { closeCardDetail(); return true }
+        return false
+      }}
+    >
+      <box name="cd-backdrop" expand hexpand vexpand $={(self) => {
+        const eb = new Gtk.EventBox({ visible_window: false })
+        eb.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        eb.connect("button-press-event", () => { closeCardDetail(); return true })
+
+        const center = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, halign: Gtk.Align.CENTER, valign: Gtk.Align.CENTER })
+        const modalEB = new Gtk.EventBox({ visible_window: true })
+        modalEB.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        modalEB.connect("button-press-event", () => true)
+        forceColor(modalEB, undefined, CD_BG)
+        const modal = (<box name="cd-panel" vertical>
+          <box name="cd-body" vertical $={(self) => {
+
+            function rebuild() {
+              self.get_children().forEach((c: Gtk.Widget) => c.destroy())
+
+              const taskId = cardDetailTaskId.get()
+              if (!taskId) return
+              const task = kanbanTasks.get().find(t => t.id === taskId)
+              if (!task) { closeCardDetail(); return }
+
+              const { notes, checklist } = parseDescription(task.description)
+
+              // GitHub colors for forceColor
+              const GH_WHITE = gtkRGBA(0xe6/255, 0xed/255, 0xf3/255)
+              const GH_DIM = gtkRGBA(0x8b/255, 0x94/255, 0x9e/255)
+              const GH_DIMMER = gtkRGBA(0x6e/255, 0x76/255, 0x81/255)
+              const GH_GREEN = gtkRGBA(0x3f/255, 0xb9/255, 0x50/255)
+              const GH_RED = gtkRGBA(0xf8/255, 0x51/255, 0x49/255)
+              const GH_BLUE = gtkRGBA(0x58/255, 0xa6/255, 0xff/255)
+              const GH_BG = gtkRGBA(0x0d/255, 0x11/255, 0x17/255)
+              const GH_SURFACE = gtkRGBA(0x16/255, 0x1b/255, 0x22/255)
+
+              // ═══════════════════════════════════════════
+              // TOP: Title + close button (like GitHub header)
+              // ═══════════════════════════════════════════
+              const titleRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+              titleRow.set_name("cd-title-row")
+
+              const titleBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+              titleBox.set_hexpand(true)
+
+              function showTitleLabel() {
+                titleBox.get_children().forEach((c: Gtk.Widget) => c.destroy())
+                const titleLabel = new Gtk.Label({ label: task.title })
+                titleLabel.set_name("cd-title")
+                titleLabel.set_halign(Gtk.Align.START)
+                titleLabel.set_hexpand(true)
+                titleLabel.set_line_wrap(true)
+                titleLabel.set_max_width_chars(80)
+                forceColor(titleLabel, GH_WHITE)
+                const titleClickEB = new Gtk.EventBox()
+                titleClickEB.add(titleLabel)
+                titleClickEB.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+                titleClickEB.connect("button-press-event", () => { showTitleEntry(); return true })
+                titleBox.pack_start(titleClickEB as Gtk.Widget, true, true, 0)
+                titleBox.show_all()
+              }
+
+              function showTitleEntry() {
+                titleBox.get_children().forEach((c: Gtk.Widget) => c.destroy())
+                const titleEntry = new Gtk.Entry()
+                titleEntry.set_name("cd-title-entry")
+                titleEntry.set_text(task.title)
+                titleEntry.set_hexpand(true)
+                let committed = false
+                function save() {
+                  if (committed) return
+                  committed = true
+                  let t = ""; try { t = titleEntry.get_text().trim() } catch {}
+                  if (t && t !== task.title) updateTask(task.id, { title: t })
+                  else showTitleLabel()
+                }
+                titleEntry.connect("activate", save)
+                titleEntry.connect("focus-out-event", () => { save(); return false })
+                titleEntry.connect("key-press-event", (_w: any, ev: any) => {
+                  if (ev.get_keyval()[1] === Gdk.KEY_Escape) { committed = true; showTitleLabel(); return true }
+                  return false
+                })
+                titleBox.pack_start(titleEntry as Gtk.Widget, true, true, 0)
+                titleBox.show_all()
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                  titleEntry.grab_focus()
+                  return GLib.SOURCE_REMOVE
+                })
+              }
+
+              showTitleLabel()
+              titleRow.pack_start(titleBox, true, true, 0)
+
+              // Close X button (top right like GitHub)
+              const closeLbl = new Gtk.Label({ label: "\u2715" })
+              forceColor(closeLbl, GH_DIM)
+              const closeBtn = new Gtk.Button()
+              closeBtn.set_name("cd-close-btn")
+              closeBtn.add(closeLbl)
+              closeBtn.connect("clicked", () => closeCardDetail())
+              titleRow.pack_end(closeBtn, false, false, 0)
+
+              self.pack_start(titleRow, false, false, 0)
+
+              // Badge row: status + board path (like GitHub "Open" badge + repo)
+              const badgeRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 })
+              badgeRow.set_name("cd-badge-row")
+
+              const statusBadge = new Gtk.Label({ label: task.status === "todo" ? "\u25CB Todo" : task.status === "doing" ? "\u25CF Doing" : "\u2713 Done" })
+              statusBadge.set_name("cd-status-badge")
+              statusBadge.get_style_context().add_class(task.status)
+              badgeRow.pack_start(statusBadge, false, false, 0)
+
+              const pathLabel = new Gtk.Label({ label: activeBoard.get() })
+              pathLabel.set_name("cd-path-label")
+              forceColor(pathLabel, GH_DIM)
+              badgeRow.pack_start(pathLabel, false, false, 0)
+
+              self.pack_start(badgeRow, false, false, 0)
+
+              // Separator
+              const headerSep = new Gtk.Box()
+              headerSep.set_name("cd-separator")
+              headerSep.set_size_request(-1, 1)
+              self.pack_start(headerSep, false, false, 0)
+
+              // ═══════════════════════════════════════════
+              // TWO COLUMNS: Main content + Sidebar
+              // ═══════════════════════════════════════════
+              const columns = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+              columns.set_name("cd-columns")
+              columns.set_vexpand(true)
+
+              // ── LEFT COLUMN (main content) ──
+              const leftScroll = new Gtk.ScrolledWindow({
+                hscrollbar_policy: Gtk.PolicyType.NEVER,
+                vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+              })
+              leftScroll.set_hexpand(true)
+              leftScroll.set_vexpand(true)
+              const left = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+              left.set_name("cd-left")
+
+              // Description comment box (like GitHub comment)
+              const descBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+              descBox.set_name("cd-desc-box")
+
+              // Comment header bar (like "AngeloNicolson opened on...")
+              const descHeader = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+              descHeader.set_name("cd-desc-header")
+              forceColor(descHeader, undefined, GH_SURFACE)
+              const descHeaderLbl = new Gtk.Label({ label: "Description" })
+              forceColor(descHeaderLbl, GH_DIM)
+              descHeader.pack_start(descHeaderLbl, false, false, 0)
+              descBox.pack_start(descHeader, false, false, 0)
+
+              // Description textarea
+              const descScroll = new Gtk.ScrolledWindow({
+                hscrollbar_policy: Gtk.PolicyType.NEVER,
+                vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+              })
+              descScroll.set_name("cd-desc-scroll")
+              descScroll.set_size_request(-1, 180)
+              const descView = new Gtk.TextView()
+              descView.set_name("cd-desc-view")
+              descView.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+              descView.set_left_margin(16)
+              descView.set_right_margin(16)
+              descView.set_top_margin(14)
+              descView.set_bottom_margin(14)
+              // Force dark bg on textview (CSS alone doesn't work in GTK3)
+              forceColor(descView, GH_WHITE, GH_BG)
+              descView.set_cursor_visible(true)
+              // Set cursor color via override so it's visible on dark bg
+              const cursorCSS = new Gtk.CssProvider()
+              cursorCSS.load_from_data(`textview text { caret-color: #58a6ff; }`, -1)
+              descView.get_style_context().add_provider(cursorCSS, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+              const buf = descView.get_buffer()
+              buf.set_text(notes || "No description provided.", -1)
+              descScroll.add(descView)
+              forceColor(descScroll as Gtk.Widget, undefined, GH_BG)
+              descBox.pack_start(descScroll as Gtk.Widget, false, false, 0)
+
+              let lastSaved = notes
+              descView.connect("focus-out-event", () => {
+                const si = buf.get_start_iter()
+                const ei = buf.get_end_iter()
+                let newNotes = buf.get_text(si, ei, false)
+                if (newNotes === "No description provided.") newNotes = ""
+                if (newNotes !== lastSaved) {
+                  lastSaved = newNotes
+                  const cur = parseDescription(kanbanTasks.get().find(t => t.id === taskId)?.description || "")
+                  updateTask(taskId, { description: serializeDescription(newNotes, cur.checklist) })
+                }
+                return false
+              })
+
+              left.pack_start(descBox, false, false, 0)
+
+              // Checklist section (like GitHub "Add a comment" area)
+              if (checklist.length > 0 || true) {
+                const checkSection = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+                checkSection.set_name("cd-check-section")
+
+                const checkHeader = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+                checkHeader.set_name("cd-check-header-row")
+                const checkLbl = new Gtk.Label({ label: "Sub Items" })
+                checkLbl.set_name("cd-section-label")
+                forceColor(checkLbl, GH_WHITE)
+                checkHeader.pack_start(checkLbl, false, false, 0)
+                if (checklist.length > 0) {
+                  const done = checklist.filter(i => i.checked).length
+                  const cntLbl = new Gtk.Label({ label: `${done}/${checklist.length}` })
+                  forceColor(cntLbl, GH_DIM)
+                  checkHeader.pack_end(cntLbl, false, false, 0)
+                }
+                checkSection.pack_start(checkHeader, false, false, 0)
+
+                // Progress bar
+                if (checklist.length > 0) {
+                  const pbar = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+                  pbar.set_name("cd-progress-bar")
+                  pbar.set_size_request(-1, 8)
+                  const done = checklist.filter(i => i.checked).length
+                  const pct = done / checklist.length
+                  const fill = new Gtk.Box()
+                  fill.set_name("cd-progress-fill")
+                  const empty = new Gtk.Box()
+                  empty.set_name("cd-progress-empty")
+                  empty.set_hexpand(true)
+                  pbar.pack_start(fill, false, false, 0)
+                  pbar.pack_start(empty, true, true, 0)
+                  pbar.connect("size-allocate", (_w: any, alloc: any) => {
+                    fill.set_size_request(Math.round(alloc.width * pct), 8)
+                  })
+                  checkSection.pack_start(pbar, false, false, 4)
+                }
+
+                // Checklist items
+                for (let i = 0; i < checklist.length; i++) {
+                  const item = checklist[i]
+                  const idx = i
+                  const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 })
+                  row.set_name("cd-check-row")
+
+                  const icon = new Gtk.Label({ label: item.checked ? "\u2611" : "\u2610" })
+                  forceColor(icon, item.checked ? GH_GREEN : GH_DIMMER)
+                  const iconBtn = new Gtk.Button()
+                  iconBtn.set_name("cd-checkbox")
+                  iconBtn.add(icon)
+                  iconBtn.connect("clicked", () => {
+                    const p = parseDescription(kanbanTasks.get().find(t => t.id === taskId)?.description || "")
+                    if (idx < p.checklist.length) {
+                      p.checklist[idx].checked = !p.checklist[idx].checked
+                      updateTask(taskId, { description: serializeDescription(p.notes, p.checklist) })
+                    }
+                  })
+
+                  const textLabel = new Gtk.Label({ label: item.text })
+                  textLabel.set_halign(Gtk.Align.START)
+                  textLabel.set_hexpand(true)
+                  textLabel.set_line_wrap(true)
+                  textLabel.set_max_width_chars(70)
+                  forceColor(textLabel, item.checked ? GH_DIMMER : GH_WHITE)
+                  if (item.checked) textLabel.get_style_context().add_class("checked")
+
+                  row.pack_start(iconBtn, false, false, 0)
+                  row.pack_start(textLabel, true, true, 0)
+
+                  const rmLbl = new Gtk.Label({ label: "\u2715" })
+                  forceColor(rmLbl, GH_DIMMER)
+                  const rmBtn = new Gtk.Button()
+                  rmBtn.set_name("cd-remove-btn")
+                  rmBtn.add(rmLbl)
+                  rmBtn.connect("clicked", () => {
+                    const p = parseDescription(kanbanTasks.get().find(t => t.id === taskId)?.description || "")
+                    p.checklist.splice(idx, 1)
+                    updateTask(taskId, { description: serializeDescription(p.notes, p.checklist) })
+                  })
+                  row.pack_end(rmBtn, false, false, 0)
+
+                  checkSection.pack_start(row, false, false, 0)
+                }
+
+                // Add item entry
+                const addEntry = new Gtk.Entry()
+                addEntry.set_name("cd-add-entry")
+                addEntry.set_placeholder_text("Add sub item...")
+                addEntry.set_hexpand(true)
+                forceColor(addEntry as Gtk.Widget, GH_DIM, GH_BG)
+                addEntry.connect("activate", () => {
+                  let text = ""; try { text = addEntry.get_text().trim() } catch {}
+                  if (!text) return
+                  addEntry.set_text("")
+                  const p = parseDescription(kanbanTasks.get().find(t => t.id === taskId)?.description || "")
+                  p.checklist.push({ checked: false, text })
+                  updateTask(taskId, { description: serializeDescription(p.notes, p.checklist) })
+                })
+                checkSection.pack_start(addEntry as Gtk.Widget, false, false, 6)
+
+                left.pack_start(checkSection, false, false, 0)
+              }
+
+              leftScroll.add(left)
+              columns.pack_start(leftScroll as Gtk.Widget, true, true, 0)
+
+              // ── RIGHT SIDEBAR (GitHub sidebar clone) ──
+              // Use an EventBox to create a visible left border (CSS borders unreliable on GtkBox)
+              const GH_BORDER = gtkRGBA(0x21/255, 0x26/255, 0x2d/255)
+              const GH_BTN_BG = gtkRGBA(0x21/255, 0x26/255, 0x2d/255)
+
+              const sidebarOuter = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+              // Visible left border line
+              const sidebarBorderLine = new Gtk.EventBox({ visible_window: true })
+              sidebarBorderLine.set_size_request(1, -1)
+              forceColor(sidebarBorderLine as Gtk.Widget, undefined, GH_BORDER)
+              sidebarOuter.pack_start(sidebarBorderLine as Gtk.Widget, false, false, 0)
+
+              const sidebar = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+              sidebar.set_name("cd-sidebar")
+              forceColor(sidebar, undefined, GH_BG)
+
+              // Separator line widget
+              function sidebarLine(): Gtk.Widget {
+                const line = new Gtk.EventBox({ visible_window: true })
+                line.set_size_request(-1, 1)
+                forceColor(line as Gtk.Widget, undefined, GH_BORDER)
+                return line as Gtk.Widget
+              }
+
+              // GitHub sidebar section: dim header (with optional dots menu), value, separator
+              function sidebarSection(headerText: string, valueWidget: Gtk.Widget, dotsMenu?: Gtk.Popover): void {
+                const headerRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
+                const header = new Gtk.Label({ label: headerText })
+                header.set_halign(Gtk.Align.START)
+                header.set_name("cd-sidebar-header")
+                forceColor(header, GH_DIM) // GitHub uses muted gray for section headers
+                headerRow.pack_start(header, true, true, 0)
+                if (dotsMenu) {
+                  const dotsLbl = new Gtk.Label({ label: "\u22EF" })
+                  forceColor(dotsLbl, GH_DIM)
+                  const dotsBtn = new Gtk.Button()
+                  dotsBtn.set_name("cd-dots-btn")
+                  dotsBtn.add(dotsLbl)
+                  dotsMenu.set_relative_to(dotsBtn)
+                  dotsBtn.connect("clicked", () => dotsMenu.popup())
+                  headerRow.pack_end(dotsBtn, false, false, 0)
+                }
+                sidebar.pack_start(headerRow, false, false, 0)
+                sidebar.pack_start(valueWidget, false, false, 4)
+                sidebar.pack_start(sidebarLine(), false, false, 12)
+              }
+
+              // ── Assignees
+              const assignVal = new Gtk.Label({ label: task.assignment || "No one — assign yourself" })
+              assignVal.set_halign(Gtk.Align.START)
+              assignVal.set_name("cd-sidebar-value")
+              forceColor(assignVal, task.assignment ? GH_WHITE : GH_DIMMER)
+              sidebarSection("Assignees", assignVal)
+
+              // ── Status section with 3-dot dropdown for move options
+              const statusVal = new Gtk.Label({ label: task.status === "todo" ? "\u25CB Todo" : task.status === "doing" ? "\u25CF In Progress" : "\u2713 Done" })
+              statusVal.set_halign(Gtk.Align.START)
+              statusVal.set_name("cd-status-badge")
+              statusVal.get_style_context().add_class(task.status)
+
+              // Build popover with move options
+              const statusPopover = new Gtk.Popover({ position: Gtk.PositionType.BOTTOM })
+              const popoverContent = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+              const statuses: Array<{ label: string, value: "todo" | "doing" | "done" }> = [
+                { label: "\u25CB  Todo", value: "todo" },
+                { label: "\u25CF  In Progress", value: "doing" },
+                { label: "\u2713  Done", value: "done" },
+              ]
+              for (const s of statuses) {
+                const itemLbl = new Gtk.Label({ label: s.label })
+                itemLbl.set_halign(Gtk.Align.START)
+                const itemBtn = new Gtk.Button()
+                itemBtn.set_name(s.value === task.status ? "planner-popover-item" : "planner-popover-item")
+                if (s.value === task.status) {
+                  forceColor(itemLbl, GH_BLUE)
+                } else {
+                  forceColor(itemLbl, GH_WHITE)
+                }
+                itemBtn.add(itemLbl)
+                itemBtn.connect("clicked", () => {
+                  statusPopover.popdown()
+                  if (s.value !== task.status) updateTask(task.id, { status: s.value })
+                })
+                popoverContent.pack_start(itemBtn, false, false, 0)
+              }
+              statusPopover.add(popoverContent)
+              popoverContent.show_all()
+
+              sidebarSection("Status", statusVal, statusPopover)
+
+              // ── Board
+              const boardVal = new Gtk.Label({ label: activeBoard.get() })
+              boardVal.set_halign(Gtk.Align.START)
+              boardVal.set_name("cd-sidebar-value")
+              forceColor(boardVal, GH_WHITE)
+              sidebarSection("Board", boardVal)
+
+              // ── Checklist summary
+              if (checklist.length > 0) {
+                const done = checklist.filter(i => i.checked).length
+                const checkVal = new Gtk.Label({ label: `${done} of ${checklist.length} complete` })
+                checkVal.set_halign(Gtk.Align.START)
+                checkVal.set_name("cd-sidebar-value")
+                forceColor(checkVal, GH_DIM)
+                sidebarSection("Sub Items", checkVal)
+              }
+
+              // ── Delete card (red, at bottom — push to end with spacer)
+              const spacer = new Gtk.Box()
+              spacer.set_vexpand(true)
+              sidebar.pack_start(spacer, true, true, 0)
+              const delLbl = new Gtk.Label({ label: "Delete card" })
+              forceColor(delLbl, GH_RED)
+              const deleteBtn = new Gtk.Button()
+              deleteBtn.set_name("cd-delete-btn")
+              deleteBtn.add(delLbl)
+              deleteBtn.connect("clicked", () => { deleteTask(taskId); closeCardDetail() })
+              sidebar.pack_start(deleteBtn, false, false, 0)
+
+              sidebarOuter.pack_start(sidebar, false, false, 0)
+              columns.pack_start(sidebarOuter, false, false, 0)
+              self.pack_start(columns, true, true, 0)
+
+              self.show_all()
+            }
+
+            kanbanTasks.subscribe(rebuild)
+            cardDetailTaskId.subscribe(rebuild)
+            rebuild()
+          }} />
+        </box>) as Gtk.Widget
+        modalEB.add(modal)
+        center.pack_start(modalEB as Gtk.Widget, false, false, 0)
+        eb.add(center)
+        self.pack_start(eb as Gtk.Widget, true, true, 0)
+        self.show_all()
+      }} />
+    </window>
+  )
+
+  // ── Board selector dropdown ──
+  function buildBoardSelector(): Gtk.Widget {
+    let popover: Gtk.Popover | null = null
+    const menu = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+    menu.set_name("planner-popover-menu")
+
+    const btn = (<button name="kanban-board-selector" onClicked={() => { if (popover) popover.popup() }}>
+      <label label={activeBoard.get().toUpperCase()} />
+    </button>) as Gtk.Button
+
+    popover = new Gtk.Popover({ relative_to: btn, position: Gtk.PositionType.BOTTOM })
+    popover.set_name("planner-popover")
+
+    const btnLabel = btn.get_child() as Gtk.Label
+
+    function rebuildMenu() {
+      menu.get_children().forEach((c: Gtk.Widget) => c.destroy())
+      const boards = boardList.get()
+      const current = activeBoard.get()
+
+      for (const name of boards) {
+        const itemBtn = new Gtk.Button()
+        itemBtn.set_name("planner-popover-item")
+        const lbl = new Gtk.Label({ label: name === current ? `> ${name}` : `  ${name}` })
+        lbl.set_halign(Gtk.Align.START)
+        itemBtn.add(lbl)
+        itemBtn.connect("clicked", () => {
+          popover!.popdown()
+          if (name !== current) switchBoard(name)
+        })
+        menu.pack_start(itemBtn, false, false, 0)
+      }
+
+      const sep = new Gtk.Separator({ orientation: Gtk.Orientation.HORIZONTAL })
+      menu.pack_start(sep, false, false, 4)
+
+      const newBtn = new Gtk.Button()
+      newBtn.set_name("planner-popover-item")
+      const newLabel = new Gtk.Label({ label: "+ New board" })
+      newLabel.set_halign(Gtk.Align.START)
+      newBtn.add(newLabel)
+      newBtn.connect("clicked", () => { popover!.popdown(); showBoardModal("new") })
+      menu.pack_start(newBtn, false, false, 0)
+
+      if (boards.length > 1) {
+        const delBtn = new Gtk.Button()
+        delBtn.set_name("planner-popover-item-danger")
+        const delLabel = new Gtk.Label({ label: `Delete "${current}"` })
+        delLabel.set_halign(Gtk.Align.START)
+        delBtn.add(delLabel)
+        delBtn.connect("clicked", () => { popover!.popdown(); showBoardModal("delete") })
+        menu.pack_start(delBtn, false, false, 0)
+      }
+
+      menu.show_all()
+    }
+
+    boardList.subscribe(rebuildMenu)
+    activeBoard.subscribe(() => { btnLabel.set_label(activeBoard.get().toUpperCase()); rebuildMenu() })
+    rebuildMenu()
+    popover.add(menu)
+
+    return btn as Gtk.Widget
+  }
+
   // ── Build the board pane ──
   function buildBoardPane(): Gtk.Widget {
     const cardContainers: Record<string, Gtk.Box> = {}
@@ -1341,39 +2320,6 @@ export default function Planner() {
       subpaneStack.add_named(scrollable, status)
     }
 
-    // Subpane tab refs for count updates
-    const tabLabelRefs: Record<string, Gtk.Label> = {}
-
-    const subpaneTabs = (<box name="kanban-subpane-tabs" halign={3}>
-      {(["todo", "doing", "done"] as const).map(status => {
-        const displayName = status === "todo" ? "TODO" : status === "doing" ? "DOING" : "DONE"
-        return (
-          <button name="kanban-subpane-tab" onClicked={() => {
-            setActiveSubpane(status)
-          }} $={(self) => {
-            function update() {
-              const isActive = activeSubpane.get() === status
-              const ctx = self.get_style_context()
-              if (isActive) ctx.add_class("active")
-              else ctx.remove_class("active")
-            }
-            activeSubpane.subscribe(update)
-            update()
-          }}>
-            <label $={(self) => {
-              tabLabelRefs[status] = self as any
-              function updateLabel() {
-                const count = kanbanTasks.get().filter(t => t.status === status).length
-                self.set_label(`${displayName} (${count})`)
-              }
-              kanbanTasks.subscribe(updateLabel)
-              updateLabel()
-            }} />
-          </button>
-        )
-      })}
-    </box>) as Gtk.Widget
-
     // Wire subpane switching
     activeSubpane.subscribe(() => {
       subpaneStack.set_visible_child_name(activeSubpane.get())
@@ -1391,16 +2337,8 @@ export default function Planner() {
       buildCardList(status, cardContainers[status])
     }
 
-    const boardFooter = (<label name="planner-footer" $={(self) => {
-      function update() { self.set_label(`${kanbanTasks.get().length} tasks`) }
-      kanbanTasks.subscribe(update)
-      update()
-    }} />) as Gtk.Widget
-
     const pane = (<box vertical vexpand={true}>
-      {subpaneTabs}
       {subpaneStack as Gtk.Widget}
-      {boardFooter}
     </box>) as Gtk.Widget
 
     subpaneStack.show_all()
@@ -1411,20 +2349,6 @@ export default function Planner() {
 
   // ── Calendar pane (extracted from old contentView) ──
   const calendarPane = (<box vertical vexpand={true}>
-    <box name="planner-date-nav" halign={3}>
-      <button name="planner-nav-btn" onClicked={prevDay}>
-        <label label="<" />
-      </button>
-      <label name="planner-date" $={(self) => {
-        function update() { self.set_label(formatDate(currentDate.get())) }
-        currentDate.subscribe(update)
-        update()
-      }} />
-      <button name="planner-nav-btn" onClicked={nextDay}>
-        <label label=">" />
-      </button>
-    </box>
-
     <scrollable hscroll={1} vscroll={0} vexpand={true} $={(self) => {
       scrollableRef = self
       self.add_events(Gdk.EventMask.SCROLL_MASK)
@@ -1461,11 +2385,6 @@ export default function Planner() {
       overlay.show_all()
     }} />
 
-    <label name="planner-footer" $={(self) => {
-      function update() { self.set_label(`${fileList.get().length} plans`) }
-      fileList.subscribe(update)
-      update()
-    }} />
   </box>) as Gtk.Widget
 
   // ── Board pane ──
@@ -1484,7 +2403,7 @@ export default function Planner() {
     contentInnerStack.set_visible_child_name(activeInnerTab.get())
   })
 
-  // ── Inner tab bar ──
+  // ── Inner tab bar (in header) ──
   const innerTabBar = (<box name="planner-inner-tabs" halign={3}>
     {(["calendar", "board"] as const).map(tab => {
       const label = tab === "calendar" ? "CAL" : "BOARD"
@@ -1504,19 +2423,70 @@ export default function Planner() {
     })}
   </box>) as Gtk.Widget
 
+  // ── Nav row: date nav for CAL, board selector + subpane nav for BOARD ──
+  const calNav = (<box name="planner-date-nav" halign={3}>
+    <button name="planner-nav-btn" onClicked={prevDay}>
+      <label label="<" />
+    </button>
+    <label name="planner-date" $={(self) => {
+      function update() { self.set_label(formatDate(currentDate.get())) }
+      currentDate.subscribe(update)
+      update()
+    }} />
+    <button name="planner-nav-btn" onClicked={nextDay}>
+      <label label=">" />
+    </button>
+  </box>) as Gtk.Widget
+
+  const boardSelectorWidget = buildBoardSelector()
+  boardSelectorWidget.set_opacity(0)
+  boardSelectorWidget.set_sensitive(false)
+  activeInnerTab.subscribe(() => {
+    const isBoard = activeInnerTab.get() === "board"
+    boardSelectorWidget.set_opacity(isBoard ? 1 : 0)
+    boardSelectorWidget.set_sensitive(isBoard)
+  })
+
+  const boardSelectorRow = (<box name="kanban-board-header" halign={3}>
+    {boardSelectorWidget}
+  </box>) as Gtk.Widget
+
+  const boardNav = (<box name="planner-date-nav" halign={3}>
+    <button name="planner-nav-btn" onClicked={prevSubpane}>
+      <label label="<" />
+    </button>
+    <label name="planner-date" $={(self) => {
+      function update() {
+        const s = activeSubpane.get()
+        const display = s === "todo" ? "TODO" : s === "doing" ? "DOING" : "DONE"
+        const count = kanbanTasks.get().filter(t => t.status === s).length
+        self.set_label(`${display} (${count})`)
+      }
+      activeSubpane.subscribe(update)
+      kanbanTasks.subscribe(update)
+      update()
+    }} />
+    <button name="planner-nav-btn" onClicked={nextSubpane}>
+      <label label=">" />
+    </button>
+  </box>) as Gtk.Widget
+
+  // Show/hide nav rows based on active tab
+  calNav.set_no_show_all(false)
+  boardNav.set_no_show_all(true)
+  boardNav.set_visible(false)
+  activeInnerTab.subscribe(() => {
+    const isBoard = activeInnerTab.get() === "board"
+    calNav.set_visible(!isBoard)
+    calNav.set_no_show_all(isBoard)
+    boardNav.set_visible(isBoard)
+    boardNav.set_no_show_all(!isBoard)
+  })
+
   const contentView = (
     <box vertical name="planner-page" vexpand={true}>
-      <box name="planner-header">
-        <label name="section-header" label="//PLANNER" />
-        <box hexpand={true} />
-        <button name="planner-info-btn" onClicked={() => {
-          if (infoPanelRef) infoPanelRef.set_visible(!infoPanelRef.get_visible())
-        }}>
-          <label label="i" />
-        </button>
-        <button name="planner-reload-btn" onClicked={() => reload()}>
-          <label label="RELOAD" />
-        </button>
+      <box name="planner-header" halign={3}>
+        {innerTabBar}
       </box>
 
       <box name="planner-info-panel" vertical $={(self) => {
@@ -1530,8 +2500,36 @@ export default function Planner() {
         }} />
       </box>
 
-      {innerTabBar}
+      {boardSelectorRow}
+      {calNav}
+      {boardNav}
       {contentInnerStack as Gtk.Widget}
+
+      <box name="planner-footer-bar">
+        <label name="planner-footer" $={(self) => {
+          function update() {
+            if (activeInnerTab.get() === "calendar") {
+              self.set_label(`${fileList.get().length} plans`)
+            } else {
+              self.set_label(`${activeBoard.get()}: ${kanbanTasks.get().length} tasks`)
+            }
+          }
+          activeInnerTab.subscribe(update)
+          fileList.subscribe(update)
+          kanbanTasks.subscribe(update)
+          activeBoard.subscribe(update)
+          update()
+        }} />
+        <box hexpand={true} />
+        <button name="planner-info-btn" onClicked={() => {
+          if (infoPanelRef) infoPanelRef.set_visible(!infoPanelRef.get_visible())
+        }}>
+          <label label="i" />
+        </button>
+        <button name="planner-reload-btn" onClicked={() => reload()}>
+          <label label="R" />
+        </button>
+      </box>
     </box>
   ) as Gtk.Widget
 
@@ -1545,6 +2543,7 @@ export default function Planner() {
   plansExist.subscribe(syncView)
   syncView()
   reload()
+  setupFileWatcher()
 
   return innerStack
 }
