@@ -292,6 +292,7 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 700;
       letter-spacing: 2px;
       margin: 0 8px;
+      min-width: 200px;
     }
 
     /* ── Day calendar grid ── */
@@ -362,6 +363,73 @@ function generateCSS(c: ThemeColors): string {
     }
     #plan-event.schedule #plan-event-time { color: #304858; }
     #plan-event.schedule #plan-event-text { color: #4a6878; }
+
+    /* 3-dot menu button (cal events + kanban cards) */
+    #planner-dots-btn {
+      background: transparent;
+      border: none;
+      padding: 0 4px;
+      min-width: 16px;
+      min-height: 14px;
+    }
+    #planner-dots-btn:hover {
+      background: alpha(#60c0d0, 0.15);
+      border-radius: 3px;
+    }
+    #planner-dots-btn label {
+      color: #5a8090;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    #planner-dots-btn:hover label {
+      color: #80e0f0;
+    }
+
+    /* Popover menu */
+    popover.background {
+      background-color: #0a1520;
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+    }
+    popover contents {
+      background-color: transparent;
+      padding: 4px 0;
+    }
+    #planner-popover-item {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 6px 16px;
+    }
+    #planner-popover-item:hover {
+      background: alpha(#60c0d0, 0.15);
+    }
+    #planner-popover-item label {
+      color: #c0e4f0;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    #planner-popover-item:hover label {
+      color: #80e0f0;
+    }
+    #planner-popover-item-danger {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 6px 16px;
+    }
+    #planner-popover-item-danger:hover {
+      background: alpha(#c05050, 0.15);
+    }
+    #planner-popover-item-danger label {
+      color: #a05050;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    #planner-popover-item-danger:hover label {
+      color: #e08080;
+    }
 
     /* Inline entry for adding/editing events */
     #plan-entry {
@@ -439,17 +507,20 @@ function generateCSS(c: ThemeColors): string {
     #planner-create-btn:hover label {
       color: #80e0a0;
     }
+    #planner-footer-bar {
+      padding: 4px 4px;
+    }
     #planner-footer {
       color: #3a5060;
       font-size: 8px;
       font-weight: 600;
       letter-spacing: 2px;
-      padding: 4px 0;
+      padding: 0 4px;
     }
 
     /* ── Inner tabs (CAL / BOARD) ── */
     #planner-inner-tabs {
-      padding: 2px 0 6px 0;
+      padding: 0;
     }
     #planner-inner-tab {
       background: alpha(#1a2530, 0.6);
@@ -510,6 +581,58 @@ function generateCSS(c: ThemeColors): string {
     }
     #kanban-subpane-tab.active label {
       color: #a0f0ff;
+    }
+
+    /* ── Board selector header ── */
+    #kanban-board-header {
+      padding: 2px 4px 2px 4px;
+      min-height: 28px;
+    }
+    button#kanban-board-selector {
+      background: alpha(#1a2530, 0.6);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 2px 10px;
+      margin: 0 3px;
+      min-width: 40px;
+    }
+    button#kanban-board-selector:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #60c0d0;
+    }
+    button#kanban-board-selector label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #5a7888;
+    }
+    button#kanban-board-selector:hover label {
+      color: #80e0f0;
+    }
+    #board-modal-backdrop {
+      background: alpha(#000000, 0.6);
+    }
+    #board-modal {
+      background: #0a1820;
+      border: 1px solid #2a3a45;
+      border-radius: 8px;
+      padding: 20px 28px;
+      min-width: 280px;
+    }
+    #board-modal-title {
+      color: #70c0d0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+    }
+    #board-modal-content {
+      padding: 0;
+    }
+    #board-modal-msg {
+      color: #90b0c0;
+      font-size: 10px;
+      letter-spacing: 1px;
     }
 
     /* ── Kanban card ── */
@@ -626,6 +749,343 @@ function generateCSS(c: ThemeColors): string {
       font-size: 10px;
       caret-color: #50b8d0;
     }
+    /* ── Checklist items on card ── */
+    #kanban-card-checklist-box {
+      margin-top: 4px;
+    }
+    #kanban-card-check-row {
+      padding: 1px 0;
+    }
+    #kanban-card-check-icon {
+      color: #50b8d0;
+      font-size: 8px;
+      font-weight: 700;
+      margin-right: 4px;
+      min-width: 18px;
+    }
+    #kanban-card-check-label {
+      color: #90c0d0;
+      font-size: 9px;
+      font-weight: 500;
+    }
+    #kanban-card-check-label.checked {
+      color: #4a6878;
+    }
+    #kanban-card.done #kanban-card-check-icon {
+      color: #2a4858;
+    }
+    #kanban-card.done #kanban-card-check-label {
+      color: #304858;
+    }
+
+    /* ══════════════════════════════════════════════
+       Card detail modal — GitHub Issue exact clone
+       bg: #0d1117  surface: #161b22  border: #30363d
+       text: #e6edf3  muted: #8b949e  link: #58a6ff
+       ══════════════════════════════════════════════ */
+    #cd-backdrop {
+      background: alpha(#010409, 0.7);
+    }
+    #cd-panel {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 32px 40px;
+      min-width: 900px;
+      min-height: 600px;
+    }
+    #cd-body {
+      background: transparent;
+    }
+
+    /* Title row */
+    #cd-title-row {
+      margin-bottom: 8px;
+    }
+    #cd-title {
+      color: #e6edf3;
+      font-size: 26px;
+      font-weight: 600;
+    }
+    #cd-title-entry {
+      background: #0d1117;
+      color: #e6edf3;
+      border: 1px solid #58a6ff;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 24px;
+      font-weight: 600;
+      caret-color: #58a6ff;
+    }
+
+    /* Close X button */
+    #cd-close-btn {
+      background: transparent;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    #cd-close-btn:hover {
+      background: alpha(#8b949e, 0.12);
+    }
+    #cd-close-btn label {
+      color: #8b949e;
+      font-size: 18px;
+    }
+    #cd-close-btn:hover label {
+      color: #e6edf3;
+    }
+
+    /* Badge row (status + board path) */
+    #cd-badge-row {
+      margin-bottom: 12px;
+    }
+    #cd-status-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 24px;
+    }
+    #cd-status-badge.todo {
+      background: #30363d;
+      color: #e6edf3;
+    }
+    #cd-status-badge.doing {
+      background: alpha(#d29922, 0.2);
+      color: #d29922;
+    }
+    #cd-status-badge.done {
+      background: #238636;
+      color: #e6edf3;
+    }
+    #cd-path-label {
+      color: #8b949e;
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    /* Separator line */
+    #cd-separator {
+      background: #21262d;
+      min-height: 1px;
+      margin-bottom: 16px;
+    }
+
+    /* Two-column layout */
+    #cd-columns {
+      background: transparent;
+    }
+
+    /* Left column */
+    #cd-left {
+      padding-right: 32px;
+    }
+
+    /* Description box (GitHub comment style) */
+    #cd-desc-box {
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      margin-bottom: 24px;
+    }
+    #cd-desc-header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      border-radius: 6px 6px 0 0;
+      padding: 10px 16px;
+    }
+    #cd-desc-header label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #8b949e;
+    }
+    #cd-desc-scroll {
+      background: #0d1117;
+      border: none;
+      border-radius: 0 0 6px 6px;
+      padding: 0;
+    }
+    textview#cd-desc-view {
+      background: #0d1117;
+      color: #e6edf3;
+    }
+    textview#cd-desc-view text {
+      background: #0d1117;
+      color: #e6edf3;
+      caret-color: #58a6ff;
+      font-size: 14px;
+    }
+
+    /* Checklist section */
+    #cd-check-section {
+      background: transparent;
+      margin-top: 8px;
+    }
+    #cd-check-header-row {
+      margin-bottom: 8px;
+    }
+    #cd-section-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e6edf3;
+    }
+
+    /* Progress bar */
+    #cd-progress-bar {
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    #cd-progress-fill {
+      background: #238636;
+      border-radius: 4px 0 0 4px;
+      min-height: 8px;
+    }
+    #cd-progress-empty {
+      background: #21262d;
+      border-radius: 0 4px 4px 0;
+      min-height: 8px;
+    }
+
+    /* Checklist rows */
+    #cd-check-row {
+      padding: 6px 8px;
+      border-radius: 6px;
+    }
+    #cd-check-row:hover {
+      background: alpha(#161b22, 0.8);
+    }
+    #cd-checkbox {
+      background: transparent;
+      border: none;
+      padding: 2px;
+      min-width: 24px;
+      min-height: 24px;
+      border-radius: 4px;
+    }
+    #cd-checkbox:hover {
+      background: alpha(#30363d, 0.5);
+    }
+    #cd-checkbox label {
+      font-size: 16px;
+    }
+    .checked {
+      color: #484f58;
+    }
+
+    /* Remove item button */
+    #cd-remove-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 6px;
+      opacity: 0.3;
+    }
+    #cd-remove-btn:hover {
+      background: alpha(#f85149, 0.1);
+      opacity: 1;
+    }
+    #cd-remove-btn label {
+      font-size: 12px;
+    }
+
+    /* Add entry */
+    #cd-add-entry {
+      background: #0d1117;
+      color: #8b949e;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px;
+      caret-color: #58a6ff;
+    }
+    #cd-add-entry:focus {
+      background: #0d1117;
+      color: #e6edf3;
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 3px alpha(#58a6ff, 0.3);
+    }
+
+    /* ── Right sidebar (GitHub style) ── */
+    #cd-sidebar {
+      min-width: 260px;
+      padding: 0 0 0 32px;
+      border-left: 1px solid #21262d;
+    }
+    #cd-sidebar-section {
+      padding: 16px 0;
+      border-bottom: 1px solid #21262d;
+    }
+    #cd-sidebar-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: #e6edf3;
+      margin-bottom: 6px;
+    }
+    #cd-sidebar-value {
+      color: #8b949e;
+      font-size: 13px;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* Move buttons in sidebar */
+    #cd-move-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 6px 16px;
+      margin-top: 8px;
+    }
+    #cd-move-btn:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+    #cd-move-btn label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #c9d1d9;
+    }
+    #cd-move-btn:hover label {
+      color: #e6edf3;
+    }
+
+    /* Sidebar 3-dot menu button */
+    #cd-dots-btn {
+      background: transparent;
+      border: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    #cd-dots-btn:hover {
+      background: alpha(#8b949e, 0.12);
+    }
+    #cd-dots-btn label {
+      color: #8b949e;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    #cd-dots-btn:hover label {
+      color: #e6edf3;
+    }
+
+    /* Delete button (red, bottom of sidebar) */
+    #cd-delete-btn {
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+    #cd-delete-btn:hover {
+      background: alpha(#f85149, 0.1);
+    }
+    #cd-delete-btn label {
+      color: #f85149;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    #cd-delete-btn:hover label {
+      color: #ff7b72;
+    }
+
     #kanban-edit-entry {
       background: #1a3248;
       color: #c0e4f0;
@@ -659,33 +1119,23 @@ function generateCSS(c: ThemeColors): string {
     #sys-toggle {
       background: alpha(#1a2530, 0.6);
       border: 1px solid #2a3a45;
-      border-radius: 4px;
-      padding: 10px 8px;
+      border-radius: 9999px;
+      padding: 12px;
       margin: 0 4px;
       min-width: 52px;
+      min-height: 52px;
     }
     #sys-toggle:hover {
       background: alpha(#253540, 0.7);
       border-color: #3a5060;
     }
     #sys-toggle.active {
-      background: alpha(#1a3040, 0.8);
-      border: 1px solid #60c0d0;
-      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
-    }
-    #sys-toggle-icon {
-      font-size: 18px;
-      color: #4a6070;
-      margin-bottom: 4px;
-    }
-    #sys-toggle:hover #sys-toggle-icon {
-      color: #6080a0;
-    }
-    #sys-toggle.active #sys-toggle-icon {
-      color: #80e0f0;
+      background: alpha(#3a2a00, 0.8);
+      border: 1px solid #f5c842;
+      box-shadow: inset 0 0 12px alpha(#f5c842, 0.3);
     }
     #sys-toggle-label {
-      font-size: 8px;
+      font-size: 12px;
       font-weight: 700;
       letter-spacing: 1px;
       color: #4a6070;
@@ -694,7 +1144,7 @@ function generateCSS(c: ThemeColors): string {
       color: #6080a0;
     }
     #sys-toggle.active #sys-toggle-label {
-      color: #80e0f0;
+      color: #f5c842;
     }
 
     /* Clock Panel */
@@ -870,11 +1320,77 @@ function generateCSS(c: ThemeColors): string {
     }
 
     /* Wallpaper selector styles */
+    #core-header {
+      padding: 0 8px;
+      margin-bottom: 4px;
+    }
+    #core-reload-btn {
+      background: transparent;
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 4px 8px;
+      transition: all 150ms linear;
+    }
+    #core-reload-btn:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #60c0d0;
+    }
+    #core-reload-btn label {
+      font-size: 14px;
+      color: #4a6070;
+    }
+    #core-reload-btn:hover label {
+      color: #80e0f0;
+    }
     #wallpaper-tab-bar {
       background: #040608;
       border-bottom: 1px solid #1a2530;
       padding: 6px;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
+    }
+    #wallpaper-sub-tab-bar {
+      background: alpha(#040608, 0.6);
+      padding: 4px 6px;
+      margin-bottom: 4px;
+    }
+    #wallpaper-sub-tab-btn {
+      background: alpha(#1a2530, 0.4);
+      border: 1px solid #1a2530;
+      border-radius: 3px;
+      padding: 4px 8px;
+      margin: 0 2px;
+      transition: all 150ms linear;
+    }
+    #wallpaper-sub-tab-btn:hover {
+      background: alpha(#253540, 0.5);
+      border-color: #3a5060;
+    }
+    #wallpaper-sub-tab-btn.active {
+      background: alpha(#1a3040, 0.6);
+      border: 1px solid #60c0d0;
+    }
+    #wallpaper-sub-tab-btn #tab-icon {
+      font-size: 12px;
+      color: #4a6070;
+      margin-bottom: 1px;
+    }
+    #wallpaper-sub-tab-btn:hover #tab-icon {
+      color: #6080a0;
+    }
+    #wallpaper-sub-tab-btn.active #tab-icon {
+      color: #80e0f0;
+    }
+    #wallpaper-sub-tab-btn #tab-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a6070;
+    }
+    #wallpaper-sub-tab-btn:hover #tab-label {
+      color: #6080a0;
+    }
+    #wallpaper-sub-tab-btn.active #tab-label {
+      color: #80e0f0;
     }
     #wallpaper-tab-btn {
       background: alpha(#1a2530, 0.6);
@@ -905,9 +1421,9 @@ function generateCSS(c: ThemeColors): string {
       color: #80e0f0;
     }
     #wallpaper-tab-btn #tab-label {
-      font-size: 7px;
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       color: #4a6070;
     }
     #wallpaper-tab-btn:hover #tab-label {
@@ -962,6 +1478,39 @@ function generateCSS(c: ThemeColors): string {
       font-size: 8px;
       color: #3a5060;
       margin-top: 4px;
+    }
+    #movie-folder {
+      margin: 2px 0;
+    }
+    #movie-folder-header {
+      background: alpha(#1a2530, 0.5);
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 12px;
+      transition: all 150ms linear;
+    }
+    #movie-folder-header:hover {
+      background: alpha(#253540, 0.7);
+      border-color: #3a5060;
+    }
+    #folder-arrow {
+      font-size: 10px;
+      color: #60c0d0;
+      margin-right: 8px;
+    }
+    #folder-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #7ab0c0;
+      letter-spacing: 0.5px;
+    }
+    #folder-count {
+      font-size: 9px;
+      color: #4a6070;
+      margin-right: 4px;
+    }
+    #movie-folder-content {
+      padding: 4px 0 4px 8px;
     }
 
     /* Destination Overlay - Solar System UI */
@@ -1934,6 +2483,39 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 20px;
     }
     #break-popup-hint {
+      color: #3a5060;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+
+    /* ============ TASK POPUP OVERLAY ============ */
+    #task-popup-overlay {
+      background: alpha(#040608, 0.75);
+    }
+    #task-popup-panel {
+      background: alpha(#0a1520, 0.95);
+      border: 2px solid #d4a847;
+      border-radius: 8px;
+      padding: 32px 44px;
+      box-shadow: 0 0 40px alpha(#d4a847, 0.25),
+                  0 0 80px alpha(#d4a847, 0.08);
+    }
+    #task-popup-label {
+      color: #d4a847;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      margin-bottom: 12px;
+    }
+    #task-popup-title {
+      color: #f0e6c8;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    #task-popup-hint {
       color: #3a5060;
       font-size: 9px;
       font-weight: 600;
