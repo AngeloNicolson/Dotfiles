@@ -17,7 +17,9 @@ const [breakMinutes, setBreakMinutes] = createState(5)
 export const [studyBlockMode, setStudyBlockMode] = createState(false)
 export const [totalBlocks, setTotalBlocks] = createState(4)
 export const [currentBlock, setCurrentBlock] = createState(0)
+const [showCustom, setShowCustom] = createState(false)
 const [audioEnabled, setAudioEnabled] = createState(true)
+const [musicPaused, setMusicPaused] = createState(false)
 const [volume, setVolume] = createState(0.5)
 const [audioThemeIndex, setAudioThemeIndex] = createState(0)
 const [focusIndex, setFocusIndex] = createState(-1)
@@ -26,6 +28,7 @@ const MPV_SOCKET = "/tmp/ags-pomodoro-mpv-socket"
 const MUSIC_DIR = `${GLib.get_home_dir()}/.config/ags/assets/music-themes`
 let fadeToken = 0
 let effectiveVolume = 0
+let endNotificationPlayed = false
 
 // === Audio Helpers ===
 function getThemeNames(): string[] {
@@ -78,6 +81,7 @@ function playMusic(subdir: string) {
   if (files.length === 0) return
 
   killMpv()
+  setMusicPaused(false)
   const file = files[Math.floor(Math.random() * files.length)]
   execAsync([
     "mpv", "--no-video", "--loop=inf",
@@ -108,11 +112,11 @@ const FADE_FLOOR = 0.3
 
 function setMpvVolume(vol: number) {
   effectiveVolume = vol
-  const pct = Math.round(vol * 100)
+  const pct = (vol * 100).toFixed(1)
   execAsync(["bash", "-c", `echo '{ "command": ["set_property", "volume", ${pct}] }' | socat - ${MPV_SOCKET}`]).catch(() => {})
 }
 
-const FADE_IN_STEPS = 10
+const FADE_IN_STEPS = 40
 const FADE_IN_DURATION = 2000
 
 function applyFade(remaining: number) {
@@ -150,7 +154,7 @@ function fadeOutMpv(durationMs: number, onDone?: () => void) {
     onDone?.()
     return
   }
-  const steps = 8
+  const steps = 30
   let step = 0
   const interval = durationMs / steps
   const tick = () => {
@@ -165,6 +169,17 @@ function fadeOutMpv(durationMs: number, onDone?: () => void) {
     }
   }
   GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => { tick(); return GLib.SOURCE_REMOVE })
+}
+
+function seekMpv(seconds: number) {
+  execAsync(["bash", "-c", `echo '{ "command": ["seek", ${seconds}, "relative"] }' | socat - ${MPV_SOCKET}`]).catch(() => {})
+}
+
+function skipTrack() {
+  const p = phase.get()
+  if (p === "work" || p === "break") {
+    fadeOutMpv(400, () => playMusic(p))
+  }
 }
 
 function switchAudioTheme(newIndex: number) {
@@ -247,6 +262,7 @@ function drawProgressRing(cr: any, width: number, height: number) {
 let isFirstSession = true
 
 function startWork() {
+  endNotificationPlayed = false
   const secs = workMinutes.get() * 60
   setTotalSeconds(secs)
   setSecondsRemaining(secs)
@@ -265,19 +281,16 @@ function startWork() {
 }
 
 function startBreak() {
+  endNotificationPlayed = false
   const secs = breakMinutes.get() * 60
   setTotalSeconds(secs)
   setSecondsRemaining(secs)
   setPhase("break")
   setRunning(true)
   setBreakPopupVisible(true)
-  // Fade out work music → notification → break music
+  // Fade out work music → break music
   fadeOutMpv(800, () => {
-    playNotification("session_end.mp3")
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
-      if (phase.get() === "break") playMusic("break")
-      return GLib.SOURCE_REMOVE
-    })
+    if (phase.get() === "break") playMusic("break")
   })
 }
 
@@ -298,15 +311,13 @@ function onTimerComplete() {
       const next = currentBlock.get() + 1
       setCurrentBlock(next)
       if (next >= totalBlocks.get()) {
-        // All blocks complete — go idle, fade out, then notify
+        // All blocks complete — go idle, fade out
         setPhase("idle")
         setSecondsRemaining(0)
         setTotalSeconds(0)
         setCurrentBlock(0)
         isFirstSession = true
-        fadeOutMpv(800, () => {
-          playNotification("break_end.mp3")
-        })
+        fadeOutMpv(800)
         return
       }
     }
@@ -314,24 +325,21 @@ function onTimerComplete() {
   } else if (phase.get() === "break") {
     setBreakPopupVisible(false)
     if (studyBlockMode.get()) {
-      // Fade out break music → notify → start next work block
+      // Fade out break music → start next work block
       fadeOutMpv(800, () => {
-        playNotification("break_end.mp3")
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
           startWork()
           return GLib.SOURCE_REMOVE
         })
       })
     } else {
-      // Session done — go idle, fade out, then notify
+      // Session done — go idle, fade out
       setPhase("idle")
       setSecondsRemaining(0)
       setTotalSeconds(0)
       setCurrentBlock(0)
       isFirstSession = true
-      fadeOutMpv(800, () => {
-        playNotification("break_end.mp3")
-      })
+      fadeOutMpv(800)
     }
   }
 }
@@ -343,10 +351,21 @@ GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
     if (rem <= 1) {
       setSecondsRemaining(0)
       setRunning(false)
+      endNotificationPlayed = false
       onTimerComplete()
     } else {
       setSecondsRemaining(rem - 1)
       applyFade(rem - 1)
+      // Play end notification 3 seconds before timer completes
+      if (rem - 1 === 3 && !endNotificationPlayed) {
+        endNotificationPlayed = true
+        const p = phase.get()
+        if (p === "work") {
+          playNotification("session_end.mp3")
+        } else if (p === "break") {
+          playNotification("break_end.mp3")
+        }
+      }
     }
   }
   return GLib.SOURCE_CONTINUE
@@ -373,6 +392,7 @@ const FOCUSABLE = [
   "work-minus", "work-plus", "break-minus", "break-plus",
   "btn-start", "btn-stop",
   "audio-toggle", "theme-prev", "theme-next",
+  "seek-back", "skip-track", "seek-fwd",
   "vol-bar",
 ]
 
@@ -435,6 +455,9 @@ export default function Pomodoro() {
           else if (id === "audio-toggle") setAudioEnabled(!audioEnabled.get())
           else if (id === "theme-prev") switchAudioTheme(Math.max(0, audioThemeIndex.get() - 1))
           else if (id === "theme-next") switchAudioTheme(audioThemeIndex.get() + 1)
+          else if (id === "seek-back") seekMpv(-30)
+          else if (id === "skip-track") skipTrack()
+          else if (id === "seek-fwd") seekMpv(30)
           return true
         }
         return false
@@ -502,7 +525,7 @@ export default function Pomodoro() {
         }} />
 
         {/* Mode toggle */}
-        <box name="pomo-mode-row">
+        <box name="pomo-mode-row" $={(self) => self.set_halign(Gtk.Align.CENTER)}>
           <button
             name="sys-toggle"
             class={studyBlockMode.as((b) => !b ? "active" : "")}
@@ -521,90 +544,126 @@ export default function Pomodoro() {
           </button>
         </box>
 
+        {/* Study block dots — click to set total, completed blocks fade out during session */}
+        <box
+          name="pomo-blocks-row"
+          css={studyBlockMode.as((v) => `opacity: ${v ? 1 : 0};`)}
+          $={(self) => self.set_halign(Gtk.Align.CENTER)}
+        >
+          {Array(16).fill(0).map((_, i) => (
+            <button
+              name="pomo-block-dot-btn"
+              $={(self) => {
+                const sc = self.get_style_context()
+                const update = () => {
+                  const tot = totalBlocks.get()
+                  const cb = currentBlock.get()
+                  sc.remove_class("selected")
+                  sc.remove_class("completed")
+                  if (i < cb) sc.add_class("completed")
+                  else if (i < tot) sc.add_class("selected")
+                }
+                totalBlocks.subscribe(update)
+                currentBlock.subscribe(update)
+                update()
+              }}
+              onClicked={() => setTotalBlocks(i + 1)}
+            >
+              <box name="pomo-block-dot" />
+            </button>
+          ))}
+        </box>
+
         {/* Ratio presets */}
-        <box name="pomo-presets-row">
+        <box name="pomo-presets-row" $={(self) => self.set_halign(Gtk.Align.CENTER)}>
           {PRESETS.map((p, i) => (
             <button
               name="pomo-preset-btn"
-              class={workMinutes.as((wm) => wm === p.work && breakMinutes.get() === p.brk ? "active" : "")}
+              $={(self) => {
+                const sc = self.get_style_context()
+                const update = () => {
+                  const isMatch = workMinutes.get() === p.work && breakMinutes.get() === p.brk
+                  if (isMatch && !showCustom.get()) sc.add_class("active")
+                  else sc.remove_class("active")
+                }
+                workMinutes.subscribe(update)
+                breakMinutes.subscribe(update)
+                showCustom.subscribe(update)
+                update()
+              }}
 
               onClicked={() => {
                 setWorkMinutes(p.work)
                 setBreakMinutes(p.brk)
+                setShowCustom(false)
               }}
             >
               <label label={p.label} />
             </button>
           ))}
+          <button
+            name="pomo-preset-btn"
+            class={showCustom.as((c) => c ? "active" : "")}
+            onClicked={() => setShowCustom(!showCustom.get())}
+          >
+            <label label="CUST" />
+          </button>
         </box>
 
-        {/* Time adjusters */}
-        <box name="pomo-adjusters" vertical>
-          <box name="pomo-adjuster-row">
-            <label name="pomo-adj-label" label="WORK" />
-            <box hexpand />
-            <button
-              name="pomo-adj-btn"
-
-              onClicked={() => {
-                const cur = workMinutes.get()
-                setWorkMinutes(cur <= 5 ? 1 : Math.floor((cur - 1) / 5) * 5)
-              }}
-            >
-              <label label="-" />
-            </button>
-            <label name="pomo-adj-value" label={workMinutes.as((m) => `${m}m`)} />
-            <button
-              name="pomo-adj-btn"
-
-              onClicked={() => {
-                const cur = workMinutes.get()
-                setWorkMinutes(Math.min(90, cur < 5 ? 5 : Math.ceil((cur + 1) / 5) * 5))
-              }}
-            >
-              <label label="+" />
-            </button>
-          </box>
-          <box name="pomo-adjuster-row">
-            <label name="pomo-adj-label" label="BREAK" />
-            <box hexpand />
-            <button
-              name="pomo-adj-btn"
-
-              onClicked={() => setBreakMinutes(Math.max(1, breakMinutes.get() - 1))}
-            >
-              <label label="-" />
-            </button>
-            <label name="pomo-adj-value" label={breakMinutes.as((m) => `${m}m`)} />
-            <button
-              name="pomo-adj-btn"
-
-              onClicked={() => setBreakMinutes(breakMinutes.get() + 1)}
-            >
-              <label label="+" />
-            </button>
-          </box>
-        </box>
-
-        {/* Study block progress dots */}
-        <box
-          name="pomo-blocks-row"
-          visible={studyBlockMode}
+        {/* Time adjusters (visible only in custom mode) */}
+        <box name="pomo-adjusters" vertical
+          css={showCustom.as((v) => `opacity: ${v ? 1 : 0};`)}
         >
-          {Array(8).fill(0).map((_, i) => (
-            <box
-              name="pomo-block-dot"
-              class={currentBlock.as((cb) => {
-                const tot = totalBlocks.get()
-                if (i >= tot) return "hidden"
-                return i < cb ? "completed" : "pending"
-              })}
-            />
-          ))}
-        </box>
+            <box name="pomo-adjuster-row">
+              <label name="pomo-adj-label" label="WORK" />
+              <box hexpand />
+              <button
+                name="pomo-adj-btn"
+
+                onClicked={() => {
+                  const cur = workMinutes.get()
+                  setWorkMinutes(cur <= 5 ? 1 : Math.floor((cur - 1) / 5) * 5)
+                }}
+              >
+                <label label="-" />
+              </button>
+              <label name="pomo-adj-value" label={workMinutes.as((m) => `${m}m`)} />
+              <button
+                name="pomo-adj-btn"
+
+                onClicked={() => {
+                  const cur = workMinutes.get()
+                  setWorkMinutes(Math.min(90, cur < 5 ? 5 : Math.ceil((cur + 1) / 5) * 5))
+                }}
+              >
+                <label label="+" />
+              </button>
+            </box>
+            <box name="pomo-adjuster-row">
+              <label name="pomo-adj-label" label="BREAK" />
+              <box hexpand />
+              <button
+                name="pomo-adj-btn"
+
+                onClicked={() => setBreakMinutes(Math.max(1, breakMinutes.get() - 1))}
+              >
+                <label label="-" />
+              </button>
+              <label name="pomo-adj-value" label={breakMinutes.as((m) => `${m}m`)} />
+              <button
+                name="pomo-adj-btn"
+
+                onClicked={() => setBreakMinutes(breakMinutes.get() + 1)}
+              >
+                <label label="+" />
+              </button>
+            </box>
+          </box>
+
+{/* block dots moved to after mode toggle */}
 
         {/* Control buttons */}
-        <box name="pomo-controls-row">
+        <box name="pomo-controls-row" $={(self) => self.set_halign(Gtk.Align.CENTER)}>
           <button
             name="pomo-start-btn"
             class={running.as((r) => r ? "running" : "")}
@@ -653,27 +712,9 @@ export default function Pomodoro() {
         <label name="section-header" label="//AUDIO" />
 
         {/* Audio theme selector */}
-        <box name="pomo-audio-row">
+        <box name="pomo-audio-row" $={(self) => self.set_halign(Gtk.Align.CENTER)}>
           <button
             name="pomo-adj-btn"
-
-            onClicked={() => {
-              const next = !audioEnabled.get()
-              setAudioEnabled(next)
-              if (!next) {
-                killMpv()
-              } else if (running.get()) {
-                const p = phase.get()
-                if (p === "work") playMusic("work")
-                else if (p === "break") playMusic("break")
-              }
-            }}
-          >
-            <label label={audioEnabled.as((a) => a ? "" : "")} />
-          </button>
-          <button
-            name="pomo-adj-btn"
-
             onClicked={() => switchAudioTheme(Math.max(0, audioThemeIndex.get() - 1))}
           >
             <label label="◀" />
@@ -688,10 +729,31 @@ export default function Pomodoro() {
           />
           <button
             name="pomo-adj-btn"
-
             onClicked={() => switchAudioTheme(audioThemeIndex.get() + 1)}
           >
             <label label="▶" />
+          </button>
+        </box>
+
+        {/* Playback controls */}
+        <box name="pomo-audio-row" $={(self) => self.set_halign(Gtk.Align.CENTER)}>
+          <button name="pomo-adj-btn" onClicked={() => skipTrack()}>
+            <label label="⏮" />
+          </button>
+          <button name="pomo-adj-btn" onClicked={() => seekMpv(-30)}>
+            <label label="⏪" />
+          </button>
+          <button name="pomo-adj-btn" onClicked={() => {
+            execAsync(["bash", "-c", `echo '{ "command": ["cycle", "pause"] }' | socat - ${MPV_SOCKET}`]).catch(() => {})
+            setMusicPaused(!musicPaused.get())
+          }}>
+            <label label={musicPaused.as((p) => p ? "▶" : "⏸")} />
+          </button>
+          <button name="pomo-adj-btn" onClicked={() => seekMpv(30)}>
+            <label label="⏩" />
+          </button>
+          <button name="pomo-adj-btn" onClicked={() => skipTrack()}>
+            <label label="⏭" />
           </button>
         </box>
 

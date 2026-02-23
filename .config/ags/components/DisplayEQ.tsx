@@ -35,7 +35,7 @@ const [gamma, setGamma] = createState(1.0)
 const [rgbR, setRgbR] = createState(1.0)
 const [rgbG, setRgbG] = createState(1.0)
 const [rgbB, setRgbB] = createState(1.0)
-const [activeProfile, setActiveProfile] = createState("default")
+export const [activeProfile, setActiveProfile] = createState("default")
 
 // Load saved settings
 try {
@@ -185,7 +185,7 @@ function setBChannel(value: number) {
   persistSettings()
 }
 
-function applyProfile(key: string) {
+export function applyProfile(key: string) {
   const p = COLOR_PROFILES[key]
   if (!p) return
   setTemperature(p.temp); setGamma(p.gamma)

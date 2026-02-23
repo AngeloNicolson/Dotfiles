@@ -8,7 +8,7 @@ import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
 import { togglePeriodicTable, sidebarPinned, setSidebarPinned } from "../state"
 import AudioEQ, { toggleHwMute, localMuted } from "./AudioEQ"
-import DisplayEQ from "./DisplayEQ"
+import DisplayEQ, { applyProfile, activeProfile } from "./DisplayEQ"
 
 // System toggle button - Star Citizen style
 function SystemToggle({
@@ -136,22 +136,19 @@ function DNDToggle() {
   )
 }
 
-// Night Light toggle
+// Night Light toggle — uses DisplayEQ "night" profile
 function NightLightToggle() {
-  const [nightOn, setNightOn] = createState(false)
-  execAsync("pgrep gammastep").then(() => setNightOn(true)).catch(() => {})
+  const nightOn = activeProfile.as((p) => p === "night")
 
   return (
     <SystemToggle
       active={nightOn}
       label="NITE"
       onClick={() => {
-        if (nightOn.get()) {
-          execAsync("pkill gammastep")
-          setNightOn(false)
+        if (activeProfile.get() === "night") {
+          applyProfile("default")
         } else {
-          execAsync(["bash", "-c", "gammastep -O 4500 &"])
-          setNightOn(true)
+          applyProfile("night")
         }
       }}
     />
