@@ -20,6 +20,96 @@ My personal configuration files for Hyprland, AGS, Neovim, Fish, and more.
   - Integrated with Neovim (CodeCompanion, Avante)
   - CLI management tool (Monolith)
 
+## Installation
+
+```bash
+git clone https://github.com/AngeloNicolson/Dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./install.sh
+```
+
+The installer prompts for optional components, then handles everything:
+
+```
+Dotfiles Installer
+==================
+
+Select optional components to install:
+  [y/n] NVIDIA drivers (VA-API, CUDA)?
+  [y/n] Ollama AI (local LLMs, ~18GB model download)?
+  [y/n] OpenTabletDriver (Wacom tablet support)?
+  [y/n] Firefox (browser + custom CSS theme)?
+  [y/n] Extras (kitty, ktouch, rnote)?
+```
+
+### What the installer does
+
+| Module | Description |
+|--------|-------------|
+| `packages` | Installs from `packages/core.txt` + selected optional package files |
+| `symlinks` | Symlinks config dirs and files into `$HOME` (backs up conflicts) |
+| `scripts` | Makes all scripts executable |
+| `templates` | Copies `.example` templates for machine-specific Hyprland configs |
+| `dirs` | Creates supplementary dirs (pipewire filter-chain, shaders) |
+| `services` | Enables systemd user services |
+| `ags` | Runs `npm install` in AGS config, clears compiled bundle |
+| `theme` | Applies default theme (mech) |
+| `firefox` | Symlinks chrome/ + user.js into Firefox profile (optional) |
+| `ollama` | Enables service, pulls qwen3-coder:30b (optional) |
+
+### Running individual modules
+
+```bash
+./install.sh symlinks        # Only re-link configs
+./install.sh theme           # Re-apply theme
+./install.sh packages ags    # Multiple modules
+```
+
+The installer is idempotent — safe to re-run at any time.
+
+### Package groups
+
+Packages are split into files under `packages/`:
+
+- `core.txt` — Always installed (hyprland, ags, foot, fish, neovim, pipewire, etc.)
+- `nvidia.txt` — NVIDIA VA-API driver, ollama-cuda
+- `ollama.txt` — Ollama (local LLM server)
+- `tablet.txt` — OpenTabletDriver
+- `firefox.txt` — Firefox
+- `extras.txt` — kitty, ktouch, rnote
+
+## Post-Installation
+
+1. **Configure fish shell:**
+   - Edit `~/.config/fish/system-local.fish` for machine-specific paths
+   - Restart your shell
+
+2. **Configure Hyprland:**
+   - Edit `~/.config/hypr/custom/*.conf` for your machine (monitors, keybinds, rules)
+   - Templates are created automatically from `.example` files
+   - Reload: `hyprctl reload`
+
+3. **Install Neovim plugins:**
+   ```bash
+   nvim --headless "+Lazy! sync" +qa
+   ```
+
+4. **Install tmux plugins:**
+   ```bash
+   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+   # Then in tmux: prefix + I
+   ```
+
+5. **Set fish as default shell (optional):**
+   ```bash
+   chsh -s /usr/bin/fish
+   ```
+
+6. **Restore rnote settings (if using rnote):**
+   ```bash
+   dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini
+   ```
+
 ## AI Coding Features
 
 ### Local AI Integration
@@ -82,160 +172,15 @@ Unified theme management system that synchronizes colors across all applications
 - **Famicom** (light, retro) - Cream background with vibrant gaming-inspired colors
 - **E-Ink** (monochrome) - Pure black and white for minimal distraction
 
-### Architecture
-
-Themes are defined in JSON files at `~/.config/themes/`:
-- `mech.json`, `famicom.json`, `e-ink.json` - Theme definitions with color palettes and settings
-- `.current` - Stores the currently active theme name
-- `apply-theme.sh` - Script to apply themes system-wide
-
-Each theme file defines:
-- **Colors** - Complete palette (background, foreground, accents, ANSI colors)
-- **GTK** - GTK theme, icon theme, cursor theme, color scheme preference
-- **Hyprland** - Border radius, gaps, border size
-
 ### Switching Themes
 
 ```bash
-# Apply a theme
 ~/.config/themes/apply-theme.sh mech
 ~/.config/themes/apply-theme.sh famicom
 ~/.config/themes/apply-theme.sh e-ink
-
-# The script automatically:
-# 1. Updates Foot terminal colors
-# 2. Applies GTK theme settings
-# 3. Updates Hyprland appearance (gaps, borders, rounding)
-# 4. Saves theme selection to .current file
 ```
 
-### Neovim Integration
-
-Neovim automatically syncs with the system theme on startup by:
-1. Reading `~/.config/themes/.current` to detect active theme
-2. Loading matching colorscheme from `~/.config/nvim/colors/`
-
-To reload theme in Neovim after changing system theme:
-```vim
-:ReloadSystemTheme
-```
-
-The Neovim colorschemes use identical color values from the theme JSON files, ensuring perfect synchronization.
-
-## Prerequisites
-
-Install required packages (Arch Linux):
-
-```bash
-# Install all dependencies
-sudo pacman -S --needed $(cat packages.txt)
-```
-
-## Installation
-
-### Quick Install (Copy files)
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/dotfiles.git ~/dotfiles-temp
-cd ~/dotfiles-temp
-
-# Backup existing configs
-mkdir -p ~/.config-backup
-cp -r ~/.config/hypr ~/.config-backup/ 2>/dev/null
-cp -r ~/.config/ags ~/.config-backup/ 2>/dev/null
-cp -r ~/.config/nvim ~/.config-backup/ 2>/dev/null
-cp -r ~/.config/fish ~/.config-backup/ 2>/dev/null
-cp -r ~/.config/foot ~/.config-backup/ 2>/dev/null
-cp -r ~/.config/themes ~/.config-backup/ 2>/dev/null
-
-# Copy configs
-cp -r .config/* ~/.config/
-
-# Create fish system-local.fish from template
-cp ~/.config/fish/system-local.fish.example ~/.config/fish/system-local.fish
-
-# Edit system-local.fish for your system
-$EDITOR ~/.config/fish/system-local.fish
-
-# Install Neovim plugins
-nvim --headless "+Lazy! sync" +qa
-
-# Install tmux plugin manager (TPM)
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-
-# Set fish as default shell (optional)
-chsh -s /usr/bin/fish
-
-# Cleanup
-cd ~
-rm -rf ~/dotfiles-temp
-```
-
-### Development Install (Symlinks)
-
-For active development where you want changes tracked by git:
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-
-# Backup existing configs
-mkdir -p ~/.config-backup
-mv ~/.config/hypr ~/.config-backup/ 2>/dev/null
-mv ~/.config/ags ~/.config-backup/ 2>/dev/null
-mv ~/.config/nvim ~/.config-backup/ 2>/dev/null
-mv ~/.config/fish ~/.config-backup/ 2>/dev/null
-mv ~/.config/foot ~/.config-backup/ 2>/dev/null
-mv ~/.config/themes ~/.config-backup/ 2>/dev/null
-mv ~/.config/starship.toml ~/.config-backup/ 2>/dev/null
-
-# Create symlinks
-ln -s ~/dotfiles/.config/hypr ~/.config/hypr
-ln -s ~/dotfiles/.config/ags ~/.config/ags
-ln -s ~/dotfiles/.config/nvim ~/.config/nvim
-ln -s ~/dotfiles/.config/fish ~/.config/fish
-ln -s ~/dotfiles/.config/foot ~/.config/foot
-ln -s ~/dotfiles/.config/themes ~/.config/themes
-ln -s ~/dotfiles/.config/starship.toml ~/.config/starship.toml
-
-# Create fish system-local.fish
-cp ~/.config/fish/system-local.fish.example ~/.config/fish/system-local.fish
-$EDITOR ~/.config/fish/system-local.fish
-
-# Install Neovim plugins
-nvim --headless "+Lazy! sync" +qa
-
-# Install tmux plugin manager (TPM) for tmux-powerline
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-# Then in tmux, press: prefix + I (capital i) to install plugins
-```
-
-## Post-Installation
-
-1. **Configure fish shell:**
-   - Edit `~/.config/fish/system-local.fish` for machine-specific paths
-   - Restart your shell
-
-2. **Apply a theme:**
-   ```bash
-   ~/.config/themes/apply-theme.sh mech
-   ```
-
-3. **Configure Hyprland:**
-   - Edit `~/.config/hypr/custom/` files for personal customizations
-   - Reload: `hyprctl reload`
-
-4. **Restore rnote settings (if using rnote):**
-   ```bash
-   dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini
-   ```
-
-5. **Start Hyprland:**
-   ```bash
-   Hyprland
-   ```
+The script automatically updates Foot, GTK, and Hyprland. Neovim syncs on startup via `~/.config/themes/.current`. Reload in Neovim with `:ReloadSystemTheme`.
 
 ## Features
 
@@ -278,7 +223,8 @@ Custom layout management system with visual designer:
 ### Hyprland
 
 - Main config: `~/.config/hypr/hyprland.conf`
-- Custom overrides: `~/.config/hypr/custom/`
+- Custom overrides: `~/.config/hypr/custom/` (machine-specific, git-ignored)
+- Templates: `~/.config/hypr/custom/*.conf.example`
 - Layouts: `~/.config/hypr/layouts/`
 - Applications database: `~/.config/hypr/apps.conf`
 
@@ -287,56 +233,14 @@ Custom layout management system with visual designer:
 - See [README_WACOM.md](README_WACOM.md) for Wacom tablet setup (Intuos Pro)
 - Uses OpenTabletDriver for best Wayland/Hyprland compatibility
 
-### Rnote
-
-- Application settings stored in dconf: `/com/github/flxzt/rnote/`
-- GTK styling in `.config/gtk-4.0/rnote.css`
-- Restore settings with: `dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini`
-
 ### Firefox Custom CSS
 
-Custom Firefox theme with:
-- Centered, always-visible URL/search bar with rounded corners
-- Auto-hiding navigation bar (shows on hover)
-- Auto-hiding sidebar (Sidebery)
-- Hidden tab bar (tabs managed by Sidebery)
-- Dark theme
+Custom Firefox theme with auto-hiding navigation, centered URL bar, and Sidebery integration. The `firefox` install module handles symlinking automatically.
 
-**Installation:**
-
-1. Find your Firefox profile folder:
-   ```bash
-   # Profile is typically at:
-   ~/.mozilla/firefox/XXXXXXXX.default-release/
-   ```
-
-2. Copy the chrome folder and config files:
-   ```bash
-   # Copy chrome folder to your Firefox profile
-   cp -r .mozilla/firefox/chrome ~/.mozilla/firefox/XXXXXXXX.default-release/
-
-   # Copy performance config
-   cp .mozilla/firefox/user.js ~/.mozilla/firefox/XXXXXXXX.default-release/
-   ```
-   Replace `XXXXXXXX.default-release` with your actual profile folder name.
-
-3. Symlink user.js (contains Potatofox settings + performance tweaks):
-   ```bash
-   ln -sf ~/projects/personal/dotfiles/.mozilla/firefox/user.js ~/.mozilla/firefox/XXXXXXXX.default-release/user.js
-   ```
-   This enables userChrome CSS and sets required Firefox preferences automatically.
-
-4. Install the Sidebery extension and import settings:
-   - Install [Sidebery](https://addons.mozilla.org/en-US/firefox/addon/sidebery)
-   - Open Sidebery Settings > Help > Import addon data
-   - Import `.mozilla/firefox/Sidebery-Data.json`
-
-5. Restart Firefox
-
-**Files included:**
-- `chrome/` - Custom CSS theme (Potatofox-based)
-- `user.js` - Potatofox theme settings + performance optimizations (NVIDIA GPU acceleration, memory management)
-- `Sidebery-Data.json` - Sidebery extension configuration
+To set up Sidebery:
+1. Install [Sidebery](https://addons.mozilla.org/en-US/firefox/addon/sidebery)
+2. Import settings from `.mozilla/firefox/Sidebery-Data.json`
+3. Restart Firefox
 
 ## License
 
