@@ -3,7 +3,7 @@ import { execAsync, createSubprocess } from "ags/process"
 
 export default function PowerIndicator() {
   const bat = createSubprocess(
-    { level: 100, status: "Unknown", ac: false, health: 100, cycles: 0, watts: "--W", time: "--" },
+    { level: 100, status: "Unknown", ac: false, cycles: 0, watts: "--W", time: "--" },
     ["bash", "-c", 'while true; do read -r cap < /sys/class/power_supply/BAT0/capacity; read -r st < /sys/class/power_supply/BAT0/status; read -r ac < /sys/class/power_supply/AC/online; read -r vo < /sys/class/power_supply/BAT0/voltage_now; read -r cu < /sys/class/power_supply/BAT0/current_now; read -r cn < /sys/class/power_supply/BAT0/charge_now; read -r cf < /sys/class/power_supply/BAT0/charge_full; read -r cfd < /sys/class/power_supply/BAT0/charge_full_design; read -r cc < /sys/class/power_supply/BAT0/cycle_count; echo "$cap|$st|$ac|$vo|$cu|$cn|$cf|$cfd|$cc"; sleep 5; done'],
     (line) => {
       const [cap, st, ac, vo, cu, cn, cf, cfd, cc] = line.split("|")
@@ -27,7 +27,6 @@ export default function PowerIndicator() {
         level,
         status,
         ac: ac === "1",
-        health: Math.round((parseInt(cf) / parseInt(cfd)) * 100) || 100,
         cycles: parseInt(cc) || 0,
         watts: watts > 0 ? `${watts.toFixed(1)}W` : "0W",
         time,
@@ -44,18 +43,27 @@ export default function PowerIndicator() {
   return (
     <box name="power-page" vertical>
       <box name="power-panel" vertical>
-        {/* Header */}
+        {/* Header — title, watts, time, badge */}
         <box name="power-panel-header">
-          <label name="power-panel-title" label="POWER // INDICATOR" />
+          <label name="power-panel-title" label="POWER // CORE" />
           <box hexpand />
-          <label name="power-panel-data" label={bat.as((d) => `H:${d.health}%`)} />
+          <label name="power-header-stat" label={bat.as((d) => d.watts)} />
+          <label name="power-header-stat" label={bat.as((d) => d.time !== "--" ? d.time : "")} />
+          <label
+            name="power-status-badge"
+            css={bat.as((d) => d.status === "Charging"
+              ? "background: #2a2e0a; border-color: #6e7116; color: #b8bb26;"
+              : d.status === "Discharging"
+              ? "background: #2e0a0a; border-color: #992222; color: #cc4444;"
+              : "background: #3c3836; border-color: #504945; color: #a89984;")}
+            label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
+          />
         </box>
 
-        {/* Main vertical bar container - centered */}
+        {/* Battery bar */}
         <box hexpand>
           <box hexpand />
           <box name="power-bar-container">
-            {/* Scale markers on the side */}
             <box name="power-scale" vertical>
               <label name="power-scale-mark" label="100" />
               <box vexpand />
@@ -64,7 +72,6 @@ export default function PowerIndicator() {
               <label name="power-scale-mark" label="0" />
             </box>
 
-            {/* Vertical bar with segments */}
             <box name="power-bar-frame" vertical>
               <box name="power-segments" vertical>
                 {Array(10).fill(0).map((_, i) => {
@@ -74,7 +81,10 @@ export default function PowerIndicator() {
                       name="power-segment"
                       class={bat.as((d) => {
                         const threshold = (segmentIndex + 1) * 10
-                        return d.level >= threshold ? "lit" : "unlit"
+                        if (d.level >= threshold) {
+                          return d.status === "Discharging" ? "discharge" : "lit"
+                        }
+                        return "unlit"
                       })}
                       vexpand
                       hexpand
@@ -84,7 +94,6 @@ export default function PowerIndicator() {
               </box>
             </box>
 
-            {/* Right side indicators */}
             <box name="power-indicators" vertical>
               <label
                 name="power-indicator"
@@ -105,34 +114,10 @@ export default function PowerIndicator() {
           <box hexpand />
         </box>
 
-        {/* Large percentage display */}
+        {/* Big percentage */}
         <label
           name="power-big-percent"
           label={bat.as((d) => `${d.level}%`)}
-        />
-
-        {/* Bottom data row */}
-        <box name="power-panel-footer">
-          <label name="power-footer-data" label={bat.as((d) =>
-            d.status === "Charging" ? "CHARGING" : d.status === "Discharging" ? "ACTIVE" : "STANDBY"
-          )} />
-          <box hexpand />
-          <label name="power-footer-data" label={bat.as((d) => d.watts)} />
-          <label name="power-footer-data" label={bat.as((d) => d.time !== "--" ? `ETA:${d.time}` : "")} />
-        </box>
-      </box>
-
-      {/* Compact status bar */}
-      <box name="status-panel">
-        <label name="status-icon" label={bat.as((d) => d.status === "Charging" ? "" : "")} />
-        <label name="status-label" label="PWR" />
-        <box hexpand />
-        <label name="status-value" label={bat.as((d) => d.watts)} />
-        <label name="status-value" label={bat.as((d) => `${d.level}%`)} />
-        <label name="status-value" label={bat.as((d) => d.time !== "--" ? d.time : "")} />
-        <label
-          name="status-indicator"
-          label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
         />
       </box>
     </box>

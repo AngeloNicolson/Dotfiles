@@ -1,0 +1,65 @@
+# Core Window Manager
+hyprland
+xdg-desktop-portal-hyprland
+
+# Desktop UI
+ags
+
+# Terminal
+foot
+fish
+starship
+
+# Editor
+neovim
+
+# Document Viewer
+zathura
+zathura-pdf-poppler
+
+# Terminal Multiplexer
+tmux
+
+# Fonts
+ttf-jetbrains-mono-nerd
+ttf-font-awesome
+nerd-fonts-complete
+noto-fonts-cjk
+
+# System
+polkit-kde-agent
+python
+python-gobject
+gtk3
+gtk4
+
+# Audio/Media
+pipewire
+wireplumber
+pavucontrol
+mpv
+socat
+
+# Wallpaper
+swww
+mpvpaper
+ffmpeg
+
+# Utilities
+swaylock
+brightnessctl
+pamixer
+wl-clipboard
+cliphist
+grim
+slurp
+swappy
+jq
+wl-color-picker
+
+# Display controls
+wl-gammarelay-rs
+hyprshade
+
+# Filesystem
+ntfs-3g

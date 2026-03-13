@@ -16,6 +16,9 @@
 # Hyprland logs
 .config/hypr/*.log
 
+# Machine-specific Hyprland configs (use .example templates)
+.config/hypr/custom/*.conf
+
 # Python cache
 __pycache__/
 **/__pycache__/

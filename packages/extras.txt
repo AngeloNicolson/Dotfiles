@@ -1,0 +1,4 @@
+# Extra applications
+kitty
+ktouch
+rnote

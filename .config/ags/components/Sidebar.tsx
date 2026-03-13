@@ -25,7 +25,14 @@ export default function Sidebar({ monitorName }: { monitorName: string }) {
     transition_duration: 300,
   })
 
-  const homePage = <Home />
+  const homeContent = <Home />
+  const homeScroll = new Gtk.ScrolledWindow({
+    hscrollbar_policy: Gtk.PolicyType.NEVER,
+    vscrollbar_policy: Gtk.PolicyType.EXTERNAL,
+  })
+  homeScroll.add(homeContent)
+  homeScroll.set_name("home-page-scroll")
+
   const powerPage = <PowerIndicator />
   const plannerPage = <Planner />
   const appPage = <AppLauncher />
@@ -33,7 +40,7 @@ export default function Sidebar({ monitorName }: { monitorName: string }) {
   const wallpaperPage = <WallpaperSelector />
   const pomodoroPage = <Pomodoro />
 
-  stack.add_named(homePage, "page1")
+  stack.add_named(homeScroll, "page1")
   stack.add_named(plannerPage, "page2")
   stack.add_named(pomodoroPage, "page3")
   stack.add_named(appPage, "page4")

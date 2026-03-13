@@ -1097,6 +1097,13 @@ function generateCSS(c: ThemeColors): string {
     }
 
     /* ============ HOME PAGE - Holographic Star Citizen Style ============ */
+    #home-page-scroll {
+      background: #040608;
+    }
+    #home-page-scroll scrollbar {
+      opacity: 0;
+      min-width: 0;
+    }
     #home-page {
       padding: 12px;
       background: #040608;
@@ -1847,12 +1854,37 @@ function generateCSS(c: ThemeColors): string {
     #power-segment {
       margin: 2px 0;
       min-height: 16px;
+      border-radius: 12px;
     }
     #power-segment.unlit {
       background: alpha(#2a3a45, 0.5);
     }
     #power-segment.lit {
       background: #60c0d0;
+    }
+    #power-segment.discharge {
+      background: #3a0a0a;
+      border: 1px solid #992222;
+      margin: 2px 0;
+      min-height: 16px;
+    }
+
+    /* Header stats + badge */
+    #power-header-stat {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #a0e0f0;
+      margin: 0 6px;
+    }
+    #power-status-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-radius: 12px;
+      padding: 3px 16px;
+      margin-left: 6px;
+      border: 1px solid transparent;
     }
 
     /* Right side indicators */
@@ -2182,6 +2214,39 @@ function generateCSS(c: ThemeColors): string {
       border-color: #80e0f0;
     }
 
+    /* Audio/Voice tab switcher */
+    #eq-tab-bar {
+      margin-bottom: 0;
+    }
+    #eq-tab-btn {
+      background: #0a1018;
+      border: 1px solid #2a3a45;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      padding: 4px 8px;
+      margin: 0 1px;
+    }
+    #eq-tab-btn:hover {
+      background: #152028;
+    }
+    #eq-tab-btn.active {
+      background: #101820;
+      border-color: #2a3a45;
+      border-bottom: 1px solid #101820;
+    }
+    #eq-tab-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #3a5060;
+    }
+    #eq-tab-btn:hover #eq-tab-label {
+      color: #5a8090;
+    }
+    #eq-tab-btn.active #eq-tab-label {
+      color: #70c0d0;
+    }
+
     /* ============ EQ PANELS (Audio & Display) ============ */
     #eq-panel {
       background: #101820;
@@ -2376,6 +2441,31 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 700;
       letter-spacing: 2px;
       color: #c04040;
+    }
+
+    /* Noise cancellation toggle */
+    #voice-nc-toggle {
+      background: #101820;
+      border: 1px solid #2a3a45;
+      border-radius: 3px;
+      padding: 2px 8px;
+      margin-right: 8px;
+    }
+    #voice-nc-toggle:hover {
+      border-color: #3a5060;
+    }
+    #voice-nc-toggle.active {
+      background: alpha(#40c060, 0.15);
+      border-color: #40c060;
+    }
+    #voice-nc-toggle #control-label {
+      color: #4a6070;
+    }
+    #voice-nc-toggle.active #control-label {
+      color: #40c060;
+    }
+    #eq-hbar-inline.disabled {
+      opacity: 0.3;
     }
 
     /* Output device selector button */

@@ -1,0 +1,8 @@
+# You can put custom rules here
+# Window/layer rules: https://wiki.hyprland.org/Configuring/Window-Rules/
+# Workspace rules: https://wiki.hyprland.org/Configuring/Workspace-Rules/
+
+# Examples:
+#windowrule = opacity 0.92 override 0.92 override, match:class ^foot$
+#windowrule = workspace 2, match:class ^firefox$
+

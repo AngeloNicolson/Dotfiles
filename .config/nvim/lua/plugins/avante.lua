@@ -5,10 +5,8 @@ return {
 	version = false,
 	opts = {
 		provider = "ollama",
-		system_prompt = [[You are an expert coding assistant. Respond directly with code and explanations.
-IMPORTANT: Do not output your thinking process, reasoning, or internal thoughts.
-Do not use phrases like "🤔 Thoughts" or show your reasoning steps.
-Respond directly and concisely with the answer, code, or explanation requested.]],
+		mode = "legacy",
+		system_prompt = "/no_think\nYou are an expert coding assistant. Respond directly and concisely with code and explanations.",
 		behaviour = {
 			auto_suggestions = false,
 			auto_set_highlight_group = true,
@@ -20,11 +18,13 @@ Respond directly and concisely with the answer, code, or explanation requested.]
 				endpoint = "http://127.0.0.1:11434",
 				model = "qwen3-coder:30b",
 				timeout = 30000,
+				disable_tools = true,
 				extra_request_body = {
 					options = {
 						temperature = 0.7,
 						num_ctx = 8192,
 						keep_alive = "5m",
+						think = false,
 					},
 				},
 			},

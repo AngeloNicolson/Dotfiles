@@ -1,12 +1,14 @@
 import Gtk from "gi://Gtk?version=3.0"
 import Gdk from "gi://Gdk"
+import GdkPixbuf from "gi://GdkPixbuf"
 import Gio from "gi://Gio"
 import { Astal } from "ags/gtk3"
 import app from "ags/gtk3/app"
 import { readFile, writeFile } from "ags/file"
 import GLib from "gi://GLib"
 import { createState } from "ags"
-import { setTaskPopupVisible, setTaskPopupTitle } from "../state"
+import { setTaskPopupVisible, setTaskPopupTitle, syncConnected, syncPeerCount, pendingChangeRequests, syncDialogVisible, setSyncDialogVisible } from "../state"
+import { lastSyncedFile, lastSyncTime, generateInvite, acceptInvite, getPeers } from "./SyncIndicator"
 
 const PLANS_DIR = GLib.get_home_dir() + "/.config/plans"
 const BOARDS_DIR = PLANS_DIR + "/boards"
@@ -2528,6 +2530,23 @@ export default function Planner() {
           update()
         }} />
         <box hexpand={true} />
+        <button name="planner-sync-btn" onClicked={() => setSyncDialogVisible(true)} $={(self) => {
+          function update() {
+            const connected = syncConnected.get()
+            const peerCount = syncPeerCount.get()
+            const crs = pendingChangeRequests.get()
+            const lbl = self.get_children()[0] as Gtk.Label
+            if (crs > 0) lbl.set_label(`S(${crs})`)
+            else if (connected) lbl.set_label(`S·${peerCount}`)
+            else lbl.set_label("S")
+          }
+          syncConnected.subscribe(update)
+          syncPeerCount.subscribe(update)
+          pendingChangeRequests.subscribe(update)
+          update()
+        }}>
+          <label label="S" />
+        </button>
         <button name="planner-info-btn" onClicked={() => {
           if (infoPanelRef) infoPanelRef.set_visible(!infoPanelRef.get_visible())
         }}>
@@ -2539,6 +2558,240 @@ export default function Planner() {
       </box>
     </box>
   ) as Gtk.Widget
+
+  // ── Sync dialog modal ──
+  let syncInviteURI = ""
+  let syncInviteQR = ""
+  let syncAcceptEntryRef: Gtk.Entry | null = null
+
+  function closeSyncDialog() { setSyncDialogVisible(false) }
+
+  const syncDialog = (
+    <window
+      visible={syncDialogVisible}
+      monitor={0}
+      anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.LEFT | Astal.WindowAnchor.BOTTOM | Astal.WindowAnchor.RIGHT}
+      exclusivity={Astal.Exclusivity.IGNORE}
+      keymode={Astal.Keymode.EXCLUSIVE}
+      application={app}
+      layer={Astal.Layer.OVERLAY}
+      onKeyPressEvent={(_: any, event: any) => {
+        if (event.get_keyval()[1] === Gdk.KEY_Escape) { closeSyncDialog(); return true }
+        return false
+      }}
+    >
+      <box name="sync-modal-backdrop" expand hexpand vexpand $={(self) => {
+        const eb = new Gtk.EventBox({ visible_window: false })
+        eb.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        eb.connect("button-press-event", () => { closeSyncDialog(); return true })
+
+        const center = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, halign: Gtk.Align.CENTER, valign: Gtk.Align.CENTER })
+        const modalEB = new Gtk.EventBox({ visible_window: true })
+        modalEB.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        modalEB.connect("button-press-event", () => true)
+        forceColor(modalEB, undefined, gtkRGBA(0x0d/255, 0x11/255, 0x17/255))
+
+        const modal = (<box name="sync-modal" vertical $={(modalSelf) => {
+          const SM_WHITE = gtkRGBA(0xe6/255, 0xed/255, 0xf3/255)
+          const SM_DIM = gtkRGBA(0x8b/255, 0x94/255, 0x9e/255)
+          const SM_GREEN = gtkRGBA(0x3f/255, 0xb9/255, 0x50/255)
+          const SM_BLUE = gtkRGBA(0x58/255, 0xa6/255, 0xff/255)
+
+          function rebuild() {
+            modalSelf.get_children().forEach((c: Gtk.Widget) => c.destroy())
+
+            // Title
+            const title = new Gtk.Label({ label: "PLANSYNC" })
+            title.set_name("sync-modal-title")
+            forceColor(title, SM_WHITE)
+            modalSelf.pack_start(title as Gtk.Widget, false, false, 8)
+
+            // Status
+            const statusLabel = new Gtk.Label()
+            statusLabel.set_name("sync-modal-status")
+            function updateStatus() {
+              const connected = syncConnected.get()
+              const count = syncPeerCount.get()
+              statusLabel.set_label(connected ? `Connected · ${count} peer${count !== 1 ? "s" : ""}` : "No peers connected")
+              forceColor(statusLabel, connected ? SM_GREEN : SM_DIM)
+            }
+            syncConnected.subscribe(updateStatus)
+            syncPeerCount.subscribe(updateStatus)
+            updateStatus()
+            modalSelf.pack_start(statusLabel as Gtk.Widget, false, false, 4)
+
+            // Last sync info
+            const syncInfoLabel = new Gtk.Label()
+            syncInfoLabel.set_name("sync-modal-info")
+            forceColor(syncInfoLabel, SM_DIM)
+            function updateSyncInfo() {
+              const file = lastSyncedFile.get()
+              const time = lastSyncTime.get()
+              syncInfoLabel.set_label(file ? `Last: ${file} at ${time}` : "No syncs yet")
+            }
+            lastSyncedFile.subscribe(updateSyncInfo)
+            lastSyncTime.subscribe(updateSyncInfo)
+            updateSyncInfo()
+            modalSelf.pack_start(syncInfoLabel as Gtk.Widget, false, false, 4)
+
+            // Separator
+            modalSelf.pack_start(new Gtk.Separator() as Gtk.Widget, false, false, 8)
+
+            // Generate invite section
+            const inviteTitle = new Gtk.Label({ label: "PAIR DEVICE" })
+            inviteTitle.set_halign(Gtk.Align.START)
+            forceColor(inviteTitle, SM_WHITE)
+            modalSelf.pack_start(inviteTitle as Gtk.Widget, false, false, 4)
+
+            const inviteRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
+
+            const genPairedBtn = new Gtk.Button()
+            genPairedBtn.set_name("sync-gen-btn")
+            genPairedBtn.add(new Gtk.Label({ label: "Invite (Paired)" }))
+            genPairedBtn.connect("clicked", () => {
+              generateInvite("paired").then((resp: any) => {
+                if (resp && resp.ok && resp.data) {
+                  syncInviteURI = resp.data.uri
+                  syncInviteQR = resp.data.qr || ""
+                  rebuild()
+                }
+              })
+            })
+            inviteRow.pack_start(genPairedBtn as Gtk.Widget, false, false, 0)
+
+            const genViewerBtn = new Gtk.Button()
+            genViewerBtn.set_name("sync-gen-btn")
+            genViewerBtn.add(new Gtk.Label({ label: "Invite (Viewer)" }))
+            genViewerBtn.connect("clicked", () => {
+              generateInvite("viewer").then((resp: any) => {
+                if (resp && resp.ok && resp.data) {
+                  syncInviteURI = resp.data.uri
+                  syncInviteQR = resp.data.qr || ""
+                  rebuild()
+                }
+              })
+            })
+            inviteRow.pack_start(genViewerBtn as Gtk.Widget, false, false, 0)
+            modalSelf.pack_start(inviteRow as Gtk.Widget, false, false, 4)
+
+            // Show invite URI if generated
+            if (syncInviteURI) {
+              const uriLabel = new Gtk.Label({ label: syncInviteURI })
+              uriLabel.set_name("sync-uri-label")
+              uriLabel.set_selectable(true)
+              uriLabel.set_line_wrap(true)
+              uriLabel.set_max_width_chars(60)
+              forceColor(uriLabel, SM_BLUE)
+              modalSelf.pack_start(uriLabel as Gtk.Widget, false, false, 4)
+
+              // QR code image if available
+              if (syncInviteQR) {
+                try {
+                  const pixbufLoader = new GdkPixbuf.PixbufLoader()
+                  pixbufLoader.write(GLib.base64_decode(syncInviteQR))
+                  pixbufLoader.close()
+                  const pixbuf = pixbufLoader.get_pixbuf()
+                  if (pixbuf) {
+                    const qrImage = Gtk.Image.new_from_pixbuf(pixbuf)
+                    qrImage.set_name("sync-qr-image")
+                    modalSelf.pack_start(qrImage as Gtk.Widget, false, false, 8)
+                  }
+                } catch {
+                  // QR display failed silently
+                }
+              }
+            }
+
+            // Separator
+            modalSelf.pack_start(new Gtk.Separator() as Gtk.Widget, false, false, 8)
+
+            // Accept invite section
+            const acceptTitle = new Gtk.Label({ label: "ACCEPT INVITE" })
+            acceptTitle.set_halign(Gtk.Align.START)
+            forceColor(acceptTitle, SM_WHITE)
+            modalSelf.pack_start(acceptTitle as Gtk.Widget, false, false, 4)
+
+            const acceptRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
+            const acceptEntry = new Gtk.Entry()
+            acceptEntry.set_name("sync-accept-entry")
+            acceptEntry.set_placeholder_text("plansync://pair?...")
+            acceptEntry.set_hexpand(true)
+            syncAcceptEntryRef = acceptEntry
+
+            const acceptBtn = new Gtk.Button()
+            acceptBtn.set_name("sync-accept-btn")
+            acceptBtn.add(new Gtk.Label({ label: "Accept" }))
+            acceptBtn.connect("clicked", () => {
+              const uri = acceptEntry.get_text().trim()
+              if (uri) {
+                acceptInvite(uri).then((resp: any) => {
+                  if (resp && resp.ok) {
+                    acceptEntry.set_text("")
+                    rebuild()
+                  }
+                })
+              }
+            })
+            acceptEntry.connect("activate", () => acceptBtn.clicked())
+
+            acceptRow.pack_start(acceptEntry as Gtk.Widget, true, true, 0)
+            acceptRow.pack_start(acceptBtn as Gtk.Widget, false, false, 0)
+            modalSelf.pack_start(acceptRow as Gtk.Widget, false, false, 4)
+
+            // Separator
+            modalSelf.pack_start(new Gtk.Separator() as Gtk.Widget, false, false, 8)
+
+            // Peers list
+            const peersTitle = new Gtk.Label({ label: "PEERS" })
+            peersTitle.set_halign(Gtk.Align.START)
+            forceColor(peersTitle, SM_WHITE)
+            modalSelf.pack_start(peersTitle as Gtk.Widget, false, false, 4)
+
+            getPeers().then((resp: any) => {
+              if (resp && resp.ok && Array.isArray(resp.data)) {
+                for (const peer of resp.data) {
+                  const peerRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
+                  const idLabel = new Gtk.Label({ label: peer.device_id })
+                  forceColor(idLabel, SM_WHITE)
+                  const roleLabel = new Gtk.Label({ label: `[${peer.role}]` })
+                  forceColor(roleLabel, SM_DIM)
+                  const statusDot = new Gtk.Label({ label: peer.connected ? "●" : "○" })
+                  forceColor(statusDot, peer.connected ? SM_GREEN : SM_DIM)
+                  peerRow.pack_start(statusDot as Gtk.Widget, false, false, 0)
+                  peerRow.pack_start(idLabel as Gtk.Widget, false, false, 0)
+                  peerRow.pack_start(roleLabel as Gtk.Widget, false, false, 0)
+                  modalSelf.pack_start(peerRow as Gtk.Widget, false, false, 2)
+                }
+                if (resp.data.length === 0) {
+                  const noPeers = new Gtk.Label({ label: "No peers yet" })
+                  forceColor(noPeers, SM_DIM)
+                  modalSelf.pack_start(noPeers as Gtk.Widget, false, false, 2)
+                }
+              }
+              modalSelf.show_all()
+            })
+
+            // Close button
+            const closeBtn = new Gtk.Button()
+            closeBtn.set_name("sync-close-btn")
+            closeBtn.add(new Gtk.Label({ label: "Close" }))
+            closeBtn.connect("clicked", closeSyncDialog)
+            modalSelf.pack_start(closeBtn as Gtk.Widget, false, false, 8)
+
+            modalSelf.show_all()
+          }
+
+          syncDialogVisible.subscribe((visible: boolean) => { if (visible) rebuild() })
+        }} />) as Gtk.Widget
+
+        modalEB.add(modal)
+        center.pack_start(modalEB as Gtk.Widget, false, false, 0)
+        eb.add(center)
+        self.pack_start(eb as Gtk.Widget, true, true, 0)
+        self.show_all()
+      }} />
+    </window>
+  )
 
   innerStack.add_named(emptyView, "empty")
   innerStack.add_named(contentView, "content")

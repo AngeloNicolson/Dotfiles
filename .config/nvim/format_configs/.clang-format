@@ -30,10 +30,10 @@ SpacesInParentheses: false
 SpacesInSquareBrackets: false
 
 # Line breaking
-AllowShortBlocksOnASingleLine: false
+AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: false
 BreakBeforeBinaryOperators: None
 BreakBeforeTernaryOperators: true
