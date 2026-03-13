@@ -1,0 +1,3 @@
+# NVIDIA drivers and hardware acceleration
+libva-nvidia-driver
+ollama-cuda

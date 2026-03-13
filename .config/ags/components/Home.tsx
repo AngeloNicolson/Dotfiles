@@ -6,9 +6,10 @@ import Network from "gi://AstalNetwork"
 import Gtk from "gi://Gtk?version=3.0"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
-import { togglePeriodicTable, sidebarPinned, setSidebarPinned } from "../state"
+import { sidebarPinned, setSidebarPinned } from "../state"
 import AudioEQ, { toggleHwMute, localMuted } from "./AudioEQ"
 import DisplayEQ, { applyProfile, activeProfile } from "./DisplayEQ"
+import VoiceControl, { toggleMicMute, micMuted } from "./VoiceControl"
 
 // System toggle button - Star Citizen style
 function SystemToggle({
@@ -90,6 +91,15 @@ function WiFiToggle() {
           const newState = !wifiOn.get()
           setWifiOn(newState)
           wifi.enabled = newState
+          if (newState) {
+            // Reconnect to last known WiFi network after radio comes up
+            execAsync(["bash", "-c", "sleep 2 && nmcli -t -f NAME,TYPE connection show --order recent | grep ':802-11-wireless$' | head -1 | cut -d: -f1"])
+              .then((name) => {
+                const ssid = name.trim()
+                if (ssid) execAsync(["nmcli", "connection", "up", ssid]).catch(() => {})
+              })
+              .catch(() => {})
+          }
         }
       }}
     />
@@ -156,26 +166,6 @@ function NightLightToggle() {
 }
 
 
-// Tool button for launching popups
-function ToolButton({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: string,
-  label: string,
-  onClick: () => void,
-}) {
-  return (
-    <button name="tool-btn" onClicked={onClick}>
-      <box vertical>
-        <label name="tool-btn-icon" label={icon} />
-        <label name="tool-btn-label" label={label} />
-      </box>
-    </button>
-  )
-}
-
 export default function Home() {
   return (
     <box vertical name="home-page">
@@ -207,6 +197,11 @@ export default function Home() {
             label="MUTE"
             onClick={toggleHwMute}
           />,
+          <SystemToggle
+            active={micMuted}
+            label="MIC"
+            onClick={toggleMicMute}
+          />,
         ]
         for (const t of toggles) flow.add(t)
         flow.show_all()
@@ -216,15 +211,41 @@ export default function Home() {
       {/* Clock panel */}
       <Clock />
 
-      {/* EQ control panels */}
-      <AudioEQ />
-      <DisplayEQ />
+      {/* Audio/Voice toggle panel */}
+      {(() => {
+        const [showVoice, setShowVoice] = createState(false)
+        const audioPanel = <AudioEQ />
+        const voicePanel = <VoiceControl />
+        const stack = new Gtk.Stack({
+          transition_type: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,
+          transition_duration: 200,
+        })
+        stack.add_named(audioPanel, "audio")
+        stack.add_named(voicePanel, "voice")
+        stack.set_visible_child_name("audio")
+        stack.show_all()
 
-      {/* Tools section */}
-      <label name="section-header" label="//TOOLS" />
-      <box name="tools-row">
-        <ToolButton icon="" label="PTABLE" onClick={togglePeriodicTable} />
-      </box>
+        return (
+          <box vertical>
+            <box name="eq-tab-bar">
+              <button name="eq-tab-btn" hexpand
+                class={showVoice.as((v) => v ? "" : "active")}
+                onClicked={() => { setShowVoice(false); stack.set_visible_child_name("audio") }}
+              >
+                <label name="eq-tab-label" label="AUDIO" />
+              </button>
+              <button name="eq-tab-btn" hexpand
+                class={showVoice.as((v) => v ? "active" : "")}
+                onClicked={() => { setShowVoice(true); stack.set_visible_child_name("voice") }}
+              >
+                <label name="eq-tab-label" label="VOICE" />
+              </button>
+            </box>
+            {stack}
+          </box>
+        )
+      })()}
+      <DisplayEQ />
 
     </box>
   )

@@ -21,6 +21,13 @@ export const [breakPopupVisible, setBreakPopupVisible] = createState(false)
 export const [taskPopupVisible, setTaskPopupVisible] = createState(false)
 export const [taskPopupTitle, setTaskPopupTitle] = createState("")
 
+// PlanSync state
+export const [syncConnected, setSyncConnected] = createState(false)
+export const [syncPeerCount, setSyncPeerCount] = createState(0)
+export const [syncPeers, setSyncPeers] = createState<string[]>([])
+export const [pendingChangeRequests, setPendingChangeRequests] = createState(0)
+export const [syncDialogVisible, setSyncDialogVisible] = createState(false)
+
 // Sidebar pinned — when on, bar has exclusive zone and pushes windows away
 export const [sidebarPinned, setSidebarPinned] = createState(true)
 

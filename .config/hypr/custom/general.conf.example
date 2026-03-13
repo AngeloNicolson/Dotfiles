@@ -1,0 +1,8 @@
+# Put general config stuff here
+# Here's a list of every variable: https://wiki.hyprland.org/Configuring/Variables/
+
+# Screen Positioning
+# Example:
+# monitor=eDP-1,2560x1600@240,0x0,1.25
+# monitor=HDMI-A-1,1920x1080@60,0x0,1
+
