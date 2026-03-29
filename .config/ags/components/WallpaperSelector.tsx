@@ -5,7 +5,7 @@ import { execAsync } from "ags/process"
 import { createState } from "ags"
 
 const WALLPAPER_DIR = "/home/Angel/projects/personal/dotfiles/.config/ags/wallpapers"
-const SWWW_DIR = GLib.get_home_dir() + "/.config/swww"
+const SWWW_DIR = GLib.get_home_dir() + "/.config/awww"
 const VIDEO_DIR = WALLPAPER_DIR
 const MOVIES_DIR = "/home/Angel/Personal/Videos"
 const THUMB_CACHE_DIR = GLib.get_home_dir() + "/.cache/ags/video-thumbs"
@@ -331,18 +331,18 @@ export default function WallpaperSelector() {
     // Wait for processes to die
     await new Promise(resolve => setTimeout(resolve, 200))
 
-    // Ensure swww-daemon is running
+    // Ensure awww-daemon is running
     try {
-      await execAsync(["pgrep", "swww-daemon"])
+      await execAsync(["pgrep", "awww-daemon"])
     } catch {
-      // swww-daemon not running, start it
-      await execAsync(["swww-daemon"]).catch(() => {})
+      // awww-daemon not running, start it
+      await execAsync(["awww-daemon"]).catch(() => {})
       // Give it a moment to initialize
       await new Promise(resolve => setTimeout(resolve, 500))
     }
 
     execAsync([
-      "swww", "img", path,
+      "awww", "img", path,
       "--transition-type", "wipe",
       "--transition-angle", "30",
       "--transition-duration", "1.5",
@@ -379,7 +379,7 @@ export default function WallpaperSelector() {
     // Check if swww is running
     let swwwRunning = false
     try {
-      await execAsync(["pgrep", "swww-daemon"])
+      await execAsync(["pgrep", "awww-daemon"])
       swwwRunning = true
     } catch {
       swwwRunning = false
@@ -394,7 +394,7 @@ export default function WallpaperSelector() {
     if (swwwRunning) {
       // Fade swww to black
       await execAsync([
-        "swww", "clear", "000000",
+        "awww", "clear", "000000",
         "--transition-type", "fade",
         "--transition-duration", "0.4",
         "--transition-fps", "60"
@@ -404,7 +404,7 @@ export default function WallpaperSelector() {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // Kill swww
-      await execAsync(["pkill", "-9", "swww-daemon"]).catch(() => {})
+      await execAsync(["pkill", "-9", "awww-daemon"]).catch(() => {})
       await new Promise(resolve => setTimeout(resolve, 50))
     }
 
