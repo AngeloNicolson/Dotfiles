@@ -183,6 +183,35 @@ function generateCSS(c: ThemeColors): string {
     #tab-btn.active #tab-label {
       color: #80e0f0;
     }
+    #tab-focus-btn {
+      background: #0a1218;
+      border: 1px solid #2a3a45;
+      border-radius: 10px;
+      padding: 2px 12px;
+      margin-top: 3px;
+      min-height: 16px;
+    }
+    #tab-focus-btn:hover {
+      background: #1b2730;
+      border-color: #3a5060;
+    }
+    #tab-focus-btn.focused {
+      background: #152834;
+      border-color: #60c0d0;
+      box-shadow: inset 0 0 8px alpha(#60d0e0, 0.3);
+    }
+    #tab-focus-btn label {
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #3a5060;
+    }
+    #tab-focus-btn:hover label {
+      color: #6080a0;
+    }
+    #tab-focus-btn.focused label {
+      color: #80e0f0;
+    }
 
     /* Typography - terminal style */
     #title {
@@ -2354,6 +2383,15 @@ function generateCSS(c: ThemeColors): string {
     #eq-seg.peak.eq-blue {
       background: #a0c0ff;
       box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#6080d0, 0.4);
+    }
+    /* White cap */
+    #eq-seg.lit.eq-cap {
+      background: #909898;
+      box-shadow: inset 0 0 2px alpha(#b0b8b8, 0.3);
+    }
+    #eq-seg.peak.eq-cap {
+      background: #c0c8c8;
+      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#909898, 0.4);
     }
     #eq-label {
       font-size: 7px;
