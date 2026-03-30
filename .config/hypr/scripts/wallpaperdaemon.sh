@@ -1,10 +1,8 @@
 #!/bin/bash
 
-swww query
+awww query
 if [ $? -eq 1 ]; then
-  swww-daemon --format xrgb &
-
-  swww img ~/.config/swww/current.set \
-    --transition-type "wipe" \
-    --transition-duration 2
+  awww-daemon --format xrgb &
+  sleep 0.5
+  awww restore
 fi

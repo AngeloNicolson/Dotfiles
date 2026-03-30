@@ -105,7 +105,14 @@ Packages are split into files under `packages/`:
    chsh -s /usr/bin/fish
    ```
 
-6. **Restore rnote settings (if using rnote):**
+6. **Chromecast support (optional):**
+   ```bash
+   pipx install catt
+   # Cast a video: catt cast /path/to/video.mkv
+   # Cast to specific device: catt -d "Living Room" cast video.mkv
+   ```
+
+7. **Restore rnote settings (if using rnote):**
    ```bash
    dconf load /com/github/flxzt/rnote/ < ~/.config/rnote-dconf-settings.ini
    ```

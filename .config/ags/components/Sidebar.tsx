@@ -1,5 +1,5 @@
 import Gtk from "gi://Gtk?version=3.0"
-import { setSidebarStack, getPageState, setPage } from "../state"
+import { setSidebarStack, getPageState, setPage, focusedPage, toggleFocusedPage } from "../state"
 import Home from "./Home"
 import Planner from "./Planner"
 import AppLauncher from "./AppLauncher"
@@ -57,25 +57,34 @@ export default function Sidebar({ monitorName }: { monitorName: string }) {
       {/* Tab bar */}
       <box name="tab-bar">
         {tabs.map((tab) => (
-          <button
-            name="tab-btn"
-            class={activePage.as((p) => p === tab.id ? "active" : "")}
-            onClicked={() => setPage(monitorName, tab.id)}
-          >
-            <box vertical>
-              <label name="tab-icon" label={tab.icon} />
-              <label name="tab-label" label={tab.id === "page3"
-                ? secondsRemaining.as((s) => {
-                    const p = phase.get()
-                    if (p === "idle") return "POMO"
-                    const m = Math.floor(s / 60)
-                    const sec = s % 60
-                    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`
-                  })
-                : tab.label
-              } />
-            </box>
-          </button>
+          <box vertical>
+            <button
+              name="tab-btn"
+              class={activePage.as((p) => p === tab.id ? "active" : "")}
+              onClicked={() => setPage(monitorName, tab.id)}
+            >
+              <box vertical>
+                <label name="tab-icon" label={tab.icon} />
+                <label name="tab-label" label={tab.id === "page3"
+                  ? secondsRemaining.as((s) => {
+                      const p = phase.get()
+                      if (p === "idle") return "POMO"
+                      const m = Math.floor(s / 60)
+                      const sec = s % 60
+                      return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`
+                    })
+                  : tab.label
+                } />
+              </box>
+            </button>
+            <button
+              name="tab-focus-btn"
+              class={focusedPage.as((p) => p === tab.id ? "focused" : "")}
+              onClicked={() => toggleFocusedPage(tab.id)}
+            >
+              <label label={focusedPage.as((p) => p === tab.id ? "FOCUS" : "FOCUS")} />
+            </button>
+          </box>
         ))}
       </box>
       {/* Page content */}

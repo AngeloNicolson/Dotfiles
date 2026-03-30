@@ -102,7 +102,7 @@ mod_symlinks() {
     info "Symlinking config directories..."
 
     local config_dirs=(
-        ags fish foot gtk-3.0 gtk-4.0 hypr nvim swappy
+        ags fish foot gtk-3.0 gtk-4.0 hypr mpv nvim swappy
         systemd themes tmux-powerline wireplumber zathura
         OpenTabletDriver hyperdocs
     )

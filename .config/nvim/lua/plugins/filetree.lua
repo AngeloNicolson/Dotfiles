@@ -72,9 +72,6 @@ return {
 					-- Add --title flag so Hyprland can identify mpv launched from nvim
 					-- Set geometry to 960x540 for 16:9 ratio (wide and short for videos)
 					cmd = string.format("setsid -f %s --title=nvim-mpv --geometry=960x540 %s", app, vim.fn.shellescape(path))
-				elseif app == "zathura" or app == "rnote" then
-					-- Open on workspace 3 using hyprctl dispatch
-					cmd = string.format("hyprctl dispatch exec \"[workspace 3] %s %s\"", app, vim.fn.shellescape(path))
 				else
 					cmd = string.format("setsid -f %s %s", app, vim.fn.shellescape(path))
 				end
@@ -84,8 +81,6 @@ return {
 				})
 			end
 
-			-- Intercept ALL attempts to open media files in buffers
-			-- This ensures consistent behavior regardless of how the file is opened
 			vim.api.nvim_create_autocmd("BufReadCmd", {
 				pattern = { "*.pdf", "*.rnote", "*.mp4", "*.mkv", "*.avi", "*.mov", "*.webm", "*.flv", "*.wmv", "*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a", "*.aac", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.webp", "*.svg" },
 				callback = function(args)
@@ -95,13 +90,12 @@ return {
 						ext = ext:lower()
 						local handler = external_handlers[ext]
 						if handler then
-							-- Block buffer from being read - BufReadCmd prevents the default buffer loading
-							vim.bo[args.buf].buftype = "nofile"
-							vim.bo[args.buf].bufhidden = "hide"
-							vim.bo[args.buf].swapfile = false
-							-- Open in external app
 							open_external(handler, path)
-							-- Don't wipe buffer - just leave it empty
+							vim.schedule(function()
+								if vim.api.nvim_buf_is_valid(args.buf) then
+									vim.api.nvim_buf_delete(args.buf, { force = true })
+								end
+							end)
 						end
 					end
 				end,
