@@ -3,7 +3,7 @@ import { execAsync } from "ags/process"
 import Gdk from "gi://Gdk?version=3.0"
 import GLib from "gi://GLib"
 import Gtk from "gi://Gtk?version=3.0"
-import { breakPopupVisible, setBreakPopupVisible, pomoMaintainFocus, setPomoMaintainFocus } from "../state"
+import { breakPopupVisible, setBreakPopupVisible, focusedPage, toggleFocusedPage } from "../state"
 
 // === Timer State ===
 type Phase = "idle" | "work" | "break"
@@ -701,8 +701,8 @@ export default function Pomodoro() {
         <box name="pomo-focus-row">
           <button
             name="sys-toggle"
-            class={pomoMaintainFocus.as((m) => m ? "active" : "")}
-            onClicked={() => setPomoMaintainFocus(!pomoMaintainFocus.get())}
+            class={focusedPage.as((p) => p === "page3" ? "active" : "")}
+            onClicked={() => toggleFocusedPage("page3")}
           >
             <label name="pomo-mode-label" label="⏼ PANE FOCUS" />
           </button>

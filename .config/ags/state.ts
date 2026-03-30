@@ -31,8 +31,16 @@ export const [syncDialogVisible, setSyncDialogVisible] = createState(false)
 // Sidebar pinned — when on, bar has exclusive zone and pushes windows away
 export const [sidebarPinned, setSidebarPinned] = createState(true)
 
-// Pomodoro maintain focus — when on, bar always opens to POMO page
-export const [pomoMaintainFocus, setPomoMaintainFocus] = createState(false)
+// Focused page — when set, bar always opens to this page
+export const [focusedPage, setFocusedPage] = createState<string | null>(null)
+
+export function toggleFocusedPage(pageId: string) {
+  if (focusedPage.get() === pageId) {
+    setFocusedPage(null)
+  } else {
+    setFocusedPage(pageId)
+  }
+}
 
 export function togglePeriodicTable() {
   const newVisible = !periodicTableVisible.get()
@@ -65,7 +73,7 @@ export function toggleBar() {
 
   if (newVisible) {
     // Set page BEFORE showing bar to avoid flicker
-    const targetPage = pomoMaintainFocus.get() ? "page3" : "page1"
+    const targetPage = focusedPage.get() || "page1"
     const targetIndex = pages.indexOf(targetPage)
     sidebarStacks.forEach((stack, monitorName) => {
       stack.set_visible_child_name(targetPage)

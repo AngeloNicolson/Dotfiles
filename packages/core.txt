@@ -40,6 +40,9 @@ pavucontrol
 mpv
 socat
 
+# Chromecast (install via pipx)
+# pipx install catt
+
 # Wallpaper
 swww
 mpvpaper

@@ -27,3 +27,7 @@ end
 
 set -x JAVA_HOME /opt/android-studio/jbr
 set -x PATH $JAVA_HOME/bin $PATH
+
+# Go
+set -x GOPATH $HOME/.local/share/go
+set -x GOBIN $HOME/.local/bin
