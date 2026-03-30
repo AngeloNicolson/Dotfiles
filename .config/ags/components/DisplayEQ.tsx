@@ -18,15 +18,18 @@ const GAMMA_RANGE = GAMMA_MAX - GAMMA_MIN
 const RGB_MIN = 0.5
 const RGB_MAX = 1.0
 const RGB_RANGE = RGB_MAX - RGB_MIN
+const CAP_MIN = 0.3
+const CAP_MAX = 1.0
+const CAP_RANGE = CAP_MAX - CAP_MIN
 
 const CONF_PATH = GLib.get_home_dir() + "/.config/ags/display-eq.json"
 const SHADER_PATH = GLib.get_home_dir() + "/.config/hypr/shaders/rgb-tint.glsl"
 
-const COLOR_PROFILES: Record<string, { label: string, temp: number, gamma: number, rgb: [number, number, number] }> = {
-  default: { label: "DEF",  temp: 6500, gamma: 1.0, rgb: [1.0, 1.0, 1.0] },
-  warm:    { label: "WARM", temp: 4500, gamma: 1.0, rgb: [1.0, 1.0, 1.0] },
-  night:   { label: "NITE", temp: 3500, gamma: 0.9, rgb: [1.0, 0.9, 0.8] },
-  vivid:   { label: "VIVD", temp: 6500, gamma: 1.2, rgb: [1.0, 1.0, 1.0] },
+const COLOR_PROFILES: Record<string, { label: string, temp: number, gamma: number, rgb: [number, number, number], cap: number }> = {
+  default: { label: "DEF",  temp: 6500, gamma: 1.0, rgb: [1.0, 1.0, 1.0], cap: 1.0 },
+  warm:    { label: "WARM", temp: 4500, gamma: 1.0, rgb: [1.0, 1.0, 1.0], cap: 1.0 },
+  night:   { label: "NITE", temp: 3500, gamma: 0.9, rgb: [1.0, 0.9, 0.8], cap: 0.7 },
+  vivid:   { label: "VIVD", temp: 6500, gamma: 1.2, rgb: [1.0, 1.0, 1.0], cap: 1.0 },
 }
 
 const [relayAvailable, setRelayAvailable] = createState(false)
@@ -35,6 +38,7 @@ const [gamma, setGamma] = createState(1.0)
 const [rgbR, setRgbR] = createState(1.0)
 const [rgbG, setRgbG] = createState(1.0)
 const [rgbB, setRgbB] = createState(1.0)
+const [whiteCap, setWhiteCap] = createState(1.0)
 export const [activeProfile, setActiveProfile] = createState("default")
 
 // Load saved settings
@@ -50,6 +54,7 @@ try {
       setRgbG(parsed.rgb[1] ?? 1.0)
       setRgbB(parsed.rgb[2] ?? 1.0)
     }
+    if (parsed.cap != null) setWhiteCap(parsed.cap)
   }
 } catch {}
 
@@ -84,10 +89,10 @@ function ensureRelay() {
 }
 ensureRelay()
 
-// Apply saved RGB on startup
+// Apply saved shader on startup
 {
-  const r = rgbR.get(), g = rgbG.get(), b = rgbB.get()
-  if (r < 0.99 || g < 0.99 || b < 0.99) applyRgbShader(r, g, b)
+  const r = rgbR.get(), g = rgbG.get(), b = rgbB.get(), cap = whiteCap.get()
+  if (r < 0.99 || g < 0.99 || b < 0.99 || cap < 0.99) applyShader(r, g, b, cap)
 }
 
 function applyTemp(kelvin: number) {
@@ -96,8 +101,8 @@ function applyTemp(kelvin: number) {
 function applyGamma(value: number) {
   execAsync(["busctl", "--user", "set-property", "rs.wl-gammarelay", "/", "rs.wl.gammarelay", "Gamma", "d", String(value.toFixed(2))]).catch(() => {})
 }
-function applyRgbShader(r: number, g: number, b: number) {
-  if (r >= 0.99 && g >= 0.99 && b >= 0.99) {
+function applyShader(r: number, g: number, b: number, cap: number) {
+  if (r >= 0.99 && g >= 0.99 && b >= 0.99 && cap >= 0.99) {
     execAsync(["hyprshade", "off"]).catch(() => {})
     return
   }
@@ -109,10 +114,12 @@ uniform sampler2D tex;
 out vec4 fragColor;
 
 const vec3 RGB_TINT = vec3(${r.toFixed(3)}, ${g.toFixed(3)}, ${b.toFixed(3)});
+const float WHITE_CAP = ${cap.toFixed(3)};
 
 void main() {
     vec4 c = texture(tex, v_texcoord);
     c.rgb *= RGB_TINT;
+    c.rgb = min(c.rgb, vec3(WHITE_CAP));
     fragColor = c;
 }
 `
@@ -132,6 +139,7 @@ function persistSettings() {
         temperature: temperature.get(),
         gamma: gamma.get(),
         rgb: [rgbR.get(), rgbG.get(), rgbB.get()],
+        cap: whiteCap.get(),
         profile: activeProfile.get(),
       }))
     } catch {}
@@ -141,10 +149,11 @@ function persistSettings() {
 
 function detectProfile() {
   const t = temperature.get(), g = gamma.get()
-  const r = rgbR.get(), gv = rgbG.get(), b = rgbB.get()
+  const r = rgbR.get(), gv = rgbG.get(), b = rgbB.get(), cap = whiteCap.get()
   const match = Object.entries(COLOR_PROFILES).find(([_, p]) =>
     Math.abs(p.temp - t) < 50 && Math.abs(p.gamma - g) < 0.05 &&
-    Math.abs(p.rgb[0] - r) < 0.03 && Math.abs(p.rgb[1] - gv) < 0.03 && Math.abs(p.rgb[2] - b) < 0.03
+    Math.abs(p.rgb[0] - r) < 0.03 && Math.abs(p.rgb[1] - gv) < 0.03 && Math.abs(p.rgb[2] - b) < 0.03 &&
+    Math.abs(p.cap - cap) < 0.03
   )
   setActiveProfile(match ? match[0] : "")
 }
@@ -166,21 +175,28 @@ function setGam(value: number) {
 function setRChannel(value: number) {
   const v = Math.max(RGB_MIN, Math.min(RGB_MAX, Math.round(value * 100) / 100))
   setRgbR(v)
-  applyRgbShader(v, rgbG.get(), rgbB.get())
+  applyShader(v, rgbG.get(), rgbB.get(), whiteCap.get())
   detectProfile()
   persistSettings()
 }
 function setGChannel(value: number) {
   const v = Math.max(RGB_MIN, Math.min(RGB_MAX, Math.round(value * 100) / 100))
   setRgbG(v)
-  applyRgbShader(rgbR.get(), v, rgbB.get())
+  applyShader(rgbR.get(), v, rgbB.get(), whiteCap.get())
   detectProfile()
   persistSettings()
 }
 function setBChannel(value: number) {
   const v = Math.max(RGB_MIN, Math.min(RGB_MAX, Math.round(value * 100) / 100))
   setRgbB(v)
-  applyRgbShader(rgbR.get(), rgbG.get(), v)
+  applyShader(rgbR.get(), rgbG.get(), v, whiteCap.get())
+  detectProfile()
+  persistSettings()
+}
+function setCapValue(value: number) {
+  const v = Math.max(CAP_MIN, Math.min(CAP_MAX, Math.round(value * 100) / 100))
+  setWhiteCap(v)
+  applyShader(rgbR.get(), rgbG.get(), rgbB.get(), v)
   detectProfile()
   persistSettings()
 }
@@ -191,8 +207,9 @@ export function applyProfile(key: string) {
   setTemperature(p.temp); setGamma(p.gamma)
   setRgbR(p.rgb[0]); setRgbG(p.rgb[1]); setRgbB(p.rgb[2])
   setActiveProfile(key)
+  setWhiteCap(p.cap)
   applyTemp(p.temp); applyGamma(p.gamma)
-  applyRgbShader(p.rgb[0], p.rgb[1], p.rgb[2])
+  applyShader(p.rgb[0], p.rgb[1], p.rgb[2], p.cap)
   persistSettings()
 }
 
@@ -294,6 +311,7 @@ export default function DisplayEQ() {
   const rSegments = rgbR.as((v) => Math.round(((v - RGB_MIN) / RGB_RANGE) * SEGMENTS))
   const gSegments = rgbG.as((v) => Math.round(((v - RGB_MIN) / RGB_RANGE) * SEGMENTS))
   const bSegments = rgbB.as((v) => Math.round(((v - RGB_MIN) / RGB_RANGE) * SEGMENTS))
+  const capSegments = whiteCap.as((v) => Math.round(((v - CAP_MIN) / CAP_RANGE) * SEGMENTS))
 
   return (
     <box name="eq-panel" vertical>
@@ -309,6 +327,7 @@ export default function DisplayEQ() {
         <EQColumn value={rSegments} label="R" onSet={(seg) => setRChannel(RGB_MIN + (seg / SEGMENTS) * RGB_RANGE)} litClass="eq-red" />
         <EQColumn value={gSegments} label="G" onSet={(seg) => setGChannel(RGB_MIN + (seg / SEGMENTS) * RGB_RANGE)} litClass="eq-green" />
         <EQColumn value={bSegments} label="B" onSet={(seg) => setBChannel(RGB_MIN + (seg / SEGMENTS) * RGB_RANGE)} litClass="eq-blue" />
+        <EQColumn value={capSegments} label="WHT" onSet={(seg) => setCapValue(CAP_MIN + (seg / SEGMENTS) * CAP_RANGE)} litClass="eq-cap" />
       </box>
       {(() => {
         const hbarEb = new Gtk.EventBox({ visible: true })
