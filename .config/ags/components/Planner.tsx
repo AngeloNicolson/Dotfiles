@@ -283,6 +283,7 @@ interface PlanEvent {
   startMin: number
   endMin: number
   desc: string
+  color?: string
   recurring?: boolean
   fromSchedule?: boolean
 }
@@ -292,15 +293,23 @@ function parseEventLine(text: string): PlanEvent | null {
   if (rangeMatch) {
     const [h1, m1] = rangeMatch[1].split(":").map(Number)
     const [h2, m2] = rangeMatch[2].split(":").map(Number)
-    return { startMin: h1 * 60 + m1, endMin: h2 * 60 + m2, desc: rangeMatch[3] }
+    const { desc, color } = extractColor(rangeMatch[3])
+    return { startMin: h1 * 60 + m1, endMin: h2 * 60 + m2, desc, color }
   }
   const singleMatch = text.match(/^(\d{1,2}:\d{2})\s+(.+)$/)
   if (singleMatch) {
     const [h, m] = singleMatch[1].split(":").map(Number)
     const sm = h * 60 + m
-    return { startMin: sm, endMin: sm + 15, desc: singleMatch[2] }
+    const { desc, color } = extractColor(singleMatch[2])
+    return { startMin: sm, endMin: sm + 15, desc, color }
   }
   return null
+}
+
+function extractColor(text: string): { desc: string, color?: string } {
+  const match = text.match(/^(.+?)\s+(#[0-9a-fA-F]{6})\s*$/)
+  if (match) return { desc: match[1].trim(), color: match[2] }
+  return { desc: text }
 }
 
 function parsePlanFile(dateStr: string): PlanEvent[] {
@@ -327,12 +336,13 @@ interface ScheduleSection {
   removals: PlanEvent[]
 }
 
+const ROUTINE_FILE = `${PLANS_DIR}/routine.plan`
 const SCHEDULE_FILE = `${PLANS_DIR}/schedule.plan`
 
-function parseScheduleFile(): ScheduleSection[] {
-  if (!GLib.file_test(SCHEDULE_FILE, GLib.FileTest.EXISTS)) return []
+function parsePlanSections(filePath: string): ScheduleSection[] {
+  if (!GLib.file_test(filePath, GLib.FileTest.EXISTS)) return []
   try {
-    const content = readFile(SCHEDULE_FILE)
+    const content = readFile(filePath)
     if (!content) return []
     const sections: ScheduleSection[] = []
     let current: ScheduleSection | null = null
@@ -365,6 +375,10 @@ function parseScheduleFile(): ScheduleSection[] {
     }
     return sections
   } catch { return [] }
+}
+
+function parseScheduleFile(): ScheduleSection[] {
+  return [...parsePlanSections(ROUTINE_FILE), ...parsePlanSections(SCHEDULE_FILE)]
 }
 
 const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
@@ -427,11 +441,7 @@ function getScheduleEventsForDate(sections: ScheduleSection[], dateStr: string, 
     if (sec.selector !== dateStr) continue
     // Remove cancelled events (explicit -)
     events = events.filter(ev => !sec.removals.some(r => eventMatchesRemoval(ev, r)))
-    // Additions auto-replace recurring events at the same time slot
-    for (const add of sec.additions) {
-      events = events.filter(ev => !ev.recurring || ev.startMin !== add.startMin)
-    }
-    // Date additions are editable overrides — NOT fromSchedule
+    // Date additions coexist with recurring events (shown side by side)
     events.push(...sec.additions)
   }
 
@@ -1132,7 +1142,17 @@ export default function Planner() {
       </box>) as Gtk.Widget
       cardVisual.set_size_request(-1, cardH)
       cardVisual.set_hexpand(true)
-      if (ev.fromSchedule) cardVisual.get_style_context().add_class("schedule")
+      if (ev.fromSchedule && !ev.color) cardVisual.get_style_context().add_class("schedule")
+      if (ev.color) {
+        const hex = ev.color.replace("#", "")
+        const r = Math.round(parseInt(hex.slice(0, 2), 16) * 0.2)
+        const g = Math.round(parseInt(hex.slice(2, 4), 16) * 0.2)
+        const b = Math.round(parseInt(hex.slice(4, 6), 16) * 0.2)
+        const bg = `#${r.toString(16).padStart(2,"0")}${g.toString(16).padStart(2,"0")}${b.toString(16).padStart(2,"0")}`
+        const provider = new Gtk.CssProvider()
+        provider.load_from_data(`#plan-event { border-left: 3px solid ${ev.color}; background: ${bg}; }`)
+        cardVisual.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+      }
 
       // Clip container — prevents GTK from expanding card beyond cardH
       const clipScroll = new Gtk.ScrolledWindow({
