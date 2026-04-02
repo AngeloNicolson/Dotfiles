@@ -149,6 +149,16 @@ function updateGainsRuntime(g: number[]) {
   ])
 }
 
+function waitForEqNode(retries: number, delay: number): Promise<void> {
+  return execAsync(["bash", "-c", "wpctl status | grep -q 'effect_input.eq6'"])
+    .catch(() => {
+      if (retries <= 0) return Promise.reject("EQ node never appeared")
+      return new Promise((resolve) =>
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => { resolve(undefined); return GLib.SOURCE_REMOVE })
+      ).then(() => waitForEqNode(retries - 1, delay))
+    })
+}
+
 function startFilterChain(g: number[]) {
   clearEqDefault()
   execAsync(["pkill", "-f", "pipewire -c filter-chain.conf"]).catch(() => {})
@@ -157,10 +167,10 @@ function startFilterChain(g: number[]) {
     try {
       GLib.spawn_command_line_async("pipewire -c filter-chain.conf")
     } catch (e) { print(`EQ: failed to start: ${e}`); setEqAvailable(false); return GLib.SOURCE_REMOVE }
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1200, () => {
-      setEqAsDefault()
-      return GLib.SOURCE_REMOVE
-    })
+    // Poll until the node actually appears, then set as default
+    waitForEqNode(10, 300)
+      .then(() => setEqAsDefault())
+      .catch((e) => { print(`EQ: gave up waiting for node: ${e}`); setEqAvailable(false) })
     return GLib.SOURCE_REMOVE
   })
 }
@@ -489,6 +499,22 @@ export default function AudioEQ() {
 
   const g = gains.get()
   if (g.some((v) => v !== 0)) reloadFilterChain()
+
+  // Health check: kill orphaned filter-chains that aren't routing audio
+  createPoll(0, 15000, () => {
+    if (gains.get().every((v) => v === 0)) return 0
+    return execAsync(["bash", "-c", "pw-cli ls Node 2>/dev/null | grep -c 'effect_input.eq6'"])
+      .then((count) => {
+        const n = parseInt(count.trim()) || 0
+        if (n > 1) {
+          print(`EQ: detected ${n} filter-chain nodes, cleaning up`)
+          execAsync(["pkill", "-f", "pipewire -c filter-chain.conf"]).catch(() => {})
+          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => { startFilterChain(gains.get()); return GLib.SOURCE_REMOVE })
+        }
+        return 0
+      })
+      .catch(() => 0)
+  })
 
   return (
     <box name="eq-panel" vertical>
