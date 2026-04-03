@@ -35,7 +35,7 @@ const DESTINATIONS: Destination[] = [
     id: "apps", label: "APPS", icon: "", x: 0.14, y: 0.14, size: 4.8, ringStyle: "planet",
     subItems: [
       { id: "wofi", label: "LAUNCHER", icon: "", command: "wofi --show drun" },
-      { id: "discord", label: "DISCORD", icon: "󰙯", command: "vesktop" },
+      { id: "discord", label: "DISCORD", icon: "󰙯", command: "firefox --new-window https://discord.com/app" },
       { id: "obs", label: "OBS", icon: "󰑋", command: "obs" },
       { id: "gimp", label: "GIMP", icon: "", command: "gimp" },
       { id: "blender", label: "BLENDER", icon: "󰂫", command: "blender" },

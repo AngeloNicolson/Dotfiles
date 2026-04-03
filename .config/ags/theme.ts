@@ -2656,6 +2656,37 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 600;
       letter-spacing: 2px;
     }
+
+    /* Submap mode bar */
+    #submap-bar {
+      background: ${c.bg_dark};
+      border-top: 2px solid ${c.accent};
+      padding: 8px 24px;
+      min-height: 36px;
+    }
+    #submap-icon {
+      font-size: 16px;
+      color: ${c.accent};
+      margin-right: 10px;
+    }
+    #submap-label {
+      font-size: 14px;
+      font-weight: bold;
+      color: ${c.accent};
+      letter-spacing: 3px;
+      margin-right: 16px;
+    }
+    #submap-separator {
+      background: ${c.accent};
+      min-width: 2px;
+      min-height: 16px;
+      margin: 0 16px;
+    }
+    #submap-binds {
+      font-size: 13px;
+      color: ${c.fg};
+      letter-spacing: 1px;
+    }
   `
 }
 
