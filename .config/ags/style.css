@@ -597,3 +597,38 @@
   margin: 8px 0;
 }
 
+/* Submap mode bar */
+#submap-bar {
+  background: #1a1a2e;
+  border-top: 2px solid #e0af68;
+  padding: 8px 24px;
+  min-height: 36px;
+}
+
+#submap-icon {
+  font-size: 16px;
+  color: #e0af68;
+  margin-right: 10px;
+}
+
+#submap-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #e0af68;
+  letter-spacing: 3px;
+  margin-right: 16px;
+}
+
+#submap-separator {
+  background: #e0af68;
+  min-width: 2px;
+  min-height: 16px;
+  margin: 0 16px;
+}
+
+#submap-binds {
+  font-size: 13px;
+  color: #f0f2f4;
+  letter-spacing: 1px;
+}
+

@@ -1,5 +1,5 @@
 import app from "ags/gtk3/app"
-import { toggleBar, cyclePage, cyclePageBack, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable } from "./state"
+import { toggleBar, cyclePage, cyclePageBack, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable, setActiveSubmap, setSubmapVisible } from "./state"
 import { initTheme, applyTheme } from "./theme"
 import Bar from "./components/Bar"
 import DestinationWindow from "./components/DestinationWindow"
@@ -7,6 +7,7 @@ import GalaxyWindow from "./components/GalaxyWindow"
 import PeriodicTableWindow from "./components/PeriodicTableWindow"
 import BreakPopupWindow from "./components/BreakPopupWindow"
 import TaskPopupWindow from "./components/TaskPopupWindow"
+import SubmapIndicator from "./components/SubmapIndicator"
 import AstalHyprland from "gi://AstalHyprland"
 import { Gdk } from "ags/gtk3"
 
@@ -140,7 +141,16 @@ app.start({
     syncBars()
     updateBarVisibility()
 
-    // Create destination menu and galaxy overlay windows on primary monitor
+    // Listen for submap changes
+    hyprland.connect("submap", (_hypr: any, name: string) => {
+      print(`SUBMAP EVENT: "${name}"`)
+      const sub = name || ""
+      setActiveSubmap(sub)
+      setSubmapVisible(sub !== "")
+    })
+
+    // Create overlay windows on primary monitor
+    SubmapIndicator(0)
     DestinationWindow(0)
     GalaxyWindow(0)
     PeriodicTableWindow(0)

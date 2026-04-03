@@ -5,6 +5,10 @@ import AstalHyprland from "gi://AstalHyprland"
 // Bar visibility state
 export const [barVisible, setBarVisible] = createState(false)
 
+// Hyprland submap indicator
+export const [activeSubmap, setActiveSubmap] = createState("")
+export const [submapVisible, setSubmapVisible] = createState(false)
+
 // Destination menu visibility state
 export const [destinationVisible, setDestinationVisible] = createState(false)
 
