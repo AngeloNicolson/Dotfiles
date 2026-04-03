@@ -32,7 +32,7 @@ export const [syncDialogVisible, setSyncDialogVisible] = createState(false)
 export const [sidebarPinned, setSidebarPinned] = createState(true)
 
 // Focused page — when set, bar always opens to this page
-export const [focusedPage, setFocusedPage] = createState<string | null>(null)
+export const [focusedPage, setFocusedPage] = createState<string | null>("page2")
 
 export function toggleFocusedPage(pageId: string) {
   if (focusedPage.get() === pageId) {
