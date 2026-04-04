@@ -1,7 +1,49 @@
+import { createState } from "ags"
 import { createPoll } from "ags/time"
 import { execAsync, createSubprocess } from "ags/process"
 
+const gpuModes = [
+  { label: "ECO", watts: 50 },
+  { label: "BAL", watts: 95 },
+  { label: "MAX", watts: 150 },
+]
+
+const sysModes = [
+  { label: "SAVE", profile: "power-saver" },
+  { label: "BAL", profile: "balanced" },
+  { label: "PERF", profile: "performance" },
+]
+
 export default function PowerIndicator() {
+  const gpu = createPoll(
+    { power: 0, temp: 0, limit: 95 },
+    3000,
+    () => execAsync("nvidia-smi --query-gpu=power.draw,temperature.gpu,enforced.power.limit --format=csv,noheader,nounits")
+      .then((out) => {
+        const [p, t, l] = out.split(",").map((s) => parseFloat(s.trim()))
+        return { power: p || 0, temp: t || 0, limit: l || 95 }
+      })
+      .catch(() => ({ power: 0, temp: 0, limit: 95 })),
+  )
+
+  const setGpuPower = (watts: number) => {
+    execAsync(`pkexec nvidia-smi -pl ${watts}`).catch((e) => console.error("GPU power set failed:", e))
+  }
+
+  const cpu = createPoll(
+    { temp: 0, freq: 0 },
+    3000,
+    () => execAsync("bash -c \"cat /sys/class/thermal/thermal_zone0/temp && cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq\"")
+      .then((out) => {
+        const lines = out.trim().split("\n")
+        return { temp: Math.round(parseInt(lines[0]) / 1000), freq: (parseInt(lines[1]) / 1000000).toFixed(1) }
+      })
+      .catch(() => ({ temp: 0, freq: 0 })),
+  )
+
+  const setSysProfile = (profile: string) => {
+    execAsync(`powerprofilesctl set ${profile}`).catch((e) => console.error("Profile set failed:", e))
+  }
   const bat = createSubprocess(
     { level: 100, status: "Unknown", ac: false, cycles: 0, watts: "--W", time: "--" },
     ["bash", "-c", 'while true; do read -r cap < /sys/class/power_supply/BAT0/capacity; read -r st < /sys/class/power_supply/BAT0/status; read -r ac < /sys/class/power_supply/AC/online; read -r vo < /sys/class/power_supply/BAT0/voltage_now; read -r cu < /sys/class/power_supply/BAT0/current_now; read -r cn < /sys/class/power_supply/BAT0/charge_now; read -r cf < /sys/class/power_supply/BAT0/charge_full; read -r cfd < /sys/class/power_supply/BAT0/charge_full_design; read -r cc < /sys/class/power_supply/BAT0/cycle_count; echo "$cap|$st|$ac|$vo|$cu|$cn|$cf|$cfd|$cc"; sleep 5; done'],
@@ -119,6 +161,56 @@ export default function PowerIndicator() {
           name="power-big-percent"
           label={bat.as((d) => `${d.level}%`)}
         />
+      </box>
+
+      {/* System Power Profile */}
+      <box name="gpu-panel" vertical>
+        <box name="gpu-panel-header">
+          <label name="power-panel-title" label="SYS // i9 275HX" />
+          <box hexpand />
+          <label name="power-header-stat" label={cpu.as((c) => `${c.freq}GHz`)} />
+          <label name="power-header-stat" label={cpu.as((c) => `${c.temp}°C`)} />
+        </box>
+
+        <box name="gpu-mode-buttons" homogeneous>
+          {sysModes.map((mode) => (
+            <button
+              name="gpu-mode-btn"
+              class={powerProfile.as((p) => p === mode.profile ? "active" : "")}
+              onClicked={() => setSysProfile(mode.profile)}
+            >
+              <box vertical>
+                <label name="gpu-mode-label" label={mode.label} />
+                <label name="gpu-mode-watts" label={mode.profile} />
+              </box>
+            </button>
+          ))}
+        </box>
+      </box>
+
+      {/* GPU Power Mode */}
+      <box name="gpu-panel" vertical>
+        <box name="gpu-panel-header">
+          <label name="power-panel-title" label="GPU // RTX 5090" />
+          <box hexpand />
+          <label name="power-header-stat" label={gpu.as((g) => `${g.power.toFixed(0)}W`)} />
+          <label name="power-header-stat" label={gpu.as((g) => `${g.temp}°C`)} />
+        </box>
+
+        <box name="gpu-mode-buttons" homogeneous>
+          {gpuModes.map((mode) => (
+            <button
+              name="gpu-mode-btn"
+              class={gpu.as((g) => Math.abs(g.limit - mode.watts) < 5 ? "active" : "")}
+              onClicked={() => setGpuPower(mode.watts)}
+            >
+              <box vertical>
+                <label name="gpu-mode-label" label={mode.label} />
+                <label name="gpu-mode-watts" label={`${mode.watts}W`} />
+              </box>
+            </button>
+          ))}
+        </box>
       </box>
     </box>
   )

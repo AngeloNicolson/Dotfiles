@@ -92,7 +92,8 @@ STATE MANAGEMENT
 
 KEYBINDINGS (Hyprland)
 ----------------------
-- SUPER + SHIFT: App launching (T=kitty, F=firefox, E=nemo, D=vesktop, B=blender, K=ktouch)
-- SUPER + CTRL: Window management (arrows=resize, 1-5=move to workspace, S=special)
+- ALT: App launching (Return=foot, F=firefox, E=nemo, B=blender, K=ttyper)
+- SUPER + SHIFT: Move windows (HJKL=direction, 1-5=to workspace, B/D/M/S=to special)
+- SUPER + CTRL: Window management (HJKL/arrows=resize, X=kill, W=float, P=pin, Return=fullscreen)
 - SUPER + Tab: Cycle sidebar panels
 - SUPER + Q: Toggle bar visibility
