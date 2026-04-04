@@ -100,20 +100,9 @@ function generateCSS(c: ThemeColors): string {
       box-shadow: none;
     }
     scrollbar {
-      background: transparent;
-      border: none;
-    }
-    scrollbar trough {
-      background: transparent;
-      border: none;
-    }
-    scrollbar slider {
-      background: alpha(#3a5060, 0.5);
-      border-radius: 4px;
-      min-width: 6px;
-    }
-    scrollbar slider:hover {
-      background: alpha(#60c0d0, 0.5);
+      opacity: 0;
+      min-width: 0;
+      min-height: 0;
     }
 
     /* Sidebar container - Holographic */
@@ -1949,6 +1938,54 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 600;
       color: #90b0c0;
       letter-spacing: 2px;
+    }
+
+    /* GPU Power Panel */
+    #gpu-panel {
+      background: #101820;
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+    #gpu-panel-header {
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #2a3a45;
+    }
+    #gpu-mode-buttons {
+      margin-top: 6px;
+    }
+    #gpu-mode-btn {
+      background: #0a1015;
+      border: 1px solid #2a3a45;
+      border-radius: 4px;
+      padding: 10px 6px;
+      margin: 0 3px;
+    }
+    #gpu-mode-btn.active {
+      background: alpha(#60c0d0, 0.15);
+      border-color: #60c0d0;
+    }
+    #gpu-mode-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #90b0c0;
+    }
+    #gpu-mode-btn.active #gpu-mode-label {
+      color: #e0f4f8;
+    }
+    #gpu-mode-watts {
+      font-size: 13px;
+      font-weight: 600;
+      color: #607080;
+      letter-spacing: 0;
+      margin-top: 2px;
+      text-shadow: none;
+    }
+    #gpu-mode-btn.active #gpu-mode-watts {
+      color: #a0e0f0;
     }
 
     /* App Launcher - Holographic Style (matches Home) */
