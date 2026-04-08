@@ -3,7 +3,7 @@
 # Usage: ./install.sh [module ...]
 # No args = full interactive install
 
-set -e
+set +e
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -73,14 +73,15 @@ pkg_install() {
     local pkgs="$1"
     [[ -z "$pkgs" ]] && return 0
 
+    local failed=""
     case "$DISTRO" in
         arch)
             if command -v yay &>/dev/null; then
-                yay -S --needed --noconfirm $pkgs
+                yay -S --needed --noconfirm $pkgs || failed="y"
             elif command -v paru &>/dev/null; then
-                paru -S --needed --noconfirm $pkgs
+                paru -S --needed --noconfirm $pkgs || failed="y"
             elif command -v pacman &>/dev/null; then
-                sudo pacman -S --needed --noconfirm $pkgs
+                sudo pacman -S --needed --noconfirm $pkgs || failed="y"
             else
                 error "No Arch package manager found (yay/paru/pacman)"
                 return 1
@@ -88,22 +89,26 @@ pkg_install() {
             ;;
         ubuntu)
             sudo apt-get update -qq
-            sudo apt-get install -y $pkgs
+            sudo apt-get install -y $pkgs || failed="y"
             ;;
         fedora)
-            sudo dnf install -y $pkgs
+            sudo dnf install -y $pkgs || failed="y"
             ;;
         opensuse)
-            sudo zypper install -y $pkgs
+            sudo zypper install -y $pkgs || failed="y"
             ;;
         void)
-            sudo xbps-install -y $pkgs
+            sudo xbps-install -y $pkgs || failed="y"
             ;;
         *)
             error "No package install method for distro: $DISTRO"
             return 1
             ;;
     esac
+
+    if [[ "$failed" == "y" ]]; then
+        warn "Some packages failed to install — check output above"
+    fi
 }
 
 parse_packages() {
@@ -389,6 +394,11 @@ run_module() {
         ollama)    mod_ollama ;;
         *)         error "Unknown module: $mod"; return 1 ;;
     esac
+    local status=$?
+    if [[ $status -ne 0 ]]; then
+        error "Module '$mod' failed (exit $status)"
+        warn "Continuing with remaining modules..."
+    fi
 }
 
 # ─── Summary ───────────────────────────────────────────────────────────────
