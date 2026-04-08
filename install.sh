@@ -132,11 +132,19 @@ ensure_symlink() {
         return 0
     fi
 
-    # Real file/dir exists — back up
+    # Real file/dir exists — ask user
     if [[ -e "$link" ]]; then
-        local backup="${link}.backup.$(date +%Y%m%d%H%M%S)"
-        mv "$link" "$backup"
-        warn "Backed up: $(basename "$link") -> $backup"
+        warn "$(basename "$link") already exists"
+        local reply
+        reply="$(ask_yn "  Back up? (n = delete)" "y")"
+        if [[ "$reply" == "y" ]]; then
+            local backup="${link}.backup.$(date +%Y%m%d%H%M%S)"
+            mv "$link" "$backup"
+            warn "Backed up: $(basename "$link") -> $backup"
+        else
+            rm -rf "$link"
+            success "Deleted: $(basename "$link")"
+        fi
     fi
 
     mkdir -p "$(dirname "$link")"
