@@ -158,6 +158,20 @@ mod_packages() {
         return 0
     fi
 
+    # Remove conflicting -git packages before installing stable versions
+    if [[ "$DISTRO" == "arch" ]]; then
+        local git_conflicts
+        git_conflicts="$(pacman -Qq 2>/dev/null | grep -E '\-git$' || true)"
+        if [[ -n "$git_conflicts" ]]; then
+            info "Removing conflicting -git packages..."
+            echo "$git_conflicts" | while read -r pkg; do
+                echo -e "    ${DIM}$pkg${NC}"
+            done
+            sudo pacman -Rdd --noconfirm $git_conflicts || warn "Some -git packages could not be removed"
+            success "Cleaned up -git packages"
+        fi
+    fi
+
     local pkgs=""
     pkgs="$(parse_packages "$PKG_DIR/core.txt")"
 
