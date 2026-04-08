@@ -3,9 +3,8 @@ import { createPoll } from "ags/time"
 import { execAsync, createSubprocess } from "ags/process"
 
 const gpuModes = [
-  { label: "ECO", watts: 50 },
-  { label: "BAL", watts: 95 },
-  { label: "MAX", watts: 150 },
+  { label: "ECO", watts: 95, boost: false },
+  { label: "BOOST", watts: 175, boost: true },
 ]
 
 const sysModes = [
@@ -26,8 +25,14 @@ export default function PowerIndicator() {
       .catch(() => ({ power: 0, temp: 0, limit: 95 })),
   )
 
-  const setGpuPower = (watts: number) => {
-    execAsync(`pkexec nvidia-smi -pl ${watts}`).catch((e) => console.error("GPU power set failed:", e))
+  const setGpuPower = (mode: typeof gpuModes[number]) => {
+    if (!mode.boost) {
+      // ECO: stop nvidia-powerd, GPU falls back to 95W default
+      execAsync("sudo systemctl stop nvidia-powerd").catch((e) => console.error("GPU power set failed:", e))
+    } else {
+      // BAL/MAX: ensure nvidia-powerd is running for dynamic boost
+      execAsync("sudo systemctl start nvidia-powerd").catch((e) => console.error("GPU power set failed:", e))
+    }
   }
 
   const cpu = createPoll(
@@ -201,8 +206,11 @@ export default function PowerIndicator() {
           {gpuModes.map((mode) => (
             <button
               name="gpu-mode-btn"
-              class={gpu.as((g) => Math.abs(g.limit - mode.watts) < 5 ? "active" : "")}
-              onClicked={() => setGpuPower(mode.watts)}
+              class={gpu.as((g) => {
+                if (!mode.boost) return g.limit <= 96 ? "active" : ""
+                return g.limit > 96 ? "active" : ""
+              })}
+              onClicked={() => setGpuPower(mode)}
             >
               <box vertical>
                 <label name="gpu-mode-label" label={mode.label} />

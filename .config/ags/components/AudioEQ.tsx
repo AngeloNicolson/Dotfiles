@@ -117,7 +117,11 @@ ${links}
             audio.channels = 2
             audio.position = [ FL FR ]
             capture.props = { node.name = "effect_input.eq6" media.class = Audio/Sink }
-            playback.props = { node.name = "effect_output.eq6" node.passive = true }
+            playback.props = {
+                node.name = "effect_output.eq6"
+                node.passive = true
+${selectedSinkNodeName ? `                target.object = "${selectedSinkNodeName}"` : ""}
+            }
         }
     }
 ]
@@ -346,8 +350,9 @@ const [localVol, setLocalVol] = createState(0)
 const [localMuted, setLocalMuted] = createState(false)
 const [activeSinkName, setActiveSinkName] = createState("")
 
-// Track selected hw sink by ID (not the EQ sink)
+// Track selected hw sink by ID and node.name (not the EQ sink)
 let selectedSinkId = 0
+let selectedSinkNodeName = ""
 // Known sink IDs — used to detect newly plugged devices
 let knownSinkIds = new Set<number>()
 let initialSyncDone = false
@@ -391,28 +396,25 @@ function rebuildOutputList() {
     outputListBox.add(btn)
   }
   outputListBox.show_all()
-  const scroll = (outputListBox as any)._scrollParent as Gtk.ScrolledWindow | null
-  if (scroll) {
-    // Size scroll to fit content, capped at 180px
-    const perItem = 30
-    const height = Math.min(speakers.length * perItem + 10, 180)
-    scroll.set_min_content_height(height)
-    scroll.visible = dropdownVisible
-  }
 }
+
+let dropdownRevealer: Gtk.Revealer | null = null
 
 function toggleDropdown() {
   if (!outputListBox) return
   dropdownVisible = !dropdownVisible
   if (dropdownVisible) rebuildOutputList()
-  const scroll = (outputListBox as any)._scrollParent
-  if (scroll) scroll.visible = dropdownVisible
+  if (dropdownRevealer) dropdownRevealer.reveal_child = dropdownVisible
   if (dropdownArrow) dropdownArrow.label = dropdownVisible ? "" : ""
 }
 
 function syncFromSink(sink: any) {
   selectedSinkId = sink.id
   setActiveSinkName(sinkDesc(sink))
+  // Resolve node.name for filter chain targeting
+  execAsync(["bash", "-c", `wpctl inspect ${sink.id} | grep -oP '(?<=node\\.name = ").*(?=")'`])
+    .then((name) => { selectedSinkNodeName = name.trim() })
+    .catch(() => { selectedSinkNodeName = "" })
   // Query wpctl for accurate volume/mute (AstalWp properties can be stale at startup)
   execAsync(["wpctl", "get-volume", String(sink.id)])
     .then((out) => {
@@ -431,7 +433,20 @@ function selectSink(sinkId: number) {
   const sink = speakers.find((s: any) => s.id === sinkId)
   if (!sink) return
   syncFromSink(sink)
-  execAsync(["wpctl", "set-default", String(sinkId)]).catch(() => {})
+  // Resolve node.name first, then set default and restart filter chain
+  execAsync(["bash", "-c", `wpctl inspect ${sinkId} | grep -oP '(?<=node\\.name = ").*(?=")'`])
+    .then((name) => {
+      selectedSinkNodeName = name.trim()
+      execAsync(["wpctl", "set-default", String(sinkId)]).catch(() => {})
+      if (gains.get().some((v) => v !== 0)) {
+        // Rewrite config with new target and restart
+        try { writeFile(CONF_PATH, buildConfFile(gains.get())) } catch {}
+        startFilterChain(gains.get())
+      }
+    })
+    .catch(() => {
+      execAsync(["wpctl", "set-default", String(sinkId)]).catch(() => {})
+    })
   rebuildOutputList()
 }
 
@@ -581,35 +596,48 @@ export default function AudioEQ() {
       </button>
       {(() => {
         const overlay = new Gtk.Overlay({ visible: true })
+
         const columns = (
           <box name="eq-columns" homogeneous>
-        {EQ_BANDS.map((band, i) => (
-          <EQColumn
-            bandIndex={i}
-            label={band.label}
-            onSet={(seg) => setBandGain(i, segmentToGain(seg))}
-            disabled={eqAvailable.as((a) => !a)}
-          />
-        ))}
+            {EQ_BANDS.map((band, i) => (
+              <EQColumn
+                bandIndex={i}
+                label={band.label}
+                onSet={(seg) => setBandGain(i, segmentToGain(seg))}
+                disabled={eqAvailable.as((a) => !a)}
+              />
+            ))}
           </box>
         ) as Gtk.Widget
         overlay.add(columns)
 
-        const listBox = (<box name="eq-output-list" vertical homogeneous />) as Gtk.Box
+        const listBox = (<box name="eq-output-list" vertical />) as Gtk.Box
         outputListBox = listBox
 
         const scroll = new Gtk.ScrolledWindow({
-          visible: false,
+          visible: true,
           hscrollbar_policy: Gtk.PolicyType.NEVER,
           vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
           valign: Gtk.Align.START,
+          halign: Gtk.Align.FILL,
           hexpand: true,
+          propagate_natural_height: true,
         })
         scroll.set_name("eq-output-scroll")
+        scroll.set_max_content_height(300)
         scroll.add(listBox)
-        overlay.add_overlay(scroll)
 
-        ;(outputListBox as any)._scrollParent = scroll
+        const revealer = new Gtk.Revealer({
+          visible: true,
+          reveal_child: false,
+          transition_type: Gtk.RevealerTransitionType.SLIDE_DOWN,
+          transition_duration: 150,
+          valign: Gtk.Align.START,
+          hexpand: true,
+        })
+        revealer.add(scroll)
+        dropdownRevealer = revealer
+        overlay.add_overlay(revealer)
 
         return overlay
       })()}

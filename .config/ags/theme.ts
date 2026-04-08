@@ -2581,6 +2581,7 @@ function generateCSS(c: ThemeColors): string {
       border: 1px solid #2a4a5a;
       border-radius: 4px;
       min-width: 216px;
+      min-height: 200px;
     }
     #eq-output-list {
       background: transparent;
@@ -2590,7 +2591,7 @@ function generateCSS(c: ThemeColors): string {
       background: #10202e;
       border: 1px solid #2a3a45;
       border-radius: 3px;
-      padding: 4px 10px;
+      padding: 8px 12px;
       margin: 1px 0;
       box-shadow: none;
       transition: none;
