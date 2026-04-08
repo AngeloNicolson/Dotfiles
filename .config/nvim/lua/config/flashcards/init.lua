@@ -24,8 +24,10 @@ M.state = {
   drill_round = {},     -- cards in current round
   drill_missed = {},    -- cards missed this round (becomes next round)
   drill_streak = {},    -- tracks consecutive correct answers per card
-  drill_target = 2,     -- need 2 correct in a row to master
+  drill_target = 3,     -- default target for new cards
+  drill_card_target = {},  -- per-card target based on mastery stage
   drill_round_num = 1,  -- current round number
+  drill_mastery = {},   -- persisted mastery stages per deck/card
   -- AI assistant state
   ai_buf = nil,
   ai_win = nil,
@@ -52,6 +54,7 @@ local function load_progress()
     if ok and data then
       M.state.progress = data.cards or data  -- backwards compat
       M.state.deck_stats = data.deck_stats or {}
+      M.state.drill_mastery = data.drill_mastery or {}
     end
   end
 end
@@ -66,6 +69,7 @@ local function save_progress()
     local data = {
       cards = M.state.progress,
       deck_stats = M.state.deck_stats,
+      drill_mastery = M.state.drill_mastery,
     }
     file:write(vim.json.encode(data))
     file:close()
@@ -560,7 +564,7 @@ local function parse_deck(filepath)
   for line in file:lines() do
     -- Skip comments and empty lines
     if not line:match("^#") and not line:match("^%s*$") then
-      local question, answer = line:match("^(.-)	(.+)$")
+      local question, answer = line:match("^(.-)%s*::%s*(.+)$")
       if question and answer then
         table.insert(cards, { q = question, a = answer })
       end
@@ -994,6 +998,20 @@ function M.stats()
   vim.keymap.set("n", "<Esc>", close_float, opts)
 end
 
+-- Get drill target for a card based on mastery stage
+-- Stage 0 (new): 3 correct in a row
+-- Stage 1: 2 correct in a row
+-- Stage 2: 1 correct
+local function get_stage_target(stage)
+  local targets = { [0] = 3, [1] = 2, [2] = 1 }
+  return targets[stage] or 3
+end
+
+-- Get mastery key for a card
+local function mastery_key(deck_id, card_idx)
+  return deck_id .. ":" .. card_idx
+end
+
 -- Shuffle helper
 local function shuffle(tbl)
   for i = #tbl, 2, -1 do
@@ -1042,13 +1060,18 @@ local function drill_show_card()
   M.state.current_index = card_idx
   M.state.showing_answer = false
 
+  local card_target = M.state.drill_card_target[card_idx] or 3
   local streak = M.state.drill_streak[card_idx] or 0
   local remaining = #M.state.drill_round + 1
   local mastered = 0
-  for _, s in pairs(M.state.drill_streak) do
-    if s >= M.state.drill_target then mastered = mastered + 1 end
+  for idx, s in pairs(M.state.drill_streak) do
+    local t = M.state.drill_card_target[idx] or 3
+    if s >= t then mastered = mastered + 1 end
   end
   local next_round = #M.state.drill_missed
+  local key = mastery_key(M.state.current_deck, card_idx)
+  local stage = M.state.drill_mastery[key] or 0
+  local stage_labels = { [0] = "New", [1] = "Familiar", [2] = "Strong" }
 
   local content = {
     "",
@@ -1056,7 +1079,7 @@ local function drill_show_card()
     "",
     "  Progress: " .. mastered .. "/" .. #M.state.cards .. " mastered",
     "  This round: " .. remaining .. " left | Next round: " .. next_round .. " queued",
-    "  This card: " .. streak .. "/" .. M.state.drill_target .. " streak",
+    "  This card: " .. streak .. "/" .. card_target .. " streak  [" .. stage_labels[stage] .. "]",
     "",
     "  ─────────────────────────────────",
     "",
@@ -1104,11 +1127,15 @@ function drill_show_answer(card_idx, card)
   M.state.showing_answer = true
   close_float()
 
+  local card_target = M.state.drill_card_target[card_idx] or 3
   local streak = M.state.drill_streak[card_idx] or 0
+  local key = mastery_key(M.state.current_deck, card_idx)
+  local stage = M.state.drill_mastery[key] or 0
+  local stage_labels = { [0] = "New", [1] = "Familiar", [2] = "Strong" }
 
   local content = {
     "",
-    "  ⚡ DRILL MODE",
+    "  ⚡ DRILL MODE  [" .. stage_labels[stage] .. "]",
     "",
     "  ─────────────────────────────────",
     "",
@@ -1136,7 +1163,7 @@ function drill_show_answer(card_idx, card)
   table.insert(content, "  ─────────────────────────────────")
   table.insert(content, "")
   table.insert(content, "  Did you get it right?")
-  table.insert(content, "  [y] Yes (+" .. (streak + 1) .. "/" .. M.state.drill_target .. ")  [n] No (reset)")
+  table.insert(content, "  [y] Yes (+" .. (streak + 1) .. "/" .. card_target .. ")  [n] No (drop)")
   table.insert(content, "  [a] Ask AI   [q] Quit")
 
   local deck_name = M.state.current_deck:gsub("-deck$", ""):gsub("-", " ")
@@ -1148,7 +1175,12 @@ function drill_show_answer(card_idx, card)
   vim.keymap.set("n", "y", function()
     close_ai_window()
     M.state.drill_streak[card_idx] = (M.state.drill_streak[card_idx] or 0) + 1
-    if M.state.drill_streak[card_idx] < M.state.drill_target then
+    if M.state.drill_streak[card_idx] >= card_target then
+      -- Mastered this session — advance stage
+      local new_stage = math.min(stage + 1, 2)
+      M.state.drill_mastery[key] = new_stage
+      save_progress()
+    else
       -- Not mastered yet, add to next round
       table.insert(M.state.drill_missed, card_idx)
     end
@@ -1159,6 +1191,11 @@ function drill_show_answer(card_idx, card)
   vim.keymap.set("n", "n", function()
     close_ai_window()
     M.state.drill_streak[card_idx] = 0
+    -- Drop one stage
+    local new_stage = math.max(stage - 1, 0)
+    M.state.drill_mastery[key] = new_stage
+    M.state.drill_card_target[card_idx] = get_stage_target(new_stage)
+    save_progress()
     -- Add to next round
     table.insert(M.state.drill_missed, card_idx)
     drill_show_card()
@@ -1193,10 +1230,18 @@ function M.drill()
     M.state.drill_mode = true
     M.state.drill_streak = {}
     M.state.drill_missed = {}
+    M.state.drill_card_target = {}
     M.state.drill_round_num = 1
 
     -- Start session tracking
     start_session(M.state.current_deck)
+
+    -- Set per-card targets based on mastery stage
+    for i = 1, #M.state.cards do
+      local key = mastery_key(M.state.current_deck, i)
+      local stage = M.state.drill_mastery[key] or 0
+      M.state.drill_card_target[i] = get_stage_target(stage)
+    end
 
     -- Initialize round 1 with all cards shuffled
     M.state.drill_round = {}
