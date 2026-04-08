@@ -123,6 +123,22 @@ ensure_symlink() {
     local target="$1"  # what the link points to (in dotfiles)
     local link="$2"    # where the link lives (in $HOME)
 
+    # Source doesn't exist in dotfiles
+    if [[ ! -e "$target" ]]; then
+        warn "$(basename "$target") not found in dotfiles"
+        info "Expected at: $target"
+        info "This is needed for $(basename "$link") to work"
+        local reply
+        reply="$(ask_yn "  Create empty directory?" "y")"
+        if [[ "$reply" == "y" ]]; then
+            mkdir -p "$target"
+            success "Created: $target"
+        else
+            error "Skipping $(basename "$link") — will not work without source"
+            return 1
+        fi
+    fi
+
     # Already correct
     if [[ -L "$link" ]] && [[ "$(readlink "$link")" == "$target" ]]; then
         skip "$(basename "$link")"
@@ -193,6 +209,14 @@ mod_packages() {
 mod_symlinks() {
     header "Symlinks"
 
+    # Verify dotfiles source is intact
+    if [[ ! -d "$DOTFILES_DIR/.config" ]]; then
+        error "Dotfiles .config directory missing at: $DOTFILES_DIR/.config"
+        info "The git clone may be incomplete or corrupted"
+        info "Try: rm -rf $DOTFILES_DIR && git clone git@github.com:AngeloNicolson/Dotfiles.git $DOTFILES_DIR"
+        return 1
+    fi
+
     local config_dirs=(
         ags fish foot gtk-3.0 gtk-4.0 hypr mpv nvim swappy
         systemd themes tmux-powerline wireplumber zathura
@@ -202,7 +226,10 @@ mod_symlinks() {
     info "Config directories"
     mkdir -p "$HOME/.config"
     for dir in "${config_dirs[@]}"; do
-        [[ -d "$DOTFILES_DIR/.config/$dir" ]] || continue
+        if [[ ! -d "$DOTFILES_DIR/.config/$dir" ]]; then
+            warn "$dir not found in dotfiles — skipping"
+            continue
+        fi
         ensure_symlink "$DOTFILES_DIR/.config/$dir" "$HOME/.config/$dir"
     done
 
