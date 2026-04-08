@@ -125,18 +125,8 @@ ensure_symlink() {
 
     # Source doesn't exist in dotfiles
     if [[ ! -e "$target" ]]; then
-        warn "$(basename "$target") not found in dotfiles"
-        info "Expected at: $target"
-        info "This is needed for $(basename "$link") to work"
-        local reply
-        reply="$(ask_yn "  Create empty directory?" "y")"
-        if [[ "$reply" == "y" ]]; then
-            mkdir -p "$target"
-            success "Created: $target"
-        else
-            error "Skipping $(basename "$link") — will not work without source"
-            return 1
-        fi
+        warn "$(basename "$target") not found in dotfiles — skipping"
+        return 1
     fi
 
     # Already correct
@@ -145,27 +135,10 @@ ensure_symlink() {
         return 0
     fi
 
-    # Wrong symlink
-    if [[ -L "$link" ]]; then
-        rm "$link"
-        ln -s "$target" "$link"
-        success "Relinked: $(basename "$link")"
-        return 0
-    fi
-
-    # Real file/dir exists — ask user
-    if [[ -e "$link" ]]; then
-        warn "$(basename "$link") already exists"
-        local reply
-        reply="$(ask_yn "  Back up? (n = delete)" "y")"
-        if [[ "$reply" == "y" ]]; then
-            local backup="${link}.backup.$(date +%Y%m%d%H%M%S)"
-            mv "$link" "$backup"
-            warn "Backed up: $(basename "$link") -> $backup"
-        else
-            rm -rf "$link"
-            success "Deleted: $(basename "$link")"
-        fi
+    # Anything else (wrong symlink, real file/dir) — back up and replace
+    if [[ -L "$link" ]] || [[ -e "$link" ]]; then
+        mv "$link" "${link}.old"
+        warn "Backed up: $(basename "$link") -> $(basename "$link").old"
     fi
 
     mkdir -p "$(dirname "$link")"
