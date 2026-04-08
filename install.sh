@@ -77,11 +77,11 @@ pkg_install() {
     case "$DISTRO" in
         arch)
             if command -v yay &>/dev/null; then
-                yay -S --needed --noconfirm $pkgs || failed="y"
+                yay -Syu --needed --noconfirm $pkgs || failed="y"
             elif command -v paru &>/dev/null; then
-                paru -S --needed --noconfirm $pkgs || failed="y"
+                paru -Syu --needed --noconfirm $pkgs || failed="y"
             elif command -v pacman &>/dev/null; then
-                sudo pacman -S --needed --noconfirm $pkgs || failed="y"
+                sudo pacman -Syu --needed --noconfirm $pkgs || failed="y"
             else
                 error "No Arch package manager found (yay/paru/pacman)"
                 return 1
@@ -157,21 +157,6 @@ mod_packages() {
         info "See packages/arch/ for reference"
         return 0
     fi
-
-    # Update system first so all packages are latest
-    info "Updating system..."
-    case "$DISTRO" in
-        arch)
-            if command -v yay &>/dev/null; then
-                yay -Syu --noconfirm || warn "System update had issues — continuing"
-            else
-                sudo pacman -Syu --noconfirm || warn "System update had issues — continuing"
-            fi
-            ;;
-        ubuntu) sudo apt-get update -qq && sudo apt-get upgrade -y || warn "System update had issues — continuing" ;;
-        fedora) sudo dnf upgrade -y || warn "System update had issues — continuing" ;;
-    esac
-    success "System up to date"
 
     local pkgs=""
     pkgs="$(parse_packages "$PKG_DIR/core.txt")"
