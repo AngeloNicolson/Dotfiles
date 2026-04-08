@@ -158,20 +158,6 @@ mod_packages() {
         return 0
     fi
 
-    # Remove conflicting -git packages before installing stable versions
-    if [[ "$DISTRO" == "arch" ]]; then
-        local git_conflicts
-        git_conflicts="$(pacman -Qq 2>/dev/null | grep -E '\-git$' || true)"
-        if [[ -n "$git_conflicts" ]]; then
-            info "Removing conflicting -git packages..."
-            echo "$git_conflicts" | while read -r pkg; do
-                echo -e "    ${DIM}$pkg${NC}"
-            done
-            sudo pacman -Rdd --noconfirm $git_conflicts || warn "Some -git packages could not be removed"
-            success "Cleaned up -git packages"
-        fi
-    fi
-
     local pkgs=""
     pkgs="$(parse_packages "$PKG_DIR/core.txt")"
 
@@ -184,6 +170,50 @@ mod_packages() {
 
     # Deduplicate
     pkgs="$(echo "$pkgs" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+
+    if [[ "$DISTRO" == "arch" ]]; then
+        # Refresh keyring to avoid signature trust issues
+        info "Refreshing keyring..."
+        sudo pacman -Sy --noconfirm archlinux-keyring || warn "Keyring refresh failed"
+        success "Keyring up to date"
+
+        # Find and remove installed packages that conflict with what we're about to install
+        info "Checking for package conflicts..."
+        local to_remove=""
+        local installed
+        installed="$(pacman -Qq 2>/dev/null)"
+
+        while read -r wanted; do
+            [[ -z "$wanted" ]] && continue
+            # Check if a -git, -nightly, or -nightly-bin variant is installed
+            local alt
+            alt="$(echo "$installed" | grep -E "^${wanted}-(git|nightly|bin|nightly-bin)$" || true)"
+            if [[ -n "$alt" ]]; then
+                to_remove="$to_remove $alt"
+            fi
+            # Reverse: if we want foo-git but stable foo is installed
+            local base="${wanted%-git}"
+            base="${base%-nightly}"
+            base="${base%-nightly-bin}"
+            base="${base%-bin}"
+            if [[ "$base" != "$wanted" ]]; then
+                alt="$(echo "$installed" | grep -E "^${base}$" || true)"
+                if [[ -n "$alt" ]]; then
+                    to_remove="$to_remove $alt"
+                fi
+            fi
+        done <<< "$(echo "$pkgs" | tr ' ' '\n')"
+
+        to_remove="$(echo "$to_remove" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)"
+        if [[ -n "$to_remove" ]]; then
+            info "Removing conflicting packages..."
+            for pkg in $to_remove; do
+                echo -e "    ${DIM}$pkg${NC}"
+            done
+            sudo pacman -Rdd --noconfirm $to_remove || warn "Some packages could not be removed"
+            success "Cleaned up conflicts"
+        fi
+    fi
     local count
     count="$(echo "$pkgs" | wc -w)"
 
