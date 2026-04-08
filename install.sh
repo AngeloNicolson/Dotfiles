@@ -158,6 +158,21 @@ mod_packages() {
         return 0
     fi
 
+    # Update system first so all packages are latest
+    info "Updating system..."
+    case "$DISTRO" in
+        arch)
+            if command -v yay &>/dev/null; then
+                yay -Syu --noconfirm || warn "System update had issues — continuing"
+            else
+                sudo pacman -Syu --noconfirm || warn "System update had issues — continuing"
+            fi
+            ;;
+        ubuntu) sudo apt-get update -qq && sudo apt-get upgrade -y || warn "System update had issues — continuing" ;;
+        fedora) sudo dnf upgrade -y || warn "System update had issues — continuing" ;;
+    esac
+    success "System up to date"
+
     local pkgs=""
     pkgs="$(parse_packages "$PKG_DIR/core.txt")"
 
