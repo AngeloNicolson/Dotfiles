@@ -4,10 +4,10 @@ import GdkPixbuf from "gi://GdkPixbuf"
 import { execAsync } from "ags/process"
 import { createState } from "ags"
 
-const WALLPAPER_DIR = "/home/Angel/projects/personal/dotfiles/.config/ags/wallpapers"
+const WALLPAPER_DIR = GLib.get_home_dir() + "/.config/ags/wallpapers"
 const SWWW_DIR = GLib.get_home_dir() + "/.config/awww"
 const VIDEO_DIR = WALLPAPER_DIR
-const MOVIES_DIR = "/home/Angel/Personal/Videos"
+const MOVIES_DIR = GLib.get_home_dir() + "/Personal/Videos"
 const THUMB_CACHE_DIR = GLib.get_home_dir() + "/.cache/ags/video-thumbs"
 const CURRENT_LIVE_FILE = "/tmp/mpvpaper-current"
 
@@ -465,7 +465,9 @@ export default function WallpaperSelector() {
       {staticWallpapers.length === 0 ? (
         <box name="wallpaper-empty" vertical>
           <label name="status-icon" label="" />
-          <label name="status-label" label="No static wallpapers found" />
+          <label name="status-label" label="No wallpapers found" />
+          <label name="status-sublabel" label={`Add images to ${WALLPAPER_DIR}`} />
+          <label name="status-sublabel" label={`or ${SWWW_DIR}`} />
         </box>
       ) : (
         staticWallpapers.map((wp) => (
