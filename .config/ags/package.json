@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "ags": "*"
+    "gnim": "file:/usr/share/ags/js/node_modules/gnim"
   }
 }
