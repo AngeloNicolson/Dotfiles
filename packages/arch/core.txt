@@ -4,6 +4,7 @@ xdg-desktop-portal-hyprland
 
 # Desktop UI
 aylurs-gtk-shell-git
+gjs
 libastal-meta
 
 # Terminal
@@ -35,6 +36,7 @@ gtk3
 gtk4
 
 # Audio/Media
+cava
 pipewire
 wireplumber
 pavucontrol
