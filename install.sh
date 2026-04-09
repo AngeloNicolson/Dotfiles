@@ -41,6 +41,10 @@ banner() {
     echo -e "${BOLD}  │${NC}  ${DIM}hyprland · ags · neovim · fish${NC}    ${BOLD}│${NC}"
     echo -e "${BOLD}  └─────────────────────────────────────┘${NC}"
     echo ""
+    echo -e "  ${YELLOW}${BOLD}NOTE:${NC} This script is designed for a ${BOLD}fresh Arch install${NC}."
+    echo -e "  ${DIM}Running on a system with an existing rice/DE may cause${NC}"
+    echo -e "  ${DIM}package conflicts that cannot be automatically resolved.${NC}"
+    echo ""
 }
 
 # ─── Distro detection ──────────────────────────────────────────────────────
