@@ -87,15 +87,82 @@ pkg_install() {
                 success "yay rebuilt"
             fi
 
-            if command -v yay &>/dev/null && yay --version &>/dev/null; then
-                yay -S --needed --noconfirm --overwrite '*' $pkgs || failed="y"
-            elif command -v paru &>/dev/null; then
-                paru -S --needed --noconfirm --overwrite '*' $pkgs || failed="y"
-            elif command -v pacman &>/dev/null; then
-                sudo pacman -S --needed --noconfirm --overwrite '*' $pkgs || failed="y"
+            # Split packages into repo and locked AUR
+            local lockfile="$PKG_DIR/versions.lock"
+            local repo_pkgs=""
+            local locked_pkgs=""
+
+            if [[ -f "$lockfile" ]]; then
+                local locked_names
+                locked_names="$(sed 's/#.*//' "$lockfile" | grep -v '^$' | cut -d= -f1)"
+
+                for pkg in $pkgs; do
+                    if echo "$locked_names" | grep -qx "$pkg"; then
+                        locked_pkgs="$locked_pkgs $pkg"
+                    else
+                        repo_pkgs="$repo_pkgs $pkg"
+                    fi
+                done
             else
-                error "No Arch package manager found (yay/paru/pacman)"
-                return 1
+                repo_pkgs="$pkgs"
+            fi
+
+            # Install repo packages normally
+            if [[ -n "$repo_pkgs" ]]; then
+                if command -v yay &>/dev/null && yay --version &>/dev/null; then
+                    yay -S --needed --noconfirm --overwrite '*' $repo_pkgs || failed="y"
+                elif command -v paru &>/dev/null; then
+                    paru -S --needed --noconfirm --overwrite '*' $repo_pkgs || failed="y"
+                else
+                    sudo pacman -S --needed --noconfirm --overwrite '*' $repo_pkgs || failed="y"
+                fi
+            fi
+
+            # Install locked AUR packages from GitHub release
+            if [[ -n "$locked_pkgs" ]]; then
+                local release_url="https://github.com/AngeloNicolson/Dotfiles/releases/download/pkg-v1"
+                local pkg_dir="$(mktemp -d)"
+
+                for pkg in $locked_pkgs; do
+                    local ver
+                    ver="$(grep "^${pkg}=" "$lockfile" | cut -d= -f2)"
+                    if [[ -z "$ver" ]]; then
+                        warn "No locked version for $pkg — skipping"
+                        continue
+                    fi
+
+                    # Check if already installed at correct version
+                    local installed_ver
+                    installed_ver="$(pacman -Q "$pkg" 2>/dev/null | awk '{print $2}')"
+                    if [[ "$installed_ver" == "$ver" ]]; then
+                        skip "$pkg ($ver)"
+                        continue
+                    fi
+
+                    # Try to download the pre-built package
+                    info "Downloading $pkg ($ver)..."
+                    local found=""
+                    for arch in x86_64 any; do
+                        local url="${release_url}/${pkg}-${ver}-${arch}.pkg.tar.zst"
+                        if curl -fsSL "$url" -o "$pkg_dir/${pkg}.pkg.tar.zst" 2>/dev/null; then
+                            found="y"
+                            break
+                        fi
+                    done
+
+                    if [[ "$found" != "y" ]]; then
+                        warn "$pkg not found in release cache — trying AUR build"
+                        if command -v yay &>/dev/null; then
+                            yay -S --needed --noconfirm --overwrite '*' "$pkg" || warn "Failed to install $pkg"
+                        fi
+                        continue
+                    fi
+
+                    sudo pacman -U --needed --noconfirm --overwrite '*' "$pkg_dir/${pkg}.pkg.tar.zst" || warn "Failed to install $pkg"
+                    success "$pkg ($ver)"
+                done
+
+                rm -rf "$pkg_dir"
             fi
             ;;
         ubuntu)
@@ -426,6 +493,42 @@ mod_ollama() {
     success "Model installed"
 }
 
+mod_lock() {
+    header "Lock Versions"
+
+    local lockfile="$PKG_DIR/versions.lock"
+    local pkg_list="$PKG_DIR/core.txt"
+
+    if [[ ! -f "$pkg_list" ]]; then
+        error "No package list found"
+        return 1
+    fi
+
+    info "Scanning installed AUR packages..."
+    local aur_installed
+    aur_installed="$(pacman -Qm)"
+
+    echo "# Locked AUR package versions — generated from working system" > "$lockfile"
+    echo "# Format: package=version" >> "$lockfile"
+    echo "# Update by running: ./install.sh lock" >> "$lockfile"
+
+    local count=0
+    while read -r pkg; do
+        [[ -z "$pkg" ]] && continue
+        local ver
+        ver="$(echo "$aur_installed" | awk -v p="$pkg" '$1 == p {print $2}')"
+        if [[ -n "$ver" ]]; then
+            echo "$pkg=$ver" >> "$lockfile"
+            success "$pkg=$ver"
+            ((count++))
+        fi
+    done <<< "$(sed 's/#.*//' "$pkg_list" | tr -s ' ' | sed 's/^ *//;s/ *$//' | grep -v '^$')"
+
+    success "Locked $count AUR packages"
+    info "Lockfile: $lockfile"
+    info "Run 'gh release upload pkg-v1 ~/.cache/yay/*/\*.pkg.tar.zst' to update cached packages"
+}
+
 # ─── Interactive prompts ───────────────────────────────────────────────────
 
 ask_yn() {
@@ -466,6 +569,7 @@ run_module() {
         firefox)   mod_firefox ;;
         tablet)    header "Tablet"; skip "Handled by symlinked configs" ;;
         ollama)    mod_ollama ;;
+        lock)      mod_lock ;;
         *)         error "Unknown module: $mod"; return 1 ;;
     esac
     local status=$?
