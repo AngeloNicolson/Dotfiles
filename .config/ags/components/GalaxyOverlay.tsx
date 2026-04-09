@@ -2,6 +2,7 @@ import Gtk from "gi://Gtk?version=3.0"
 import Gdk from "gi://Gdk?version=3.0"
 import GLib from "gi://GLib"
 import cairo from "cairo"
+import { s } from "../scale"
 
 // Planet data - distributed across 3 orbit rings
 interface Planet {
@@ -32,7 +33,7 @@ const PLANET_BASE_SIZE_PERCENT = 0.045
 
 // Create custom circular cursor
 function createCircleCursor(display: Gdk.Display): Gdk.Cursor | null {
-  const size = 64
+  const size = s(64)
   const surface = new cairo.ImageSurface(cairo.Format.ARGB32, size, size)
   const cr = new cairo.Context(surface)
 

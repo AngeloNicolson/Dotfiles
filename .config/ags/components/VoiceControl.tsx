@@ -3,6 +3,7 @@ import { createPoll } from "ags/time"
 import { type Accessor } from "gnim"
 import { execAsync } from "ags/process"
 import { writeFile, readFile } from "ags/file"
+import { s } from "../scale"
 import GLib from "gi://GLib"
 import Gdk from "gi://Gdk"
 import Gtk from "gi://Gtk"
@@ -396,8 +397,8 @@ function rebuildMicList() {
   micListBox.show_all()
   const scroll = (micListBox as any)._scrollParent as Gtk.ScrolledWindow | null
   if (scroll) {
-    const perItem = 30
-    const height = Math.min(mics.length * perItem + 10, 180)
+    const perItem = s(30)
+    const height = Math.min(mics.length * perItem + s(10), s(180))
     scroll.set_min_content_height(height)
     scroll.visible = micDropdownVisible
   }

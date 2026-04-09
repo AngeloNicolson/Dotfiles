@@ -1,6 +1,8 @@
 import app from "ags/gtk3/app"
+import Gtk from "gi://Gtk?version=3.0"
 import { toggleBar, cyclePage, cyclePageBack, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable } from "./state"
 import { initTheme, applyTheme } from "./theme"
+import { getScaledCSS, getScale } from "./scale"
 import Bar from "./components/Bar"
 import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
@@ -54,6 +56,19 @@ app.start({
   },
   main() {
     initTheme()
+
+    // Apply responsive scaling CSS
+    const scaledCSS = getScaledCSS()
+    if (scaledCSS) {
+      const cssProvider = new Gtk.CssProvider()
+      cssProvider.load_from_data(scaledCSS, scaledCSS.length)
+      Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default()!,
+        cssProvider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+      )
+      print(`AGS: Scale factor ${getScale().toFixed(2)} applied`)
+    }
 
     const display = Gdk.Display.get_default()
     const hyprland = AstalHyprland.get_default()

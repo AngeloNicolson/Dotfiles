@@ -3,6 +3,7 @@ import GLib from "gi://GLib"
 import GdkPixbuf from "gi://GdkPixbuf"
 import { execAsync } from "ags/process"
 import { createState } from "ags"
+import { s } from "../scale"
 
 const WALLPAPER_DIR = GLib.get_home_dir() + "/.config/ags/wallpapers"
 const SWWW_DIR = GLib.get_home_dir() + "/.config/awww"
@@ -142,7 +143,7 @@ async function generateVideoThumbnail(videoPath: string): Promise<string> {
       "ffmpeg", "-y", "-i", videoPath,
       "-ss", "00:00:10",
       "-vframes", "1",
-      "-vf", "scale=280:-1",
+      "-vf", `scale=${s(280)}:-1`,
       thumbPath
     ])
   } catch {
@@ -152,7 +153,7 @@ async function generateVideoThumbnail(videoPath: string): Promise<string> {
         "ffmpeg", "-y", "-i", videoPath,
         "-ss", "00:00:01",
         "-vframes", "1",
-        "-vf", "scale=280:-1",
+        "-vf", `scale=${s(280)}:-1`,
         thumbPath
       ])
     } catch {
@@ -160,7 +161,7 @@ async function generateVideoThumbnail(videoPath: string): Promise<string> {
       await execAsync([
         "ffmpeg", "-y", "-i", videoPath,
         "-vframes", "1",
-        "-vf", "scale=280:-1",
+        "-vf", `scale=${s(280)}:-1`,
         thumbPath
       ])
     }
@@ -178,7 +179,7 @@ function StaticThumbnail({
 }) {
   let pixbuf: GdkPixbuf.Pixbuf | null = null
   try {
-    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 280, 175, true)
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, s(280), s(175), true)
   } catch {
     // Failed to load image
   }
