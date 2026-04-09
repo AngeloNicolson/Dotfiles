@@ -196,19 +196,38 @@ mod_packages() {
 
         while read -r wanted; do
             [[ -z "$wanted" ]] && continue
-            # Check if a -git, -nightly, or -nightly-bin variant is installed
+
+            # Already installed — skip
+            echo "$installed" | grep -qx "$wanted" && continue
+
+            # Check what this package provides (e.g. aylurs-gtk-shell-git provides ags)
+            local provides
+            provides="$(yay -Si "$wanted" 2>/dev/null | grep "Provides" | sed 's/Provides *: //' | tr ' ' '\n' | sed 's/[>=<].*//' | grep -v '^None$' || true)"
+
+            # If it provides something that's already installed under a different name, remove the old one
+            while read -r prov; do
+                [[ -z "$prov" ]] && continue
+                local alt
+                alt="$(echo "$installed" | grep -x "$prov" || true)"
+                if [[ -n "$alt" ]] && [[ "$alt" != "$wanted" ]]; then
+                    to_remove="$to_remove $alt"
+                fi
+            done <<< "$provides"
+
+            # Check name-based variants (-git, -nightly, -bin)
             local alt
             alt="$(echo "$installed" | grep -E "^${wanted}-(git|nightly|bin|nightly-bin)$" || true)"
             if [[ -n "$alt" ]]; then
                 to_remove="$to_remove $alt"
             fi
+
             # Reverse: if we want foo-git but stable foo is installed
             local base="${wanted%-git}"
             base="${base%-nightly}"
             base="${base%-nightly-bin}"
             base="${base%-bin}"
             if [[ "$base" != "$wanted" ]]; then
-                alt="$(echo "$installed" | grep -E "^${base}$" || true)"
+                alt="$(echo "$installed" | grep -x "$base" || true)"
                 if [[ -n "$alt" ]]; then
                     to_remove="$to_remove $alt"
                 fi
