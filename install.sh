@@ -80,15 +80,15 @@ pkg_install() {
     local failed=""
     case "$DISTRO" in
         arch)
-            # Ensure yay is functional — rebuild if broken by pacman update
-            if command -v yay &>/dev/null && ! yay --version &>/dev/null; then
-                warn "yay is broken (likely pacman update) — rebuilding..."
-                sudo pacman -S --needed --noconfirm base-devel
+            # Ensure yay exists and is functional
+            if ! command -v yay &>/dev/null || ! yay --version &>/dev/null; then
+                info "Installing yay..."
+                sudo pacman -S --needed --noconfirm base-devel curl
                 local _yay_tmp="$(mktemp -d)"
                 git clone https://aur.archlinux.org/yay-bin.git "$_yay_tmp/yay-bin"
                 (cd "$_yay_tmp/yay-bin" && makepkg -si --noconfirm)
                 rm -rf "$_yay_tmp"
-                success "yay rebuilt"
+                success "yay installed"
             fi
 
             # Split packages into repo and locked AUR
