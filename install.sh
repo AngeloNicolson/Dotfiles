@@ -113,6 +113,7 @@ pkg_install() {
 
             # Install repo packages normally
             if [[ -n "$repo_pkgs" ]]; then
+                info "Installing repo packages..."
                 if command -v yay &>/dev/null && yay --version &>/dev/null; then
                     yay -S --needed --noconfirm --overwrite '*' $repo_pkgs || failed="y"
                 elif command -v paru &>/dev/null; then
@@ -120,10 +121,22 @@ pkg_install() {
                 else
                     sudo pacman -S --needed --noconfirm --overwrite '*' $repo_pkgs || failed="y"
                 fi
+
+                if [[ "$failed" == "y" ]]; then
+                    error "Repo package install failed — checking what's missing..."
+                    for pkg in $repo_pkgs; do
+                        if ! pacman -Qq "$pkg" &>/dev/null; then
+                            error "  MISSING: $pkg"
+                        fi
+                    done
+                else
+                    success "Repo packages installed"
+                fi
             fi
 
             # Install locked AUR packages from GitHub release
             if [[ -n "$locked_pkgs" ]]; then
+                info "Installing locked AUR packages..."
                 local release_url="https://github.com/AngeloNicolson/Dotfiles/releases/download/pkg-v1"
                 local pkg_dir="$(mktemp -d)"
 
@@ -321,7 +334,23 @@ mod_packages() {
     info "Distro: $DISTRO"
     info "Groups: $groups ($count packages)"
     pkg_install "$pkgs"
-    success "$count packages installed"
+
+    # Final check — report any packages that are still missing
+    local missing=""
+    for pkg in $pkgs; do
+        if ! pacman -Qq "$pkg" &>/dev/null; then
+            missing="$missing $pkg"
+        fi
+    done
+    if [[ -n "$missing" ]]; then
+        error "The following packages failed to install:"
+        for pkg in $missing; do
+            error "  $pkg"
+        done
+        warn "These must be resolved before continuing"
+    else
+        success "All $count packages installed"
+    fi
 }
 
 mod_symlinks() {
