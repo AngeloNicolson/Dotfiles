@@ -76,7 +76,18 @@ pkg_install() {
     local failed=""
     case "$DISTRO" in
         arch)
-            if command -v yay &>/dev/null; then
+            # Ensure yay is functional — rebuild if broken by pacman update
+            if command -v yay &>/dev/null && ! yay --version &>/dev/null; then
+                warn "yay is broken (likely pacman update) — rebuilding..."
+                sudo pacman -S --needed --noconfirm base-devel
+                local _yay_tmp="$(mktemp -d)"
+                git clone https://aur.archlinux.org/yay-bin.git "$_yay_tmp/yay-bin"
+                (cd "$_yay_tmp/yay-bin" && makepkg -si --noconfirm)
+                rm -rf "$_yay_tmp"
+                success "yay rebuilt"
+            fi
+
+            if command -v yay &>/dev/null && yay --version &>/dev/null; then
                 yay -Syu --needed --noconfirm $pkgs || failed="y"
             elif command -v paru &>/dev/null; then
                 paru -Syu --needed --noconfirm $pkgs || failed="y"
