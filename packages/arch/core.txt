@@ -24,7 +24,7 @@ tmux
 # Fonts
 ttf-jetbrains-mono-nerd
 ttf-font-awesome
-nerd-fonts-complete
+ttf-nerd-fonts-meta
 noto-fonts-cjk
 
 # System
@@ -45,7 +45,7 @@ socat
 # pipx install catt
 
 # Wallpaper
-swww
+awww
 mpvpaper
 ffmpeg
 
