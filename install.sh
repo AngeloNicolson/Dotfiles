@@ -440,6 +440,15 @@ mod_ags() {
     if [[ -f "$DOTFILES_DIR/.config/ags/package.json" ]]; then
         (cd "$DOTFILES_DIR/.config/ags" && npm install --silent 2>&1)
         success "Dependencies installed"
+
+        # Apply gjs dbus compatibility patch if gjs >= 1.88
+        local gjs_ver
+        gjs_ver="$(gjs --version 2>/dev/null | grep -oP '[\d.]+')"
+        local patch_file="$DOTFILES_DIR/.config/ags/gnim-dbus-fix.patch"
+        if [[ -f "$patch_file" ]] && [[ "$(printf '%s\n' "1.88" "$gjs_ver" | sort -V | head -1)" == "1.88" ]]; then
+            info "gjs $gjs_ver detected — applying dbus compatibility patch..."
+            (cd "$DOTFILES_DIR/.config/ags" && patch -Np1 --forward -i "$patch_file" 2>/dev/null) && success "gnim patch applied" || skip "gnim patch already applied"
+        fi
     fi
 
     rm -f /run/user/$(id -u)/ags.js
