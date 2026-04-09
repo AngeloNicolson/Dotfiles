@@ -136,48 +136,37 @@ pkg_install() {
 
             # Install locked AUR packages from GitHub release
             if [[ -n "$locked_pkgs" ]]; then
-                info "Installing locked AUR packages..."
+                info "Installing locked AUR packages from cache..."
                 local release_url="https://github.com/AngeloNicolson/Dotfiles/releases/download/pkg-v1"
                 local pkg_dir="$(mktemp -d)"
 
-                for pkg in $locked_pkgs; do
-                    local ver
-                    ver="$(grep "^${pkg}=" "$lockfile" | cut -d= -f2)"
-                    if [[ -z "$ver" ]]; then
-                        warn "No locked version for $pkg — skipping"
-                        continue
-                    fi
+                # Get list of all available packages in the release
+                local asset_list
+                asset_list="$(curl -fsSL "https://api.github.com/repos/AngeloNicolson/Dotfiles/releases/tags/pkg-v1" 2>/dev/null | grep '"name"' | sed 's/.*"name": "//;s/".*//' | grep '.pkg.tar.zst$')"
 
-                    # Check if already installed at correct version
-                    local installed_ver
-                    installed_ver="$(pacman -Q "$pkg" 2>/dev/null | awk '{print $2}')"
-                    if [[ "$installed_ver" == "$ver" ]]; then
-                        skip "$pkg ($ver)"
-                        continue
-                    fi
+                # Download all available packages
+                local downloaded=0
+                while read -r asset; do
+                    [[ -z "$asset" ]] && continue
+                    # Skip debug packages
+                    echo "$asset" | grep -q "\-debug-" && continue
+                    info "Downloading $asset..."
+                    curl -fsSL "${release_url}/${asset}" -o "$pkg_dir/${asset}" || { warn "Failed to download $asset"; continue; }
+                    ((downloaded++))
+                done <<< "$asset_list"
 
-                    # Try to download the pre-built package
-                    info "Downloading $pkg ($ver)..."
-                    local found=""
-                    for arch in x86_64 any; do
-                        local url="${release_url}/${pkg}-${ver}-${arch}.pkg.tar.zst"
-                        if curl -fsSL "$url" -o "$pkg_dir/${pkg}.pkg.tar.zst" 2>/dev/null; then
-                            found="y"
-                            break
-                        fi
-                    done
-
-                    if [[ "$found" != "y" ]]; then
-                        warn "$pkg not found in release cache — trying AUR build"
+                if [[ $downloaded -gt 0 ]]; then
+                    info "Installing $downloaded cached packages..."
+                    sudo pacman -U --needed --noconfirm --overwrite '*' "$pkg_dir"/*.pkg.tar.zst || warn "Some cached packages failed to install"
+                    success "Cached AUR packages installed"
+                else
+                    warn "No packages downloaded from cache — falling back to AUR build"
+                    for pkg in $locked_pkgs; do
                         if command -v yay &>/dev/null; then
                             yay -S --needed --noconfirm --overwrite '*' "$pkg" || warn "Failed to install $pkg"
                         fi
-                        continue
-                    fi
-
-                    sudo pacman -U --needed --noconfirm --overwrite '*' "$pkg_dir/${pkg}.pkg.tar.zst" || warn "Failed to install $pkg"
-                    success "$pkg ($ver)"
-                done
+                    done
+                fi
 
                 rm -rf "$pkg_dir"
             fi
