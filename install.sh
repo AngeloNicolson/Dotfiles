@@ -88,11 +88,11 @@ pkg_install() {
             fi
 
             if command -v yay &>/dev/null && yay --version &>/dev/null; then
-                yay -S --needed --noconfirm $pkgs || failed="y"
+                yay -S --needed --noconfirm --overwrite '*' $pkgs || failed="y"
             elif command -v paru &>/dev/null; then
-                paru -S --needed --noconfirm $pkgs || failed="y"
+                paru -S --needed --noconfirm --overwrite '*' $pkgs || failed="y"
             elif command -v pacman &>/dev/null; then
-                sudo pacman -S --needed --noconfirm $pkgs || failed="y"
+                sudo pacman -S --needed --noconfirm --overwrite '*' $pkgs || failed="y"
             else
                 error "No Arch package manager found (yay/paru/pacman)"
                 return 1
