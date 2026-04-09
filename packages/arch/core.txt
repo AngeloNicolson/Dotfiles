@@ -49,6 +49,9 @@ awww
 mpvpaper
 ffmpeg
 
+# Notifications
+dunst
+
 # Utilities
 swaylock
 brightnessctl
