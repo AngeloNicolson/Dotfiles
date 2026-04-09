@@ -7,6 +7,7 @@ import app from "ags/gtk3/app"
 import { readFile, writeFile } from "ags/file"
 import GLib from "gi://GLib"
 import { createState } from "ags"
+import { s } from "../scale"
 import { setTaskPopupVisible, setTaskPopupTitle, syncConnected, syncPeerCount, pendingChangeRequests, syncDialogVisible, setSyncDialogVisible } from "../state"
 import { lastSyncedFile, lastSyncTime, generateInvite, acceptInvite, getPeers } from "./SyncIndicator"
 
@@ -236,9 +237,9 @@ function migrateKanbanIfNeeded() {
 
 const START_H = 4
 const END_H = 22
-const DEFAULT_ROW_H = 72
-const MIN_ROW_H = 24
-const MAX_ROW_H = 120
+const DEFAULT_ROW_H = s(72)
+const MIN_ROW_H = s(24)
+const MAX_ROW_H = s(120)
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
@@ -1981,7 +1982,7 @@ export default function Planner() {
                 vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
               })
               descScroll.set_name("cd-desc-scroll")
-              descScroll.set_size_request(-1, 180)
+              descScroll.set_size_request(-1, s(180))
               const descView = new Gtk.TextView()
               descView.set_name("cd-desc-view")
               descView.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)

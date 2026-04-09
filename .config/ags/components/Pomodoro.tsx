@@ -193,8 +193,9 @@ function switchAudioTheme(newIndex: number) {
 }
 
 // === Circular Progress Ring ===
+import { s } from "../scale"
 const RING_SEGMENTS = 60
-const RING_SIZE = 270
+const RING_SIZE = s(270)
 const DIM = [0.12, 0.15, 0.18, 0.5]
 const WORK_COLOR = [0.83, 0.66, 0.26, 1.0]
 const BREAK_COLOR = [0.85, 0.90, 0.92, 1.0]
@@ -493,11 +494,11 @@ export default function Pomodoro() {
           timeLabel.set_name("pomo-time-display")
 
           const timeCss = new Gtk.CssProvider()
-          timeCss.load_from_data(`#pomo-time-display { font-size: 56px; color: #f0f2f4; font-weight: 700; letter-spacing: 4px; }`)
+          timeCss.load_from_data(`#pomo-time-display { font-size: ${s(56)}px; color: #f0f2f4; font-weight: 700; letter-spacing: ${s(4)}px; }`)
           timeLabel.get_style_context().add_provider(timeCss, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
           const phaseCss = new Gtk.CssProvider()
-          phaseCss.load_from_data(`#pomo-phase-label { font-size: 9px; color: #5090a0; font-weight: 700; letter-spacing: 2px; margin-top: 2px; }`)
+          phaseCss.load_from_data(`#pomo-phase-label { font-size: ${s(9)}px; color: #5090a0; font-weight: 700; letter-spacing: 2px; margin-top: 2px; }`)
           phaseLabel.get_style_context().add_provider(phaseCss, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
           labelBox.pack_start(timeLabel, false, false, 0)

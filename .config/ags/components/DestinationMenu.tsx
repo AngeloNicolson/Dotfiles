@@ -3,6 +3,7 @@ import Gdk from "gi://Gdk?version=3.0"
 import GdkPixbuf from "gi://GdkPixbuf"
 import GLib from "gi://GLib"
 import cairo from "cairo"
+import { s } from "../scale"
 import { setDestinationVisible } from "../state"
 
 // Background image path
@@ -160,7 +161,7 @@ function generateStars(count: number): Star[] {
 }
 
 function createCircleCursor(display: Gdk.Display, hovered: boolean = false): Gdk.Cursor | null {
-  const size = 64
+  const size = s(64)
   const surface = new cairo.ImageSurface(cairo.Format.ARGB32, size, size)
   const cr = new cairo.Context(surface)
 
@@ -338,7 +339,7 @@ export default function DestinationMenu() {
     // Draw background image with parallax
     if (bgPixbuf) {
       // Scale image to cover canvas (with extra for parallax movement)
-      const scalePadding = 60  // Extra pixels for parallax
+      const scalePadding = s(60)  // Extra pixels for parallax
       const targetW = width + scalePadding * 2
       const targetH = height + scalePadding * 2
 
@@ -470,8 +471,8 @@ export default function DestinationMenu() {
   })
 
   function drawTabs(cr: any, width: number, parallaxX: number) {
-    const tabWidth = 120
-    const tabHeight = 32
+    const tabWidth = s(120)
+    const tabHeight = s(32)
     const totalWidth = TABS.length * tabWidth + (TABS.length - 1) * 20
     const startX = (width - totalWidth) / 2 + parallaxX * 5
     const y = 25
@@ -585,7 +586,7 @@ export default function DestinationMenu() {
       cr.setFontSize(32)
 
       // Calculate total width with wide letter spacing
-      const letterSpacing = 22
+      const letterSpacing = s(22)
       const chars = dest.label.split('')
       let totalWidth = 0
       chars.forEach(ch => {
