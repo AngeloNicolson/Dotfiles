@@ -3,7 +3,7 @@ hyprland
 xdg-desktop-portal-hyprland
 
 # Desktop UI
-ags
+aylurs-gtk-shell-git
 libastal-meta
 
 # Terminal
