@@ -4,6 +4,7 @@ xdg-desktop-portal-hyprland
 
 # Desktop UI
 ags
+libastal-meta
 
 # Terminal
 foot
