@@ -157,7 +157,7 @@ pkg_install() {
 
                 if [[ $downloaded -gt 0 ]]; then
                     info "Installing $downloaded cached packages..."
-                    sudo pacman -U --needed --noconfirm --overwrite '*' "$pkg_dir"/*.pkg.tar.zst || warn "Some cached packages failed to install"
+                    sudo pacman -U --noconfirm --overwrite '*' "$pkg_dir"/*.pkg.tar.zst || warn "Some cached packages failed to install"
                     success "Cached AUR packages installed"
                 else
                     warn "No packages downloaded from cache — falling back to AUR build"
