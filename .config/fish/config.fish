@@ -14,10 +14,6 @@ end
 
 starship init fish | source
 
-# System fetch on launch
-if status is-interactive; and not set -q INSIDE_EMACS; and not set -q VSCODE_INJECTION
-    fastfetch
-end
 #if test -f ~/.cache/ags/user/generated/terminal/sequences.txt
 #    cat ~/.cache/ags/user/generated/terminal/sequences.txt
 #end
