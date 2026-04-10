@@ -2,7 +2,7 @@
 -- vim.opt settings go here
 
 -- Cursor settings
-vim.opt.guicursor = ""
+vim.opt.guicursor = "n-v-c:block-Cursor,i-ci-ve:ver25-Cursor,r-cr:hor20-Cursor"
 
 -- Line numbers
 vim.opt.nu = true
@@ -29,6 +29,7 @@ vim.opt.hlsearch = false
 vim.opt.incsearch = true
 
 -- UI settings
+vim.opt.cursorline = true
 vim.opt.termguicolors = true
 vim.opt.scrolloff = 7
 vim.opt.signcolumn = "yes"
