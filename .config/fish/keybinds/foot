@@ -1,0 +1,15 @@
+ Foot Terminal
+
+ Navigation
+  Page Up                  scroll back
+  Page Down                scroll forward
+
+ Clipboard
+  Ctrl+C                   copy
+  Ctrl+V                   paste
+
+ Search
+  Ctrl+F                   start search
+  F3                       find next
+  Shift+F3                 find previous
+  Escape                   cancel search

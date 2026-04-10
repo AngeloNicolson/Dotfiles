@@ -1,0 +1,19 @@
+ Yazi (file manager)
+
+ Navigation
+  j/k                      up/down
+  l / Enter                open file/dir
+  h                        parent directory
+  ~                        home
+  /                        search
+  z                        jump (zoxide)
+
+ Actions
+  Space                    select
+  d                        delete
+  r                        rename
+  c                        copy
+  x                        cut
+  p                        paste
+  .                        toggle hidden
+  q                        quit

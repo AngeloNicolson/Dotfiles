@@ -99,6 +99,19 @@ hyprctl keyword general:col.active_border "rgb($(strip_hash $BG_DARK))" 2>/dev/n
 hyprctl keyword general:col.inactive_border "rgb($(strip_hash $BG_DARK))" 2>/dev/null
 hyprctl setcursor "$CURSOR_THEME" 20 2>/dev/null
 
+# --- DUNST ---
+DUNST_CONFIG="$HOME/.config/dunst/dunstrc"
+if [[ -f "$DUNST_CONFIG" ]]; then
+  echo "  Updating dunst..."
+  sed -i "s/^    background = .*/    background = \"$BG_DARK\"/" "$DUNST_CONFIG"
+  sed -i "s/^    foreground = .*/    foreground = \"$FG\"/" "$DUNST_CONFIG"
+  sed -i "/^\[urgency_normal\]/,/^\[/ s/^    frame_color = .*/    frame_color = \"$ACCENT\"/" "$DUNST_CONFIG"
+  sed -i "/^\[urgency_low\]/,/^\[/ s/^    frame_color = .*/    frame_color = \"$BG_LIGHTER\"/" "$DUNST_CONFIG"
+  sed -i "/^\[urgency_critical\]/,/^\[/ s/^    frame_color = .*/    frame_color = \"$RED_BRIGHT\"/" "$DUNST_CONFIG"
+  sed -i "/^\[global\]/,/^\[/ s/^    frame_color = .*/    frame_color = \"$ACCENT\"/" "$DUNST_CONFIG"
+  killall dunst 2>/dev/null
+fi
+
 # --- Save current theme ---
 echo "$THEME_NAME" > "$THEME_DIR/.current"
 
