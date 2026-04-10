@@ -21,8 +21,6 @@ vim.keymap.set("n", "<leader>Y", '"+y')
 -- Map <leader>l to act as <C-w>
 vim.keymap.set("n", "<leader>w", "<C-w>")
 
--- Map Neotree command to <leader>-e
-vim.keymap.set("n", "<leader>e", "<cmd>Neotree right toggle<CR>")
 
 -- Show all keymaps
 vim.keymap.set("n", "<leader>?", "<cmd>Telescope keymaps<CR>", { desc = "Search keymaps" })
