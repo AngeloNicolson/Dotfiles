@@ -1,0 +1,79 @@
+ Neovim  (leader = Space)
+
+ Navigation
+  Ctrl+D / Ctrl+U          page down/up (centered)
+  n / N                    next/prev search (centered)
+  Space+pv                 file explorer (Ex)
+  Space+e                  toggle neotree
+
+ Telescope
+  Space+pf                 find files
+  Ctrl+P                   find git files
+  Space+ps                 grep search
+  Space+fm                 find media
+  Space+?                  search keymaps
+
+ Harpoon
+  Space+a                  mark file
+  Ctrl+E                   open menu
+  Ctrl+H/J/K/L             goto mark 1/2/3/4
+  Ctrl+Shift+P/N           prev/next mark
+
+ Git
+  Space+gs                 fugitive
+  Space+gg                 lazygit
+  Space+gf                 lazygit current file
+  Space+gc                 lazygit commits
+
+ LSP
+  gd                       goto definition
+  gr                       goto references
+  gI                       goto implementation
+  gD                       goto declaration
+  K                        hover docs
+  Space+D                  goto type definition
+  Space+rn                 rename
+  Space+ca                 code action
+  Space+ds                 document symbols
+  Space+ws                 workspace symbols
+
+ Debug (DAP)
+  F5                       continue
+  Shift+F5                 stop
+  Ctrl+F5                  restart
+  F10                      step over
+  F11                      step into
+  Shift+F11                step out
+  Space+db                 toggle breakpoint
+  Space+dB                 conditional breakpoint
+  Space+du                 toggle debug UI
+  Space+de                 evaluate expression
+  Space+dC                 run to cursor
+
+ CMake
+  Space+cg                 generate
+  Space+cb                 build
+  Space+cr                 run
+  Space+cd                 debug
+  Space+cy                 select build type
+  Space+ct                 select target
+
+ Find & Replace (Spectre)
+  Space+S                  toggle spectre
+  Space+sw                 search word
+  Space+sp                 search in file
+
+ Editing
+  V+J / V+K               move line down/up
+  Space+y                  yank to clipboard
+  Space+Y                  yank line to clipboard
+  Space+u                  undo tree
+
+ Tasks (Overseer)
+  Space+ot                 toggle runner
+  Space+or                 run task
+  Space+ob                 build task
+
+ Other
+  Space+oo                 open related file
+  Space+cp                 color picker

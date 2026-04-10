@@ -1,0 +1,11 @@
+[manager]
+sort_by = "natural"
+sort_sensitive = false
+sort_reverse = false
+sort_dir_first = true
+show_hidden = false
+show_symlink = true
+
+[preview]
+max_width = 600
+max_height = 900

@@ -1,0 +1,8 @@
+ Bat
+
+ Usage
+  bat <file>               view with syntax highlighting
+  bat -l                   list languages
+  bat -p                   plain mode (no line numbers)
+  bat --diff               show git diff
+  bat -A                   show non-printable characters

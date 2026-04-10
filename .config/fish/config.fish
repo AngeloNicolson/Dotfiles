@@ -13,12 +13,23 @@ if status is-interactive
 end
 
 starship init fish | source
+
+# System fetch on launch
+if status is-interactive; and not set -q INSIDE_EMACS; and not set -q VSCODE_INJECTION
+    fastfetch
+end
 #if test -f ~/.cache/ags/user/generated/terminal/sequences.txt
 #    cat ~/.cache/ags/user/generated/terminal/sequences.txt
 #end
 
 # Universal aliases
 alias pamcan=pacman
+alias ls='eza --icons'
+alias la='eza --icons -a'
+alias ll='eza --icons -la'
+alias lt='eza --icons --tree --level=2'
+alias cat='bat'
+alias lg='lazygit'
 
 # Source machine-specific configuration
 if test -f ~/.config/fish/system-local.fish

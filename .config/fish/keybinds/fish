@@ -1,0 +1,24 @@
+ Fish Shell
+
+ Builtins
+  Ctrl+R                   search history
+  Ctrl+F                   accept autosuggestion
+  Ctrl+A                   move to start of line
+  Ctrl+E                   move to end of line
+  Ctrl+W                   delete word backward
+  Ctrl+U                   delete to start of line
+  Ctrl+K                   delete to end of line
+  Ctrl+L                   clear screen
+  Ctrl+C                   cancel command
+  Ctrl+Z                   suspend process
+  Alt+Left/Right           move word
+  Tab                      autocomplete
+  Alt+Up                   previous argument
+
+ Aliases
+  ls                       eza --icons
+  la                       eza --icons -a
+  ll                       eza --icons -la
+  lt                       eza --icons --tree
+  cat                      bat
+  lg                       lazygit

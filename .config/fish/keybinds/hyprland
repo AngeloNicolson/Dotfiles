@@ -1,0 +1,52 @@
+ Hyprland
+
+ Focus & Navigate
+  SUPER + H/J/K/L          focus left/down/up/right
+  SUPER + 1-5, 7           switch workspace
+  SUPER + B                toggle browser workspace
+  SUPER + D                toggle document workspace
+  SUPER + M                toggle media workspace
+  SUPER + S                toggle special workspace
+  SUPER + G                toggle kondor workspace
+  SUPER + Scroll            next/prev workspace
+
+ Move Windows
+  SUPER+SHIFT + H/J/K/L    move window left/down/up/right
+  SUPER+SHIFT + 1-5, 7     move to workspace
+  SUPER+SHIFT + B/D/M/S    move to special workspace
+
+ Window Properties
+  SUPER+CTRL + H/L         resize horizontal
+  SUPER+CTRL + K/J         resize vertical
+  SUPER+CTRL + X           kill window
+  SUPER+CTRL + W           toggle floating
+  SUPER+CTRL + P           pin window
+  SUPER+CTRL + Return      fullscreen
+  SUPER+CTRL + T           toggle split
+  SUPER + LMB drag         move window
+  SUPER + RMB drag         resize window
+
+ Desktop
+  SUPER + Q                toggle bar (AGS)
+  SUPER + Tab              cycle sidebar
+  SUPER + T                toggle periodic table
+  SUPER + I                screenshot (snip)
+  SUPER+CTRL + I           screenshot (frozen)
+  SUPER+SHIFT + I          screenshot monitor
+  Print                    screenshot all
+  SUPER + P                color picker
+  SUPER + R                snap windows
+
+ App Launch
+  ALT + Return             foot terminal
+  ALT + F                  firefox
+  ALT + E                  nemo file manager
+  ALT + B                  qutebrowser
+  ALT + K                  ttyper
+  ALT + Tab                cycle window
+  ALT + X                  kill window
+  ALT + F4                 kill all windows
+
+ Hardware
+  XF86MonBrightness Up/Down  brightness
+  XF86PowerOff             suspend & lock
