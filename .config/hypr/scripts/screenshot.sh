@@ -25,20 +25,35 @@ cat << "EOF"
 EOF
 }
 
+# Kill any stale screenshot processes before starting
+pkill -x grimblast 2>/dev/null
+pkill -x slurp 2>/dev/null
+pkill -x swappy 2>/dev/null
+pkill -x hyprpicker 2>/dev/null
+rm -f "$temp_screenshot"
+# Remove stale grimblast lockfile
+rm -f "${XDG_RUNTIME_DIR:-/tmp}/grimblast.lock"
+
 case $1 in
 p)  # print all outputs
-    grimblast copysave screen $temp_screenshot && swappy -f $temp_screenshot ;;
-s)  # drag to manually snip an area / click on a window to print it
-    grimblast --freeze copysave area $temp_screenshot && swappy -f $temp_screenshot ;;
-sf)  # frozen screen, drag to manually snip an area / click on a window to print it
-    grimblast --freeze copysave area $temp_screenshot && swappy -f $temp_screenshot ;;
+    grimblast copysave screen $temp_screenshot ;;
+s)  # drag to manually snip an area
+    grimblast copysave area $temp_screenshot ;;
+sf)  # frozen screen, drag to manually snip an area
+    grimblast --freeze copysave area $temp_screenshot ;;
 m)  # print focused monitor
-    grimblast copysave output $temp_screenshot && swappy -f $temp_screenshot ;;
+    grimblast copysave output $temp_screenshot ;;
 *)  # invalid option
-    print_error ;;
+    print_error
+    exit 1 ;;
 esac
 
-rm "$temp_screenshot"
+if [ -f "$temp_screenshot" ]; then
+    swappy -f "$temp_screenshot"
+    rm -f "$temp_screenshot"
+else
+    notify-send -a "Screenshot" "Screenshot cancelled or failed"
+fi
 
 if [ -f "$save_dir/$save_file" ] ; then
   notify-send -a "Screenshot" -i "${save_dir}/${save_file}" -t 2200 "Screenshot saved" "saved at ${save_dir}/${save_file}"
