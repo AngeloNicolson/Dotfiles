@@ -115,4 +115,20 @@ fi
 # --- Save current theme ---
 echo "$THEME_NAME" > "$THEME_DIR/.current"
 
+# --- Live reload running apps ---
+
+echo "  Reloading foot..."
+killall -USR1 foot 2>/dev/null
+
+echo "  Reloading nvim..."
+for sock in "${XDG_RUNTIME_DIR:-/tmp}"/nvim.*/0 /tmp/nvim.*/0; do
+  [[ -S "$sock" ]] || continue
+  nvim --server "$sock" --remote-send '<Cmd>ReloadSystemTheme<CR>' 2>/dev/null
+done
+
+echo "  Repainting TUIs..."
+for app in ncmpcpp grimoire candor; do
+  pkill -WINCH -x "$app" 2>/dev/null
+done
+
 echo "Theme applied: $THEME_NAME"

@@ -31,9 +31,9 @@
     "colorScheme": "prefer-dark"
   },
   "hyprland": {
-    "borderRadius": 3,
-    "gapsIn": 2,
-    "gapsOut": 4,
-    "borderSize": 0
+    "borderRadius": 8,
+    "gapsIn": 8,
+    "gapsOut": 15,
+    "borderSize": 1
   }
 }

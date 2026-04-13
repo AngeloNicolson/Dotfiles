@@ -6,7 +6,7 @@ add_newline = false
 # Random noise 🬖🬥🬔🬗
 
 format = """
-\n\n$cmd_duration$directory $git_branch
+$cmd_duration$directory $git_branch
 $character
 """
 
