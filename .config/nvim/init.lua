@@ -1,4 +1,6 @@
 require("config.settings")
+require("config.ai").setup()
+require("config.keymaps")
 require("config.remaps")
 require("config.lazy")
 

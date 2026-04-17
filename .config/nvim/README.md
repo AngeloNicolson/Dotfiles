@@ -50,17 +50,28 @@ To reload theme after system change:
 Leader key: `Space`
 
 ### AI Assistants
-- `Space cc` - Toggle CodeCompanion chat
-- `Space ci` - Inline code generation
-- `Space ca` - Code actions menu
+- `Space ac` - Toggle CodeCompanion chat
+- `Space ai` - Inline code generation
+- `Space ax` - CodeCompanion actions
 - `Space aa` - Avante sidebar
 - `Space ae` - AI edit selection (visual mode)
 
 ### File Navigation
-- `Space pf` - Find files (Telescope)
-- `Space ps` - Search in files (grep)
-- `Space pv` - File explorer
+- `Space sf` - Find files (Telescope)
+- `Space sg` - Search in files (grep)
+- `Space fx` - File explorer
 - `Ctrl-p` - Find files (git)
+
+### Language
+- `Space ld` - Type definition
+- `Space ls` - Document symbols
+- `Space lS` - Workspace symbols
+- `Space lr` - Rename symbol
+- `Space la` - Code action
+
+### Build
+- `Space bc…` - CMake commands
+- `Space bo…` - Overseer tasks
 
 ### Git
 - `Space gs` - Git status (Fugitive)

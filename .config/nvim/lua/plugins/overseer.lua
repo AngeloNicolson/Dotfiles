@@ -1,5 +1,6 @@
 return {
 	"stevearc/overseer.nvim",
+	-- Prefix ownership: <leader>bo (Build -> Overseer)
 	config = function()
 		require("overseer").setup({
 			strategy = {
@@ -59,10 +60,10 @@ return {
 		})
 
 		-- Keybindings
-		vim.keymap.set("n", "<leader>ot", "<cmd>OverseerToggle<cr>", { desc = "Toggle Overseer" })
-		vim.keymap.set("n", "<leader>or", "<cmd>OverseerRun<cr>", { desc = "Run Task" })
-		vim.keymap.set("n", "<leader>ob", "<cmd>OverseerBuild<cr>", { desc = "Build Task" })
-		vim.keymap.set("n", "<leader>oq", "<cmd>OverseerQuickAction<cr>", { desc = "Quick Action" })
-		vim.keymap.set("n", "<leader>oa", "<cmd>OverseerTaskAction<cr>", { desc = "Task Action" })
+		vim.keymap.set("n", "<leader>bot", "<cmd>OverseerToggle<cr>", { desc = "Overseer toggle" })
+		vim.keymap.set("n", "<leader>bor", "<cmd>OverseerRun<cr>", { desc = "Overseer run task" })
+		vim.keymap.set("n", "<leader>bob", "<cmd>OverseerBuild<cr>", { desc = "Overseer build task" })
+		vim.keymap.set("n", "<leader>boq", "<cmd>OverseerQuickAction<cr>", { desc = "Overseer quick action" })
+		vim.keymap.set("n", "<leader>boa", "<cmd>OverseerTaskAction<cr>", { desc = "Overseer task action" })
 	end,
 }

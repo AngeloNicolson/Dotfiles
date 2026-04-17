@@ -1,5 +1,9 @@
 vim.g.mapleader = " "
-vim.keymap.set("n", "<leader>pv", vim.cmd.Ex)
+
+-- Global/editor mappings only. Plugin-specific mappings live with plugin configs.
+
+-- File/open mappings
+vim.keymap.set("n", "<leader>fx", vim.cmd.Ex, { desc = "Files netrw explorer" })
 
 -- Allows moving of highlighted text up and down
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
@@ -13,14 +17,27 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz")
 vim.keymap.set("n", "n", "nzzzv")
 vim.keymap.set("n", "N", "Nzzzv")
 
--- Copy vim content to system keyboard
-vim.keymap.set("n", "<leader>y", '"+y')
-vim.keymap.set("v", "<leader>y", '"+y')
-vim.keymap.set("n", "<leader>Y", '"+y')
+-- Clipboard group
+vim.keymap.set("n", "<leader>cy", '"+y', { desc = "Clipboard yank" })
+vim.keymap.set("v", "<leader>cy", '"+y', { desc = "Clipboard yank" })
+vim.keymap.set("n", "<leader>cY", '"+Y', { desc = "Clipboard yank line" })
+vim.keymap.set("n", "<leader>cp", '"+p', { desc = "Clipboard paste after" })
+vim.keymap.set("n", "<leader>cP", '"+P', { desc = "Clipboard paste before" })
+vim.keymap.set("v", "<leader>cp", '"+p', { desc = "Clipboard paste after" })
+vim.keymap.set("v", "<leader>cP", '"+P', { desc = "Clipboard paste before" })
 
 -- Map <leader>l to act as <C-w>
 vim.keymap.set("n", "<leader>w", "<C-w>")
 
 
--- Show all keymaps
-vim.keymap.set("n", "<leader>?", "<cmd>Telescope keymaps<CR>", { desc = "Search keymaps" })
+vim.keymap.set("n", "<leader>hk", "<cmd>Telescope keymaps<CR>", { desc = "Help keymaps" })
+vim.keymap.set("n", "<leader>hc", "<cmd>Telescope commands<CR>", { desc = "Help commands" })
+vim.keymap.set("n", "<leader>hh", "<cmd>Telescope help_tags<CR>", { desc = "Help tags" })
+vim.keymap.set("n", "<leader>he", "<cmd>Noice errors<CR>", { desc = "Help error history" })
+vim.keymap.set("n", "<leader>hm", "<cmd>Noice history<CR>", { desc = "Help message history" })
+vim.keymap.set("n", "<leader>hb", function()
+	require("which-key").show({ global = false })
+end, { desc = "Help buffer keymaps" })
+
+vim.keymap.set("n", "<leader>am", "<cmd>AIModels<CR>", { desc = "AI model select" })
+vim.keymap.set("n", "<leader>a?", "<cmd>AIModels<CR>", { desc = "AI model select" })

@@ -2,6 +2,7 @@ return {
 	-- nvim-dap: Debug Adapter Protocol client
 	{
 		"mfussenegger/nvim-dap",
+		-- Prefix ownership: <leader>d (Debug)
 		dependencies = {
 			-- UI for nvim-dap
 			{
@@ -43,16 +44,16 @@ return {
 			-- C++ launch configurations
 			dap.configurations.cpp = {
 				{
-					name = "WildCore Engine",
+					name = "Kondor Engine",
 					type = "codelldb",
 					request = "launch",
 					program = function()
 						-- Check common build directories
 						local build_dirs = {
-							"build/WildCore",
-							"build/debug/WildCore",
-							"build/Debug/WildCore",
-							"cmake-build-debug/WildCore",
+							"build/kondor",
+							"build/debug/kondor",
+							"build/Debug/kondor",
+							"cmake-build-debug/kondor",
 						}
 						for _, path in ipairs(build_dirs) do
 							local full_path = vim.fn.getcwd() .. "/" .. path
@@ -61,7 +62,7 @@ return {
 							end
 						end
 						-- Fallback to manual input
-						return vim.fn.input("Executable: ", vim.fn.getcwd() .. "/build/WildCore", "file")
+						return vim.fn.input("Executable: ", vim.fn.getcwd() .. "/build/kondor", "file")
 					end,
 					cwd = "${workspaceFolder}",
 					stopOnEntry = false,
@@ -78,7 +79,7 @@ return {
 					type = "codelldb",
 					request = "launch",
 					program = function()
-						return vim.fn.input("Executable: ", vim.fn.getcwd() .. "/build/WildCore", "file")
+						return vim.fn.input("Executable: ", vim.fn.getcwd() .. "/build/kondor", "file")
 					end,
 					cwd = "${workspaceFolder}",
 					stopOnEntry = false,
@@ -216,7 +217,7 @@ return {
 
 			-- Leader-based keybinds (more discoverable)
 			vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "Debug: Continue" })
-			vim.keymap.set("n", "<leader>ds", dap.step_over, { desc = "Debug: Step Over" })
+			vim.keymap.set("n", "<leader>dn", dap.step_over, { desc = "Debug: Step Over" })
 			vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Debug: Step Into" })
 			vim.keymap.set("n", "<leader>do", dap.step_out, { desc = "Debug: Step Out" })
 			vim.keymap.set("n", "<leader>dq", dap.terminate, { desc = "Debug: Quit/Stop" })

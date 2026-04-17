@@ -10,6 +10,57 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/monolith"
+STATE_FILE="$STATE_DIR/selected_model"
+
+ensure_state_dir() {
+    mkdir -p "$STATE_DIR"
+}
+
+save_selected_model() {
+    ensure_state_dir
+    printf '%s\n' "$1" > "$STATE_FILE"
+}
+
+load_selected_model() {
+    if [ -f "$STATE_FILE" ]; then
+        cat "$STATE_FILE"
+    fi
+}
+
+model_details() {
+    case "$1" in
+        qwen3-coder:30b)
+            echo "default coding model"
+            ;;
+        qwen3-coder-gamedev:latest)
+            echo "qwen3-coder:30b + gamedev/engine mentor system prompt"
+            ;;
+        qwen3-narrative-gamedesign:latest)
+            echo "narrative and game design model for lore, quests, GDDs"
+            ;;
+        qwen3:30b-a3b)
+            echo "general-purpose qwen model, lighter than coder-focused variants"
+            ;;
+        qwen2.5-coder:32b)
+            echo "older coder model, still strong but less current than qwen3-coder"
+            ;;
+        *)
+            echo "custom or unclassified model"
+            ;;
+    esac
+}
+
+list_models_plain() {
+    while read -r name id size modified; do
+        [ -z "$name" ] && continue
+        printf '%s\t%s\n' "$name" "$(model_details "$name")"
+    done < <(ollama list 2>/dev/null | tail -n +2)
+}
+
+current_model() {
+    ollama ps 2>/dev/null | tail -n +2 | head -n 1 | awk '{print $1}'
+}
 
 print_header() {
     echo -e "${BLUE}╔════════════════════════════════════╗${NC}"
@@ -39,7 +90,12 @@ show_loaded_models() {
 
 list_models() {
     echo -e "\n${YELLOW}Available Models:${NC}"
-    ollama list 2>/dev/null | tail -n +2 | nl -w2 -s'. '
+    local index=1
+    while read -r name id size modified; do
+        [ -z "$name" ] && continue
+        printf "%2d. %-32s (%s)\n" "$index" "$name" "$(model_details "$name")"
+        index=$((index + 1))
+    done < <(ollama list 2>/dev/null | tail -n +2)
 }
 
 select_model() {
@@ -60,6 +116,7 @@ select_model() {
 
     echo -e "\n${GREEN}Loading model: ${model}${NC}"
     echo -e "${YELLOW}Running chat... (Ctrl+D to exit)${NC}\n"
+    save_selected_model "$model"
     ollama run "$model"
 }
 
@@ -138,6 +195,7 @@ if [ $# -eq 0 ]; then
     if [ -n "$loaded" ]; then
         # Model already loaded, get the model name and run chat
         model=$(echo "$loaded" | head -n 1 | awk '{print $1}')
+        save_selected_model "$model"
         echo -e "${GREEN}Using loaded model: ${model}${NC}"
         echo -e "${YELLOW}Running chat... (Ctrl+D to exit)${NC}\n"
         ollama run "$model"
@@ -150,6 +208,27 @@ if [ $# -eq 0 ]; then
     fi
 else
     case $1 in
+        list)
+            if [ "${2:-}" = "--plain" ]; then
+                list_models_plain
+            else
+                list_models
+            fi
+            ;;
+        current)
+            current_model
+            ;;
+        selected)
+            load_selected_model
+            ;;
+        select)
+            if [ -z "${2:-}" ]; then
+                echo "Usage: monolith select <model>"
+                exit 1
+            fi
+            save_selected_model "$2"
+            echo -e "${GREEN}✓${NC} Selected model: $2"
+            ;;
         start)
             sudo systemctl start ollama
             echo -e "${GREEN}✓${NC} Ollama started"
@@ -166,7 +245,7 @@ else
             show_menu
             ;;
         *)
-            echo "Usage: monolith [start|stop|status|menu]"
+            echo "Usage: monolith [list [--plain]|current|selected|select <model>|start|stop|status|menu]"
             echo "Or run without arguments to select and load a model"
             ;;
     esac

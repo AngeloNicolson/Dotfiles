@@ -1,6 +1,7 @@
 return {
 	{
 		"uga-rosa/ccc.nvim",
+		-- Prefix ownership: <leader>w (Windows/appearance utility)
 		config = function()
 			local ccc = require("ccc")
 			ccc.setup({
@@ -27,11 +28,11 @@ return {
 				highlight_mode = "bg", -- or "fg", "virtual"
 			})
 
-			-- Keybind: <leader>cp to open color picker
-			vim.keymap.set("n", "<leader>cp", "<cmd>CccPick<cr>", { desc = "Color picker" })
+			-- Keybind: <leader>wp to open color picker
+			vim.keymap.set("n", "<leader>wp", "<cmd>CccPick<cr>", { desc = "Window color picker" })
 
-			-- Keybind: <leader>ct to toggle color highlighting
-			vim.keymap.set("n", "<leader>ct", "<cmd>CccHighlighterToggle<cr>", { desc = "Toggle color highlighting" })
+			-- Keybind: <leader>wh to toggle color highlighting
+			vim.keymap.set("n", "<leader>wh", "<cmd>CccHighlighterToggle<cr>", { desc = "Window color highlight" })
 		end,
 	},
 }

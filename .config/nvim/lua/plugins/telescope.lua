@@ -2,6 +2,7 @@ return {
 	-- Telescope plugin
 	{
 		"nvim-telescope/telescope.nvim",
+		-- Prefix ownership: <leader>s / <leader>h (Search/Help)
 		dependencies = {
 			"nvim-lua/plenary.nvim", -- Required dependency
 			"nvim-telescope/telescope-ui-select.nvim", -- Add this line
@@ -12,17 +13,17 @@ return {
 			local telescope = require("telescope")
 
 			-- Set up Telescope with your key mappings
-			vim.keymap.set("n", "<leader>pf", builtin.find_files, {})
+			vim.keymap.set("n", "<leader>sf", builtin.find_files, { desc = "Search files" })
 			vim.keymap.set("n", "<c-p>", builtin.git_files, {})
-			vim.keymap.set("n", "<leader>ps", function()
+			vim.keymap.set("n", "<leader>sg", function()
 				builtin.grep_string({ search = vim.fn.input("Grep > ") })
-			end)
+			end, { desc = "Search grep" })
 
-			vim.keymap.set("n", "<leader>fm", function()
+			vim.keymap.set("n", "<leader>sm", function()
 				require("telescope").extensions.media_files.media_files({
 					search_dirs = { "~/personal/Media", "~/study/massey_mainframe" },
 				})
-			end)
+			end, { desc = "Search media" })
 
 			-- Telescope setup with extensions and floating window configuration
 			telescope.setup({

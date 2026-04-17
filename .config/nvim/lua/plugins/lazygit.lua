@@ -1,5 +1,6 @@
 return {
 	"kdheepak/lazygit.nvim",
+	-- Prefix ownership: <leader>g (Git)
 	dependencies = {
 		"nvim-lua/plenary.nvim",
 	},

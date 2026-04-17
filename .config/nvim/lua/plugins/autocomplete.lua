@@ -91,9 +91,14 @@ return { -- Autocompletion
 				["<C-f>"] = cmp.mapping.scroll_docs(4),
 
 				-- Accept ([y]es) the completion.
-				--  This will auto-import if your LSP supports it.
-				--  This will expand snippets if the LSP sent a snippet.
 				["<C-y>"] = cmp.mapping.confirm({ select = true }),
+				["<CR>"] = cmp.mapping(function(fallback)
+					if cmp.visible() and cmp.get_selected_entry() then
+						cmp.confirm({ select = false })
+					else
+						fallback()
+					end
+				end, { "i", "s" }),
 
 				-- If you prefer more traditional completion keymaps,
 				-- you can uncomment the following lines

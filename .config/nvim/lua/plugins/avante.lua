@@ -1,5 +1,6 @@
 return {
 	"yetone/avante.nvim",
+	-- Prefix ownership: <leader>a (AI)
 	event = "VeryLazy",
 	lazy = false,
 	version = false,
@@ -10,13 +11,13 @@ return {
 		behaviour = {
 			auto_suggestions = false,
 			auto_set_highlight_group = true,
-			auto_set_keymaps = true,
+			auto_set_keymaps = false,
 			support_paste_from_clipboard = true,
 		},
 		providers = {
 			ollama = {
 				endpoint = "http://127.0.0.1:11434",
-				model = "qwen3-coder:30b",
+				model = require("config.ai").get_current_model(),
 				timeout = 30000,
 				disable_tools = true,
 				extra_request_body = {

@@ -1,5 +1,6 @@
 return {
 	"Civitasv/cmake-tools.nvim",
+	-- Prefix ownership: <leader>bc (Build -> CMake)
 	dependencies = { "nvim-lua/plenary.nvim" },
 	ft = { "c", "cpp", "objc", "objcpp", "cuda" },
 	opts = {
@@ -27,14 +28,14 @@ return {
 		require("cmake-tools").setup(opts)
 
 		-- Keybindings
-		vim.keymap.set("n", "<leader>cg", "<cmd>CMakeGenerate<cr>", { desc = "CMake Generate" })
-		vim.keymap.set("n", "<leader>cb", "<cmd>CMakeBuild<cr>", { desc = "CMake Build" })
-		vim.keymap.set("n", "<leader>cr", "<cmd>CMakeRun<cr>", { desc = "CMake Run" })
-		vim.keymap.set("n", "<leader>cd", "<cmd>CMakeDebug<cr>", { desc = "CMake Debug" })
-		vim.keymap.set("n", "<leader>cy", "<cmd>CMakeSelectBuildType<cr>", { desc = "CMake Select Build Type" })
-		vim.keymap.set("n", "<leader>ct", "<cmd>CMakeSelectBuildTarget<cr>", { desc = "CMake Select Target" })
-		vim.keymap.set("n", "<leader>cl", "<cmd>CMakeSelectLaunchTarget<cr>", { desc = "CMake Select Launch Target" })
-		vim.keymap.set("n", "<leader>co", "<cmd>CMakeOpen<cr>", { desc = "CMake Open Console" })
-		vim.keymap.set("n", "<leader>cc", "<cmd>CMakeClose<cr>", { desc = "CMake Close Console" })
+		vim.keymap.set("n", "<leader>bcg", "<cmd>CMakeGenerate<cr>", { desc = "CMake generate" })
+		vim.keymap.set("n", "<leader>bcb", "<cmd>CMakeBuild<cr>", { desc = "CMake build" })
+		vim.keymap.set("n", "<leader>bcr", "<cmd>CMakeRun<cr>", { desc = "CMake run" })
+		vim.keymap.set("n", "<leader>bcd", "<cmd>CMakeDebug<cr>", { desc = "CMake debug" })
+		vim.keymap.set("n", "<leader>bcy", "<cmd>CMakeSelectBuildType<cr>", { desc = "CMake build type" })
+		vim.keymap.set("n", "<leader>bct", "<cmd>CMakeSelectBuildTarget<cr>", { desc = "CMake target" })
+		vim.keymap.set("n", "<leader>bcl", "<cmd>CMakeSelectLaunchTarget<cr>", { desc = "CMake launch target" })
+		vim.keymap.set("n", "<leader>bco", "<cmd>CMakeOpen<cr>", { desc = "CMake open console" })
+		vim.keymap.set("n", "<leader>bcc", "<cmd>CMakeClose<cr>", { desc = "CMake close console" })
 	end,
 }

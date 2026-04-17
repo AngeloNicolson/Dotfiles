@@ -37,13 +37,18 @@ return {
 				separator = "→",
 			},
 		},
+		config = function(_, opts)
+			local wk = require("which-key")
+			wk.setup(opts)
+			require("config.keymaps").register_groups()
+		end,
 		keys = {
 			{
-				"<leader>k",
+				"<leader>hb",
 				function()
 					require("which-key").show({ global = false })
 				end,
-				desc = "Buffer Local Keymaps (which-key)",
+				desc = "Help buffer keymaps",
 			},
 		},
 	},
