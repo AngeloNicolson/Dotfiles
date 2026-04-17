@@ -1,5 +1,6 @@
 return {
 	"olimorris/codecompanion.nvim",
+	-- Prefix ownership: <leader>a (AI)
 	dependencies = {
 		"nvim-lua/plenary.nvim",
 		"nvim-treesitter/nvim-treesitter",
@@ -9,6 +10,13 @@ return {
 	},
 	config = function()
 		require("codecompanion").setup({
+			interactions = {
+				chat = {
+					opts = {
+						completion_provider = "cmp",
+					},
+				},
+			},
 			strategies = {
 				chat = {
 					adapter = "ollama",
@@ -108,7 +116,9 @@ return {
 						return require("codecompanion.adapters").extend("ollama", {
 							schema = {
 								model = {
-									default = "qwen3-coder:30b",
+									default = function()
+										return require("config.ai").get_current_model()
+									end,
 								},
 							},
 						})
@@ -116,6 +126,12 @@ return {
 				},
 			},
 			display = {
+				action_palette = {
+					opts = {
+						-- Upstream built-in markdown prompts are currently noisy in this install.
+						show_preset_prompts = false,
+					},
+				},
 				chat = {
 					window = {
 						layout = "vertical", -- float|vertical|horizontal|buffer
@@ -133,12 +149,54 @@ return {
 				},
 			},
 		})
+
+		local ok, parser = pcall(require, "codecompanion.interactions.chat.parser")
+		if ok and not parser._safe_messages_patch then
+			local helpers = require("codecompanion.interactions.chat.helpers")
+			local original_messages = parser.messages
+
+			parser.messages = function(chat, start_range)
+				local ok_parse, result = pcall(original_messages, chat, start_range)
+				if ok_parse then
+					return result
+				end
+
+				vim.schedule(function()
+					vim.notify("CodeCompanion chat parser fell back to plain text parsing", vim.log.levels.WARN, {
+						title = "CodeCompanion",
+					})
+				end)
+
+				local lines = vim.api.nvim_buf_get_lines(chat.bufnr, start_range - 1, -1, false)
+				if not lines or vim.tbl_isempty(lines) then
+					return nil
+				end
+
+				if lines[1] and lines[1]:match("^##%s+") then
+					table.remove(lines, 1)
+				end
+
+				while lines[1] and vim.trim(lines[1]) == "" do
+					table.remove(lines, 1)
+				end
+
+				lines = helpers.strip_context(lines)
+				local content = vim.trim(table.concat(lines, "\n"))
+				if content == "" then
+					return nil
+				end
+
+				return { content = content }
+			end
+
+			parser._safe_messages_patch = true
+		end
 	end,
 	keys = {
-		{ "<leader>cc", "<cmd>CodeCompanionChat Toggle<cr>", desc = "Toggle CodeCompanion Chat", mode = { "n", "v" } },
-		{ "<leader>ca", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions", mode = { "n", "v" } },
-		{ "<leader>ci", "<cmd>CodeCompanion<cr>", desc = "Inline CodeCompanion", mode = "n" },
-		{ "<leader>ci", ":CodeCompanion ", desc = "Inline CodeCompanion", mode = "v" },
+		{ "<leader>ac", "<cmd>CodeCompanionChat Toggle<cr>", desc = "AI chat", mode = { "n", "v" } },
+		{ "<leader>ax", "<cmd>CodeCompanionActions<cr>", desc = "AI actions", mode = { "n", "v" } },
+		{ "<leader>ai", "<cmd>CodeCompanion<cr>", desc = "AI inline", mode = "n" },
+		{ "<leader>ai", ":CodeCompanion ", desc = "AI inline", mode = "v" },
 		{ "ga", "<cmd>CodeCompanionChat Add<cr>", desc = "Add to CodeCompanion Chat", mode = "v" },
 	},
 }

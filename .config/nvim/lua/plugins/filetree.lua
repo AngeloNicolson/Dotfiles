@@ -1,11 +1,12 @@
 return {
 	{
 		"mikavilpas/yazi.nvim",
+		-- Prefix ownership: <leader>f (Files)
 		event = "VeryLazy",
 		dependencies = { "nvim-lua/plenary.nvim" },
 		keys = {
-			{ "<leader>e", "<cmd>Yazi<cr>", desc = "Open yazi at current file" },
-			{ "<leader>E", "<cmd>Yazi cwd<cr>", desc = "Open yazi in cwd" },
+			{ "<leader>fe", "<cmd>Yazi<cr>", desc = "Files yazi current file" },
+			{ "<leader>fE", "<cmd>Yazi cwd<cr>", desc = "Files yazi cwd" },
 		},
 		opts = {
 			open_for_directories = true,

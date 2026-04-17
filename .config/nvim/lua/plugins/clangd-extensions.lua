@@ -1,5 +1,6 @@
 return {
 	"p00f/clangd_extensions.nvim",
+	-- Prefix ownership: <leader>lc (Language -> Clangd)
 	dependencies = { "neovim/nvim-lspconfig" },
 	ft = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
 	opts = {
@@ -46,9 +47,9 @@ return {
 		require("clangd_extensions").setup(opts)
 
 		-- Keybindings for clangd-specific features
-		vim.keymap.set("n", "<leader>ch", "<cmd>ClangdSwitchSourceHeader<cr>", { desc = "Switch Source/Header" })
-		vim.keymap.set("n", "<leader>ct", "<cmd>ClangdTypeHierarchy<cr>", { desc = "Type Hierarchy" })
-		vim.keymap.set("n", "<leader>cs", "<cmd>ClangdSymbolInfo<cr>", { desc = "Symbol Info" })
-		vim.keymap.set("n", "<leader>cm", "<cmd>ClangdMemoryUsage<cr>", { desc = "Memory Usage" })
+		vim.keymap.set("n", "<leader>lch", "<cmd>ClangdSwitchSourceHeader<cr>", { desc = "Clangd switch source/header" })
+		vim.keymap.set("n", "<leader>lct", "<cmd>ClangdTypeHierarchy<cr>", { desc = "Clangd type hierarchy" })
+		vim.keymap.set("n", "<leader>lcs", "<cmd>ClangdSymbolInfo<cr>", { desc = "Clangd symbol info" })
+		vim.keymap.set("n", "<leader>lcm", "<cmd>ClangdMemoryUsage<cr>", { desc = "Clangd memory usage" })
 	end,
 }

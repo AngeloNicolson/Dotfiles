@@ -58,16 +58,16 @@ return {
         map("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
         map("gr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences")
         map("gI", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
-        map("<leader>D", require("telescope.builtin").lsp_type_definitions, "Type [D]efinition")
-        map("<leader>ds", require("telescope.builtin").lsp_document_symbols, "[D]ocument [S]ymbols")
-        map("<leader>ws", require("telescope.builtin").lsp_dynamic_workspace_symbols, "[W]orkspace [S]ymbols")
-        map("<leader>rn", vim.lsp.buf.rename, "[R]e[n]ame")
-        map("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
+        map("<leader>ld", require("telescope.builtin").lsp_type_definitions, "Type [D]efinition")
+        map("<leader>ls", require("telescope.builtin").lsp_document_symbols, "[D]ocument [S]ymbols")
+        map("<leader>lS", require("telescope.builtin").lsp_dynamic_workspace_symbols, "[W]orkspace [S]ymbols")
+        map("<leader>lr", vim.lsp.buf.rename, "[R]ename")
+        map("<leader>la", vim.lsp.buf.code_action, "Code [A]ction")
         map("K", vim.lsp.buf.hover, "Hover Documentation")
         map("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration")
-        map("<leader>wa", vim.lsp.buf.add_workspace_folder, "[W]orkspace [A]dd Folder")
-        map("<leader>wr", vim.lsp.buf.remove_workspace_folder, "[W]orkspace [R]emove Folder")
-        map("<leader>wl", function()
+        map("<leader>lwa", vim.lsp.buf.add_workspace_folder, "[W]orkspace [A]dd Folder")
+        map("<leader>lwr", vim.lsp.buf.remove_workspace_folder, "[W]orkspace [R]emove Folder")
+        map("<leader>lwl", function()
           print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, "[W]orkspace [L]ist Folders")
 
@@ -108,9 +108,9 @@ return {
           clangdFileStatus = true,
         },
       },
-      glslls = {
+      glsl_analyzer = {
         on_attach = on_attach,
-        filetypes = { "glsl", "vert", "frag" },
+        filetypes = { "glsl", "vert", "frag", "geom", "comp", "tesc", "tese" },
       },
       lua_ls = {
         on_attach = on_attach,
@@ -195,14 +195,12 @@ return {
     -- Setup Mason
     require("mason").setup()
 
-    -- Install servers and tools manually via :Mason when needed
-    -- Automatic installation disabled to prevent startup conflicts
-    -- local ensure_installed = vim.tbl_keys(servers or {})
-    -- vim.list_extend(ensure_installed, {
-    --   "stylua",
-    --   "eslint_d",
-    -- })
-    -- require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
+    local ensure_installed = vim.tbl_keys(servers or {})
+    vim.list_extend(ensure_installed, {
+      "stylua",
+      "eslint_d",
+    })
+    require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
     -- Setup Mason-LSPconfig
     require("mason-lspconfig").setup({

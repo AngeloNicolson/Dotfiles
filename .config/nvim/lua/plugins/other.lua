@@ -1,5 +1,6 @@
 return {
 	"rgroli/other.nvim",
+	-- Prefix ownership: <leader>o (Open/Tasks)
 	config = function()
 		require("other-nvim").setup({
 			mappings = {
