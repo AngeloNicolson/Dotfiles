@@ -32,9 +32,17 @@ if test -f ~/.config/fish/system-local.fish
     source ~/.config/fish/system-local.fish
 end
 
+set -gx EDITOR nvim
+set -gx VISUAL nvim
+
 set -x JAVA_HOME /opt/android-studio/jbr
 set -x PATH $JAVA_HOME/bin $PATH
 
 # Go
 set -x GOPATH $HOME/.local/share/go
 set -x GOBIN $HOME/.local/bin
+
+# CUDA
+set -gx CUDA_HOME /opt/cuda
+set -gx PATH /opt/cuda/bin $PATH
+set -gx LD_LIBRARY_PATH /opt/cuda/lib64 $LD_LIBRARY_PATH

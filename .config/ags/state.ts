@@ -17,10 +17,6 @@ export const [periodicTableVisible, setPeriodicTableVisible] = createState(false
 // Break popup visibility state (Pomodoro)
 export const [breakPopupVisible, setBreakPopupVisible] = createState(false)
 
-// Task popup visibility state (Planner — shown when calendar event switches)
-export const [taskPopupVisible, setTaskPopupVisible] = createState(false)
-export const [taskPopupTitle, setTaskPopupTitle] = createState("")
-
 // PlanSync state
 export const [syncConnected, setSyncConnected] = createState(false)
 export const [syncPeerCount, setSyncPeerCount] = createState(0)

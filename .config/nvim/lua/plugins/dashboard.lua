@@ -51,6 +51,12 @@ return {
 					},
 					{
 						type = "button",
+						val = "  Browse (yazi)",
+						on_press = function() vim.cmd("Yazi cwd") end,
+						opts = { shortcut = "y", position = "center", cursor = 3, width = 30, align_shortcut = "right", hl_shortcut = "Keyword" },
+					},
+					{
+						type = "button",
 						val = "  Quit",
 						on_press = function() vim.cmd("qa") end,
 						opts = { shortcut = "q", position = "center", cursor = 3, width = 30, align_shortcut = "right", hl_shortcut = "Keyword" },
@@ -76,6 +82,7 @@ return {
 					vim.keymap.set("n", "f", "<cmd>Telescope find_files<cr>", { buffer = buf })
 					vim.keymap.set("n", "r", "<cmd>Telescope oldfiles<cr>", { buffer = buf })
 					vim.keymap.set("n", "g", "<cmd>Telescope live_grep<cr>", { buffer = buf })
+					vim.keymap.set("n", "y", "<cmd>Yazi cwd<cr>", { buffer = buf })
 					vim.keymap.set("n", "q", "<cmd>qa<cr>", { buffer = buf })
 				end,
 			})

@@ -6,7 +6,6 @@ import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
 import PeriodicTableWindow from "./components/PeriodicTableWindow"
 import BreakPopupWindow from "./components/BreakPopupWindow"
-import TaskPopupWindow from "./components/TaskPopupWindow"
 import AstalHyprland from "gi://AstalHyprland"
 import { Gdk } from "ags/gtk3"
 
@@ -71,26 +70,21 @@ app.start({
         currentMonitors.add(mon.get_name())
       })
 
-      // Remove bars for disconnected monitors
+      // Destroy all existing bars and recreate them
+      // GDK monitor indices can shift when monitors are added/removed
       bars.forEach((bar, name) => {
-        if (!currentMonitors.has(name)) {
-          console.log(`Removing bar for disconnected monitor: ${name}`)
-          bar.destroy()
-          bars.delete(name)
-          removeSidebarStack(name)
-        }
+        bar.destroy()
+        removeSidebarStack(name)
       })
+      bars.clear()
 
-      // Add bars for new monitors
+      // Create bars for all current monitors
       hyprMonitors.forEach((mon, idx) => {
         const name = mon.get_name()
-        if (!bars.has(name)) {
-          // GDK monitor index is typically reversed from Hyprland order
-          const numMonitors = display?.get_n_monitors() || 1
-          const gdkIndex = numMonitors > 1 ? (numMonitors - 1) - idx : 0
-          console.log(`Creating bar for monitor: ${name} (gdk index: ${gdkIndex})`)
-          bars.set(name, Bar(gdkIndex, name))
-        }
+        const numMonitors = display?.get_n_monitors() || 1
+        const gdkIndex = numMonitors > 1 ? (numMonitors - 1) - idx : 0
+        console.log(`Creating bar for monitor: ${name} (gdk index: ${gdkIndex})`)
+        bars.set(name, Bar(gdkIndex, name))
       })
 
       console.log(`Active bars: ${Array.from(bars.keys()).join(", ")}`)
@@ -145,6 +139,5 @@ app.start({
     GalaxyWindow(0)
     PeriodicTableWindow(0)
     BreakPopupWindow(0)
-    TaskPopupWindow(0)
   },
 })

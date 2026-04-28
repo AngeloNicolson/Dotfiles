@@ -8,7 +8,7 @@ return {
 		config = function()
 			require("fidget").setup({
 				notification = {
-					override_vim_notify = true,
+					override_vim_notify = false,
 					window = {
 						winblend = 0,
 						align = "bottom",
@@ -30,12 +30,12 @@ return {
 				messages = {
 					enabled = true,
 					view = "mini",
-					view_error = "mini",
-					view_warn = "mini",
+					view_error = "notify",
+					view_warn = "notify",
 				},
 				notify = {
 					enabled = true,
-					view = "mini",
+					view = "notify",
 				},
 				-- Views for cmdline popup and popup menu
 				views = {
