@@ -25,6 +25,10 @@ return {
 		dependencies = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim" },
 	},
 	{
+		"editorconfig/editorconfig-vim",
+		event = { "BufReadPre", "BufNewFile" },
+	},
+	{
 		"folke/which-key.nvim",
 		event = "VeryLazy",
 		init = function()

@@ -1,0 +1,39 @@
+{
+  "name": "miasma",
+  "displayName": "Miasma",
+  "colors": {
+    "bg": "#222222",
+    "bg_dark": "#1c1c1c",
+    "bg_light": "#2a2a2a",
+    "bg_lighter": "#333333",
+    "fg": "#d7c483",
+    "fg_dim": "#9a8a5a",
+    "fg_bright": "#e8d999",
+    "accent": "#78824b",
+    "red": "#b36d43",
+    "red_bright": "#c97a4a",
+    "green": "#5f875f",
+    "green_bright": "#78824b",
+    "yellow": "#c9a554",
+    "yellow_bright": "#d7c483",
+    "blue": "#43492a",
+    "blue_bright": "#5f875f",
+    "magenta": "#685742",
+    "magenta_bright": "#78824b",
+    "cyan": "#5f875f",
+    "cyan_bright": "#78824b",
+    "gray": "#666666"
+  },
+  "gtk": {
+    "theme": "adw-gtk3-dark",
+    "iconTheme": "Tela-circle-black",
+    "cursorTheme": "Bibata-Modern-Ice",
+    "colorScheme": "prefer-dark"
+  },
+  "hyprland": {
+    "borderRadius": 8,
+    "gapsIn": 8,
+    "gapsOut": 15,
+    "borderSize": 1
+  }
+}

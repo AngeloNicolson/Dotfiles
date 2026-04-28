@@ -28,6 +28,9 @@ __pycache__/
 .claude/
 **/.claude/
 
+# Study cleanup list (local-only)
+to-be-deleted.txt
+
 # General
 *.swp
 *.swo

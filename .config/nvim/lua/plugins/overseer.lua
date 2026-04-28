@@ -59,8 +59,8 @@ return {
 			},
 		})
 
-		-- Keybindings
-		vim.keymap.set("n", "<leader>bot", "<cmd>OverseerToggle<cr>", { desc = "Overseer toggle" })
+		-- Keybindings for uncommon/custom tasks
+		vim.keymap.set("n", "<leader>boo", "<cmd>OverseerToggle<cr>", { desc = "Overseer toggle" })
 		vim.keymap.set("n", "<leader>bor", "<cmd>OverseerRun<cr>", { desc = "Overseer run task" })
 		vim.keymap.set("n", "<leader>bob", "<cmd>OverseerBuild<cr>", { desc = "Overseer build task" })
 		vim.keymap.set("n", "<leader>boq", "<cmd>OverseerQuickAction<cr>", { desc = "Overseer quick action" })

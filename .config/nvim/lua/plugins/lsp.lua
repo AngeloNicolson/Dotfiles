@@ -89,10 +89,23 @@ return {
     capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
 
     -- Language server configurations
+    local lspconfig = require("lspconfig")
+    local util = lspconfig.util
+
     local servers = {
       clangd = {
         capabilities = { offsetEncoding = { "utf-16" } },
         on_attach = on_attach,
+        root_dir = util.root_pattern(
+          "compile_commands.json",
+          "compile_flags.txt",
+          ".clangd",
+          ".clang-format",
+          ".editorconfig",
+          "CMakePresets.json",
+          "CMakeLists.txt",
+          ".git"
+        ),
         cmd = {
           "clangd",
           "--background-index",
@@ -111,6 +124,14 @@ return {
       glsl_analyzer = {
         on_attach = on_attach,
         filetypes = { "glsl", "vert", "frag", "geom", "comp", "tesc", "tese" },
+        root_dir = util.root_pattern(
+          "compile_commands.json",
+          ".clang-format",
+          ".editorconfig",
+          "CMakePresets.json",
+          "CMakeLists.txt",
+          ".git"
+        ),
       },
       lua_ls = {
         on_attach = on_attach,
@@ -156,7 +177,7 @@ return {
       ts_ls = {
         on_attach = on_attach,
         filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
-        root_dir = require("lspconfig").util.root_pattern("package.json", "tsconfig.json"),
+        root_dir = util.root_pattern("package.json", "tsconfig.json", ".editorconfig", ".git"),
         single_file_support = false,
         settings = {
           typescript = {
@@ -195,15 +216,16 @@ return {
     -- Setup Mason
     require("mason").setup()
 
-    local ensure_installed = vim.tbl_keys(servers or {})
-    vim.list_extend(ensure_installed, {
+    require("mason-tool-installer").setup({
+      ensure_installed = {
       "stylua",
       "eslint_d",
+      },
     })
-    require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
     -- Setup Mason-LSPconfig
     require("mason-lspconfig").setup({
+      ensure_installed = vim.tbl_keys(servers or {}),
       handlers = {
         function(server_name)
           local server = servers[server_name] or {}

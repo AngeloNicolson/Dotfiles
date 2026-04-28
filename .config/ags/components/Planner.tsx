@@ -7,7 +7,7 @@ import app from "ags/gtk3/app"
 import { readFile, writeFile } from "ags/file"
 import GLib from "gi://GLib"
 import { createState } from "ags"
-import { setTaskPopupVisible, setTaskPopupTitle, syncConnected, syncPeerCount, pendingChangeRequests, syncDialogVisible, setSyncDialogVisible } from "../state"
+import { syncConnected, syncPeerCount, pendingChangeRequests, syncDialogVisible, setSyncDialogVisible } from "../state"
 import { lastSyncedFile, lastSyncTime, generateInvite, acceptInvite, getPeers } from "./SyncIndicator"
 
 const PLANS_DIR = GLib.get_home_dir() + "/.config/plans"
@@ -695,7 +695,7 @@ export default function Planner() {
     }
   }
 
-  // ── Task-switch popup: detect when the current calendar event changes ──
+  // ── Task-switch notification: fire a system notification when the current calendar event changes ──
   let lastActiveTaskDesc = ""
 
   function getCurrentTaskDesc(): string {
@@ -703,7 +703,6 @@ export default function Planner() {
     const now = new Date()
     const nowMin = now.getHours() * 60 + now.getMinutes()
     const evList = events.get()
-    // Find the event whose time range contains "now"
     for (const ev of evList) {
       if (nowMin >= ev.startMin && nowMin < ev.endMin) return ev.desc
     }
@@ -714,14 +713,21 @@ export default function Planner() {
     const desc = getCurrentTaskDesc()
     if (desc && desc !== lastActiveTaskDesc) {
       lastActiveTaskDesc = desc
-      setTaskPopupTitle(desc)
-      setTaskPopupVisible(true)
+      if (startupDone) {
+        try {
+          GLib.spawn_command_line_async(
+            `notify-send -a Planner -i x-office-calendar "Up next" ${GLib.shell_quote(desc)}`
+          )
+        } catch (e) {
+          print(`Planner notify-send failed: ${e}`)
+        }
+      }
     } else if (!desc) {
       lastActiveTaskDesc = ""
     }
   }
 
-  // Suppress popup during startup — wait for events to settle
+  // Suppress notification during startup — wait for events to settle
   let startupDone = false
   lastActiveTaskDesc = getCurrentTaskDesc()
 

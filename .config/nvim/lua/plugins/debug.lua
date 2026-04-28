@@ -44,25 +44,80 @@ return {
 			-- C++ launch configurations
 			dap.configurations.cpp = {
 				{
-					name = "Kondor Engine",
+					name = "Launch executable",
 					type = "codelldb",
 					request = "launch",
 					program = function()
+						local function is_executable(path)
+							return vim.fn.filereadable(path) == 1 and vim.fn.executable(path) == 1
+						end
+
+						local function add_candidate(candidates, seen, path)
+							if path ~= "" and is_executable(path) and not seen[path] then
+								table.insert(candidates, path)
+								seen[path] = true
+							end
+						end
+
+						local source_file = vim.fn.expand("%:p")
+						if source_file:match("^dap%-src://") or source_file == "" then
+							for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+								local name = vim.api.nvim_buf_get_name(buf)
+								if name:match("%.c$") or name:match("%.cpp$") or name:match("%.cc$") or name:match("%.cxx$") then
+									source_file = name
+									break
+								end
+							end
+						end
+
+						local current_executable = vim.fn.fnamemodify(source_file, ":r")
+						if is_executable(current_executable) then
+							return current_executable
+						end
+
+						local cwd = vim.fn.getcwd()
+						local cwd_name = vim.fn.fnamemodify(cwd, ":t")
+						local current_dir = vim.fn.fnamemodify(source_file, ":h")
+						local candidates = {}
+						local seen = {}
+
 						-- Check common build directories
 						local build_dirs = {
+							cwd_name,
+							"build/" .. cwd_name,
 							"build/kondor",
 							"build/debug/kondor",
 							"build/Debug/kondor",
 							"cmake-build-debug/kondor",
 						}
 						for _, path in ipairs(build_dirs) do
-							local full_path = vim.fn.getcwd() .. "/" .. path
-							if vim.fn.filereadable(full_path) == 1 then
+							local full_path = cwd .. "/" .. path
+							if is_executable(full_path) then
 								return full_path
 							end
 						end
-						-- Fallback to manual input
-						return vim.fn.input("Executable: ", vim.fn.getcwd() .. "/build/kondor", "file")
+
+						for _, dir in ipairs({ current_dir, cwd, cwd .. "/build", cwd .. "/build/debug", cwd .. "/build/Debug" }) do
+							for _, path in ipairs(vim.fn.glob(dir .. "/*", false, true)) do
+								add_candidate(candidates, seen, path)
+							end
+						end
+
+						if #candidates > 0 then
+							local choices = { "Select executable:" }
+							for _, path in ipairs(candidates) do
+								table.insert(choices, vim.fn.fnamemodify(path, ":~:."))
+							end
+							table.insert(choices, "Enter path manually")
+
+							local choice = vim.fn.inputlist(choices)
+							if choice >= 1 and choice <= #candidates then
+								return candidates[choice]
+							end
+						end
+
+						vim.notify("No executable found. Build with debug symbols first.", vim.log.levels.WARN)
+						return vim.fn.input("Executable: ", current_executable, "file")
 					end,
 					cwd = "${workspaceFolder}",
 					stopOnEntry = false,

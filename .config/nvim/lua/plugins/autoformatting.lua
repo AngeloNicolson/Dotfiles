@@ -1,93 +1,114 @@
 return {
-	"nvimtools/none-ls.nvim",
-	dependencies = {
-		"nvimtools/none-ls-extras.nvim",
-		"jayp0521/mason-null-ls.nvim",
+	{
+		"stevearc/conform.nvim",
+		event = { "BufReadPre", "BufNewFile" },
+		config = function()
+			local conform = require("conform")
+			local clang_format_config = vim.fn.stdpath("config") .. "/format_configs/.clang-format"
+
+			conform.setup({
+				formatters_by_ft = {
+					lua = { "stylua" },
+					python = { "black" },
+					c = { "clang_format" },
+					cpp = { "clang_format" },
+					h = { "clang_format" },
+					hpp = { "clang_format" },
+					java = { "astyle" },
+					markdown = { "mdformat" },
+					css = { "prettierd" },
+					javascript = { "prettierd" },
+					typescript = { "prettierd" },
+					javascriptreact = { "prettierd" },
+					typescriptreact = { "prettierd" },
+					json = { "prettierd" },
+					html = { "prettierd" },
+					scss = { "prettierd" },
+					less = { "prettierd" },
+				},
+				format_on_save = function(bufnr)
+					if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+						return
+					end
+
+					return {
+						timeout_ms = 1500,
+						lsp_format = "fallback",
+						quiet = true,
+					}
+				end,
+				formatters = {
+					black = {
+						prepend_args = { "--line-length", "80" },
+					},
+					clang_format = {
+						prepend_args = function(_, ctx)
+							local project_style = vim.fs.find(
+								{ ".clang-format", "_clang-format" },
+								{ path = ctx.filename, upward = true }
+							)[1]
+
+							if project_style then
+								return {}
+							end
+
+							return {
+								"--style=file:" .. clang_format_config,
+								"--fallback-style=LLVM",
+							}
+						end,
+					},
+					astyle = {
+						prepend_args = {
+							"--style=allman",
+							"--mode=java",
+							"--indent=spaces=4",
+							"--pad-oper",
+							"--suffix=none",
+						},
+					},
+					mdformat = {
+						prepend_args = { "--wrap", "77" },
+					},
+					prettierd = {
+						prepend_args = {
+							"--no-semi",
+							"--double-quote",
+							"--jsx-single-quote",
+							"--bracket-same-line",
+						},
+					},
+				},
+			})
+
+			vim.keymap.set("n", "<leader>lf", function()
+				conform.format({
+					async = false,
+					lsp_format = "fallback",
+				})
+			end, { desc = "LSP: format buffer" })
+
+			vim.api.nvim_create_user_command("Format", function()
+				conform.format({
+					async = false,
+					lsp_format = "fallback",
+				})
+			end, { desc = "Format current buffer" })
+
+			vim.api.nvim_create_user_command("Wf", function()
+				vim.cmd("write")
+			end, { desc = "Format and save buffer" })
+		end,
 	},
-	config = function()
-		local null_ls = require("null-ls")
-		local formatting = null_ls.builtins.formatting
-
-		-- Install formatters manually via :Mason when needed
-		-- Automatic installation disabled to prevent startup conflicts
-		require("mason-null-ls").setup({
-			-- ensure_installed = {
-			-- 	"stylua",
-			-- 	"black",
-			-- 	"prettierd",
-			-- 	"clang-format",
-			-- },
-			automatic_installation = false,
-		})
-
-		local sources = {
-			formatting.stylua,
-			formatting.black.with({
-				extra_args = { "--line-length=80" },
-				filetypes = { "python" },
-			}),
-			formatting.clang_format.with({
-				extra_args = {
-					"--style=file:/home/Angel/.config/nvim/format_configs/.clang-format",
-					"--verbose",
-				},
-				filetypes = { "c", "cpp", "h", "hpp" },
-			}),
-			-- Java formatting with astyle (Global formatter)
-			formatting.astyle.with({
-				extra_args = {
-					"--style=allman",
-					"--mode=java",
-					"--indent=spaces=4",
-					"--pad-oper",
-					"--suffix=none",
-				},
-				filetypes = { "java" },
-			}),
-			formatting.mdformat.with({
-				extra_args = { "--wrap", "77" },
-				filetypes = { "markdown" },
-			}),
-			formatting.prettierd.with({
-				extra_args = {
-					"--no-semi",
-					"--double-quote",
-					"--jsx-single-quote",
-					"--bracket-same-line",
-				},
-				filetypes = {
-					"css",
-					"javascript",
-					"typescript",
-					"javascriptreact",
-					"typescriptreact",
-					"json",
-					"html",
-					"scss",
-					"less",
-					"js",
-					"jsx",
-				},
-			}),
-		}
-
-		null_ls.setup({
-			sources = sources,
-			on_attach = function(client, bufnr)
-				if client.server_capabilities.documentFormattingProvider then
-					vim.api.nvim_buf_create_user_command(bufnr, "Wf", function()
-						vim.lsp.buf.format({
-							async = false,
-							filter = function(c)
-								return c.name == "null-ls"
-							end,
-						})
-						vim.api.nvim_buf_call(bufnr, function()
-							vim.cmd("write")
-						end)
-					end, { desc = "Format and save buffer" })
-				end
-			end,
-		})
-	end,
+	{
+		"nvimtools/none-ls.nvim",
+		dependencies = {
+			"nvimtools/none-ls-extras.nvim",
+		},
+		config = function()
+			require("null-ls").setup({
+				sources = {},
+			})
+		end,
+	},
 }

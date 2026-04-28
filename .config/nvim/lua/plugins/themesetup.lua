@@ -13,6 +13,12 @@ return {
 		priority = 999,
 	},
 
+	{
+		"xero/miasma.nvim",
+		lazy = true,
+		priority = 999,
+	},
+
 	-- System-synced colorscheme loader
 	{
 		name = "system-theme-sync",
@@ -41,6 +47,7 @@ return {
 				mech = "mech",
 				famicom = "famicom",
 				["e-ink"] = "monochrome",
+				miasma = "miasma",
 			}
 
 			local function apply_transparency()
@@ -90,6 +97,8 @@ return {
 				vim.cmd("highlight Function cterm=bold gui=bold")
 				apply_transparency()
 				neutralize_semantic_tokens()
+				vim.api.nvim_set_hl(0, "CursorLine", { bg = "#000000" })
+				vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "#000000", bold = true })
 			end
 
 			load_scheme(colorscheme_map[system_theme] or "mech")
@@ -98,6 +107,8 @@ return {
 				callback = function()
 					apply_transparency()
 					neutralize_semantic_tokens()
+					vim.api.nvim_set_hl(0, "CursorLine", { bg = "#000000" })
+					vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "#000000", bold = true })
 				end,
 			})
 
