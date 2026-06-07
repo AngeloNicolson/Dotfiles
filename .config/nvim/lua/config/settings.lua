@@ -29,6 +29,7 @@ vim.opt.hlsearch = false
 vim.opt.incsearch = true
 
 -- UI settings
+vim.opt.conceallevel = 1 -- needed for obsidian.nvim link/markup concealing
 vim.opt.cursorline = true
 vim.opt.termguicolors = true
 vim.opt.scrolloff = 7

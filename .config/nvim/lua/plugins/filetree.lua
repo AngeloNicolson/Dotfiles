@@ -12,8 +12,6 @@ return {
 			open_for_directories = true,
 		},
 		config = function(_, opts)
-			require("yazi").setup(opts)
-
 			-- External file handlers (extension -> app)
 			local external_handlers = {
 				pdf = "zathura", rnote = "rnote",
@@ -46,30 +44,23 @@ return {
 				vim.fn.jobstart(cmd, { detach = true, shell = true })
 			end
 
-			vim.api.nvim_create_autocmd("BufReadCmd", {
-				pattern = {
-					"*.pdf", "*.rnote",
-					"*.mp4", "*.mkv", "*.avi", "*.mov", "*.webm", "*.flv", "*.wmv",
-					"*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a", "*.aac",
-					"*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.webp", "*.svg",
-				},
-				callback = function(args)
-					local path = vim.fn.fnamemodify(args.file, ":p")
-					local ext = path:match("^.+%.(.+)$")
-					if ext then
-						ext = ext:lower()
-						local handler = external_handlers[ext]
-						if handler then
-							open_external(handler, path)
-							vim.schedule(function()
-								if vim.api.nvim_buf_is_valid(args.buf) then
-									vim.api.nvim_buf_delete(args.buf, { force = true })
-								end
-							end)
-						end
+			local default_open_file = require("yazi.openers").open_file
+
+			opts.open_file_function = function(chosen_file, config, state)
+				local ext = chosen_file:match("^.+%.(.+)$")
+				if ext then
+					ext = ext:lower()
+					local handler = external_handlers[ext]
+					if handler then
+						open_external(handler, chosen_file)
+						return
 					end
-				end,
-			})
+				end
+
+				default_open_file(chosen_file, config, state)
+			end
+
+			require("yazi").setup(opts)
 		end,
 	},
 }
