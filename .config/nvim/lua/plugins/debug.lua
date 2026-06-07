@@ -169,18 +169,22 @@ return {
 				},
 				layouts = {
 					{
-						-- Left side: variables and watches (important for game dev)
 						elements = {
-							{ id = "scopes", size = 0.4 }, -- Local vars, great for vectors/matrices
-							{ id = "watches", size = 0.3 }, -- Custom expressions
-							{ id = "breakpoints", size = 0.15 },
-							{ id = "stacks", size = 0.15 },
+							{ id = "scopes", size = 0.45 },
+							{ id = "watches", size = 0.35 },
+							{ id = "breakpoints", size = 0.20 },
 						},
-						size = 50, -- Wider for long variable names
+						size = 50,
 						position = "left",
 					},
 					{
-						-- Bottom: console and repl
+						elements = {
+							{ id = "stacks", size = 1.0 },
+						},
+						size = 45,
+						position = "right",
+					},
+					{
 						elements = {
 							{ id = "repl", size = 0.5 },
 							{ id = "console", size = 0.5 },

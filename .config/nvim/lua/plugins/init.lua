@@ -1,14 +1,5 @@
 return {
 
-	-- Obsidian
-	{
-		"epwalsh/obsidian.nvim",
-		tag = "*",
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-		},
-	},
-
 	-- Markdown Preview
 	{
 		"iamcco/markdown-preview.nvim",
