@@ -191,6 +191,31 @@ return {
 
 			parser._safe_messages_patch = true
 		end
+
+		local ok_ui, UI = pcall(require, "codecompanion.interactions.chat.ui")
+		if ok_ui and not UI._safe_display_tokens_patch then
+			local original_display_tokens = UI.display_tokens
+
+			UI.display_tokens = function(self, parser, start_row)
+				local ok_tokens, err = pcall(original_display_tokens, self, parser, start_row)
+				if ok_tokens then
+					return
+				end
+
+				if not self._safe_display_tokens_warning_shown then
+					self._safe_display_tokens_warning_shown = true
+					vim.schedule(function()
+						vim.notify(
+							"CodeCompanion token count display was skipped: " .. tostring(err),
+							vim.log.levels.WARN,
+							{ title = "CodeCompanion" }
+						)
+					end)
+				end
+			end
+
+			UI._safe_display_tokens_patch = true
+		end
 	end,
 	keys = {
 		{ "<leader>ac", "<cmd>CodeCompanionChat Toggle<cr>", desc = "AI chat", mode = { "n", "v" } },
