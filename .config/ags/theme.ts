@@ -1,8 +1,10 @@
 import { readFile, writeFile } from "ags/file"
 import { execAsync } from "ags/process"
 import app from "ags/gtk3/app"
+import GLib from "gi://GLib"
+import { scaleCss } from "./scale"
 
-const THEME_DIR = "/home/Angel/.config/themes"
+const THEME_DIR = GLib.get_home_dir() + "/.config/themes"
 
 export interface ThemeColors {
   bg: string
@@ -2712,9 +2714,16 @@ export function initTheme() {
   const themeName = getCurrentThemeName()
   const theme = loadTheme(themeName)
   if (theme) {
-    app.apply_css(generateCSS(theme.colors), true)
+    app.apply_css(scaleCss(generateCSS(theme.colors)), true)
     print(`Loaded theme: ${themeName}`)
   }
+}
+
+// Re-apply the current theme's CSS without changing the theme. Used when the
+// display scale (U) changes so the regenerated, rescaled stylesheet takes effect.
+export function reapplyCss() {
+  const theme = loadTheme(getCurrentThemeName())
+  if (theme) app.apply_css(scaleCss(generateCSS(theme.colors)), true)
 }
 
 export async function applyTheme(themeName: string) {
@@ -2728,10 +2737,10 @@ export async function applyTheme(themeName: string) {
   const c = theme.colors
 
   // Update AGS CSS (this will smoothly transition)
-  app.apply_css(generateCSS(c), true)
+  app.apply_css(scaleCss(generateCSS(c)), true)
 
   // Apply to foot terminal
-  const footConfig = "/home/Angel/.config/foot/foot.ini"
+  const footConfig = GLib.get_home_dir() + "/.config/foot/foot.ini"
   try {
     let foot = readFile(footConfig) || ""
     foot = foot.replace(/^background=.*/m, `background=${stripHash(c.bg)}`)

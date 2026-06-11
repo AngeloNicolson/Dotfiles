@@ -1,25 +1,21 @@
 #!/bin/bash
 # Monitor hotplug handler for Hyprland
-# Disables laptop screen when HDMI is connected, enables it when disconnected
+# Disables the laptop panel when any external monitor is connected, re-enables it
+# when the last external is unplugged. Monitor names are auto-detected so this
+# works on any machine (no hardcoded eDP-1/HDMI-A-1).
 
-LAPTOP_MONITOR="eDP-1"
-EXTERNAL_MONITOR="HDMI-A-1"
+source "$(dirname "$0")/monitor-helpers.sh"
 
 handle_monitors() {
-    # Get list of connected monitors
-    monitors=$(hyprctl monitors -j 2>/dev/null)
+    local laptop; laptop="$(mon_laptop)"
+    [ -z "$laptop" ] && return  # desktop with no built-in panel — nothing to toggle
 
-    if [ -z "$monitors" ]; then
-        return
-    fi
-
-    # Check if external monitor is connected
-    if echo "$monitors" | grep -q "$EXTERNAL_MONITOR"; then
-        # HDMI connected - disable laptop screen
-        hyprctl keyword monitor "$LAPTOP_MONITOR,disable"
+    if [ -n "$(mon_first_external)" ]; then
+        # External monitor present — disable laptop panel
+        hyprctl keyword monitor "$laptop,disable"
     else
-        # HDMI disconnected - enable laptop screen
-        hyprctl keyword monitor "$LAPTOP_MONITOR,2560x1600@240,0x0,1.25"
+        # No external monitor — enable laptop panel at its preferred mode
+        hyprctl keyword monitor "$laptop,preferred,auto,auto"
     fi
 }
 

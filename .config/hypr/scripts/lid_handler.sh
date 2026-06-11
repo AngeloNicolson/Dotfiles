@@ -1,36 +1,36 @@
-#!/bin/bash
-# Lid switch handler for Hyprland
+#!/usr/bin/env bash
+# Lid switch handler for Hyprland (monitor names/resolutions auto-detected).
 # When lid closes:
-#   - If HDMI connected: disable laptop screen, move HDMI to 0x0
-#   - If no HDMI: suspend the system
+#   - If an external is connected: disable laptop screen, make external primary
+#   - If no external: lock + suspend the system
 # When lid opens:
-#   - Enable laptop screen at 0x0, move HDMI to the right
+#   - Enable laptop screen at 0x0, push external to the right
+# Optional host overrides (custom/env.conf): LAPTOP_SCALE, LAPTOP_MODE
+source "$(dirname "$0")/monitor-helpers.sh"
 
-LAPTOP_MONITOR="eDP-1"
-EXTERNAL_MONITOR="HDMI-A-1"
+LAPTOP="$(mon_laptop)"
+[ -z "$LAPTOP" ] && exit 0   # desktop, no lid
 
-has_external_monitor() {
-    hyprctl monitors -j 2>/dev/null | grep -q "$EXTERNAL_MONITOR"
-}
+LAPTOP_SCALE="${LAPTOP_SCALE:-auto}"
+LAPTOP_MODE="${LAPTOP_MODE:-preferred}"
+EXTERNAL="$(mon_first_external)"
 
 case "$1" in
     close)
-        if has_external_monitor; then
-            # External monitor connected - disable laptop, HDMI becomes primary at 0x0
-            hyprctl keyword monitor "$LAPTOP_MONITOR,disable"
-            hyprctl keyword monitor "$EXTERNAL_MONITOR,1920x1080@60,0x0,1"
+        if [ -n "$EXTERNAL" ]; then
+            hyprctl keyword monitor "$LAPTOP,disable"
+            hyprctl keyword monitor "$EXTERNAL,preferred,0x0,1"
         else
-            # No external monitor - suspend and lock
             hyprlock &
             sleep 0.5
             systemctl suspend
         fi
         ;;
     open)
-        # Lid opened - laptop at 0x0, HDMI to the right (2048 = 2560/1.25)
-        hyprctl keyword monitor "$LAPTOP_MONITOR,2560x1600@240,0x0,1.25"
-        if has_external_monitor; then
-            hyprctl keyword monitor "$EXTERNAL_MONITOR,1920x1080@60,2048x0,1"
+        hyprctl keyword monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
+        if [ -n "$EXTERNAL" ]; then
+            x="$(mon_logical_width "$LAPTOP")"
+            hyprctl keyword monitor "$EXTERNAL,preferred,${x}x0,1"
         fi
         ;;
 esac

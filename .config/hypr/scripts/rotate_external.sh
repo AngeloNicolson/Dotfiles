@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# Toggle the external monitor DP-1 between landscape (transform 0) and
-# portrait/vertical (transform 3). Bound to the Copilot/Assistant key.
-MON="DP-1"
+# Toggle the external monitor between landscape (transform 0) and portrait
+# (transform 3). Monitor name, mode and position are auto-detected, so this works
+# on any machine. Bound to the Copilot/Assistant key.
+source "$(dirname "$0")/monitor-helpers.sh"
 
-cur=$(hyprctl monitors -j | python3 -c \
-  "import json,sys; print(next((m['transform'] for m in json.load(sys.stdin) if m['name']=='$MON'), 0))")
+MON="$(mon_first_external)"
+[ -z "$MON" ] && exit 0   # no external monitor connected
 
-if [ "$cur" = "0" ]; then
-    t=3   # landscape -> portrait/vertical
+# Preserve the monitor's current position; only flip the transform.
+read -r x y <<<"$(hyprctl monitors -j | jq -r --arg n "$MON" \
+    '.[] | select(.name == $n) | "\(.x) \(.y)"')"
+x="${x:-0}"; y="${y:-0}"
+
+if [ "$(mon_transform "$MON")" = "0" ]; then
+    t=3   # landscape -> portrait
 else
-    t=0   # portrait  -> landscape/horizontal
+    t=0   # portrait  -> landscape
 fi
 
-hyprctl keyword monitor "$MON,1920x1080@60,2048x0,1,transform,$t"
+hyprctl keyword monitor "$MON,preferred,${x}x${y},1,transform,$t"

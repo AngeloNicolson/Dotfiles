@@ -41,6 +41,11 @@ from pathlib import Path
 import cairo
 import time
 
+# Reference canvas width the designer's gap rendering is scaled against. This is
+# the layout-preview widget's own coordinate space, NOT the physical screen — gaps
+# are drawn proportional to (actual canvas width / this reference).
+REFERENCE_CANVAS_WIDTH = 1920.0
+
 
 class BSPNode:
     """Represents a node in the BSP tree"""
@@ -319,7 +324,7 @@ class BSPDesigner(Gtk.Box):
         """Draw a window rectangle with rounded corners"""
         # Calculate gap size based on canvas scale (assuming 1920px reference width)
         canvas_width = self.canvas.get_width()
-        scale = canvas_width / 1920.0
+        scale = canvas_width / REFERENCE_CANVAS_WIDTH
         gap = max(1, int(self.gaps_in * scale))  # Minimum 1px for visibility
 
         radius = 4
@@ -491,7 +496,7 @@ class BSPDesigner(Gtk.Box):
             return None
 
         # Account for the visual gap offset
-        scale = canvas_w / 1920.0
+        scale = canvas_w / REFERENCE_CANVAS_WIDTH
         gap = max(1, int(self.gaps_in * scale))
         node_x = node.x * canvas_w + gap
         node_y = node.y * canvas_h + gap
@@ -526,7 +531,7 @@ class BSPDesigner(Gtk.Box):
             return None
 
         # Account for the visual gap offset used in drawing
-        scale = canvas_w / 1920.0
+        scale = canvas_w / REFERENCE_CANVAS_WIDTH
         gap = max(1, int(self.gaps_in * scale))
         node_x = node.x * canvas_w + gap
         node_y = node.y * canvas_h + gap

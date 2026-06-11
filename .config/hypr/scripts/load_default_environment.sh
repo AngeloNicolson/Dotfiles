@@ -52,6 +52,9 @@ trap 'ags -r "hideModal()" 2>/dev/null' EXIT
 # Launch environment layouts from workspace definitions using apply_layout.py
 # Sort by workspace ID to process in order (workspace 1, 2, 3...)
 jq -r '.workspaces[]? | select(.layout != null) | "\(.id) \(.layout)"' "$CONFIG_FILE" 2>/dev/null | sort -n | while read -r ws_id layout_file; do
+    # Expand ~ and $HOME so layout paths are portable across machines/users
+    layout_file="${layout_file/#\~/$HOME}"
+    layout_file="${layout_file//\$HOME/$HOME}"
     if [ -n "$ws_id" ] && [ -n "$layout_file" ] && [ -f "$layout_file" ]; then
         echo "Launching layout for workspace $ws_id: $layout_file"
 

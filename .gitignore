@@ -36,3 +36,6 @@ to-be-deleted.txt
 *.swo
 *~
 .DS_Store
+
+# Stray nvim log
+nvim.log

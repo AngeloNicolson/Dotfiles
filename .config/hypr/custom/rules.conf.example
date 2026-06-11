@@ -1,8 +1,17 @@
 # You can put custom rules here
 # Window/layer rules: https://wiki.hyprland.org/Configuring/Window-Rules/
 # Workspace rules: https://wiki.hyprland.org/Configuring/Workspace-Rules/
+#
+# This file is machine-specific (gitignored). Copy to rules.conf and edit.
 
-# Examples:
+# ── Window rules (examples) ──────────────────────────────────────────────────
 #windowrule = opacity 0.92 override 0.92 override, match:class ^foot$
 #windowrule = workspace 2, match:class ^firefox$
 
+# ── Workspace → monitor bindings ─────────────────────────────────────────────
+# Pin workspaces to monitors so they survive hotplug. Use your real monitor
+# names (run `hyprctl monitors -j | jq -r '.[].name'`). Omit on a single-monitor
+# machine — everything defaults to the one screen.
+#workspace = name:1, monitor:eDP-1, default:true
+#workspace = name:2, monitor:eDP-1
+#workspace = name:7, monitor:DP-2, default:true

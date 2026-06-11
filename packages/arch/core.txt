@@ -25,6 +25,7 @@ tmux
 
 # Fonts
 ttf-jetbrains-mono-nerd
+ttf-cascadia-code-nerd
 ttf-font-awesome
 ttf-nerd-fonts-meta
 noto-fonts-cjk
