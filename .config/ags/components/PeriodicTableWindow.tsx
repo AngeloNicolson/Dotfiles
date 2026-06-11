@@ -4,8 +4,11 @@ import { periodicTableVisible, setPeriodicTableVisible } from "../state"
 import PeriodicTable from "./PeriodicTable"
 import Gdk from "gi://Gdk?version=3.0"
 import Gtk from "gi://Gtk?version=3.0"
+import { px } from "../scale"
 
-export default function PeriodicTableWindow(gdkMonitor: number) {
+// gdkMonitor may be a literal index or a reactive accessor so the window can
+// follow the focused monitor.
+export default function PeriodicTableWindow(gdkMonitor: number | any) {
   return (
     <window
       visible={periodicTableVisible}
@@ -15,8 +18,8 @@ export default function PeriodicTableWindow(gdkMonitor: number) {
       application={app}
       layer={Astal.Layer.TOP}
       anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.LEFT}
-      marginLeft={100}
-      marginTop={100}
+      marginLeft={px(100)}
+      marginTop={px(100)}
       onKeyPressEvent={(_, event) => {
         const keyval = event.get_keyval()[1]
         if (keyval === Gdk.KEY_Escape) {

@@ -3,6 +3,7 @@ import GLib from "gi://GLib"
 import GdkPixbuf from "gi://GdkPixbuf"
 import { execAsync } from "ags/process"
 import { createState } from "ags"
+import { px } from "../scale"
 
 const WALLPAPER_DIR = GLib.get_home_dir() + "/.config/ags/wallpapers"
 const SWWW_DIR = GLib.get_home_dir() + "/.config/awww"
@@ -142,7 +143,7 @@ async function generateVideoThumbnail(videoPath: string): Promise<string> {
       "ffmpeg", "-y", "-i", videoPath,
       "-ss", "00:00:10",
       "-vframes", "1",
-      "-vf", "scale=280:-1",
+      "-vf", `scale=${px(280)}:-1`,
       thumbPath
     ])
   } catch {
@@ -152,7 +153,7 @@ async function generateVideoThumbnail(videoPath: string): Promise<string> {
         "ffmpeg", "-y", "-i", videoPath,
         "-ss", "00:00:01",
         "-vframes", "1",
-        "-vf", "scale=280:-1",
+        "-vf", `scale=${px(280)}:-1`,
         thumbPath
       ])
     } catch {
@@ -160,7 +161,7 @@ async function generateVideoThumbnail(videoPath: string): Promise<string> {
       await execAsync([
         "ffmpeg", "-y", "-i", videoPath,
         "-vframes", "1",
-        "-vf", "scale=280:-1",
+        "-vf", `scale=${px(280)}:-1`,
         thumbPath
       ])
     }
@@ -178,7 +179,7 @@ function StaticThumbnail({
 }) {
   let pixbuf: GdkPixbuf.Pixbuf | null = null
   try {
-    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 280, 175, true)
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, px(280), px(175), true)
   } catch {
     // Failed to load image
   }
@@ -210,7 +211,7 @@ function VideoThumbnail({
   // Load thumbnail asynchronously
   generateVideoThumbnail(path).then((thumbPath) => {
     try {
-      const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, 280, 175, true)
+      const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, px(280), px(175), true)
       image.set_from_pixbuf(pixbuf)
     } catch {
       // Keep fallback icon
@@ -249,7 +250,7 @@ function MovieThumbnail({ path }: { path: string }) {
 
   generateVideoThumbnail(path).then((thumbPath) => {
     try {
-      const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, 280, 175, true)
+      const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, px(280), px(175), true)
       image.set_from_pixbuf(pixbuf)
     } catch {
       // Keep fallback icon
@@ -364,16 +365,16 @@ export default function WallpaperSelector() {
     await execAsync(["pkill", "-9", "-f", "mpv.*no-audio.*loop.*panscan"]).catch(() => {})
     await new Promise(resolve => setTimeout(resolve, 100))
 
-    // Get monitor name
-    let monitor = "eDP-1"
+    // Get the target monitor name — prefer the focused one, else the first.
+    let monitor = ""
     try {
       const result = await execAsync(["hyprctl", "monitors", "-j"])
       const monitors = JSON.parse(result)
       if (monitors.length > 0) {
-        monitor = monitors[0].name
+        monitor = (monitors.find((m: any) => m.focused) || monitors[0]).name
       }
     } catch {
-      // Use default
+      // No monitor info — leave empty and let the caller fall back.
     }
 
     // Check if swww is running

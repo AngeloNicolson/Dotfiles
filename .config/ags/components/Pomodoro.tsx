@@ -4,6 +4,7 @@ import Gdk from "gi://Gdk?version=3.0"
 import GLib from "gi://GLib"
 import Gtk from "gi://Gtk?version=3.0"
 import { breakPopupVisible, setBreakPopupVisible, focusedPage, toggleFocusedPage } from "../state"
+import { px } from "../scale"
 
 // === Timer State ===
 type Phase = "idle" | "work" | "break"
@@ -473,7 +474,7 @@ export default function Pomodoro() {
           self.set_halign(Gtk.Align.CENTER)
 
           const da = new Gtk.DrawingArea()
-          da.set_size_request(RING_SIZE, RING_SIZE)
+          da.set_size_request(px(RING_SIZE), px(RING_SIZE))
 
           da.connect("draw", (_: any, cr: any) => {
             drawProgressRing(cr, da.get_allocated_width(), da.get_allocated_height())
@@ -493,11 +494,11 @@ export default function Pomodoro() {
           timeLabel.set_name("pomo-time-display")
 
           const timeCss = new Gtk.CssProvider()
-          timeCss.load_from_data(`#pomo-time-display { font-size: 56px; color: #f0f2f4; font-weight: 700; letter-spacing: 4px; }`)
+          timeCss.load_from_data(`#pomo-time-display { font-size: ${px(56)}px; color: #f0f2f4; font-weight: 700; letter-spacing: ${px(4)}px; }`)
           timeLabel.get_style_context().add_provider(timeCss, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
           const phaseCss = new Gtk.CssProvider()
-          phaseCss.load_from_data(`#pomo-phase-label { font-size: 9px; color: #5090a0; font-weight: 700; letter-spacing: 2px; margin-top: 2px; }`)
+          phaseCss.load_from_data(`#pomo-phase-label { font-size: ${px(9)}px; color: #5090a0; font-weight: 700; letter-spacing: ${px(2)}px; margin-top: ${px(2)}px; }`)
           phaseLabel.get_style_context().add_provider(phaseCss, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
           labelBox.pack_start(timeLabel, false, false, 0)

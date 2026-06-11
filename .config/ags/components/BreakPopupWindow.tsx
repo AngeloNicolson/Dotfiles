@@ -10,7 +10,9 @@ function formatTime(secs: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
 }
 
-export default function BreakPopupWindow(gdkMonitor: number) {
+// gdkMonitor may be a literal index or a reactive accessor so the overlay can
+// follow the focused monitor.
+export default function BreakPopupWindow(gdkMonitor: number | any) {
   const { TOP, LEFT, BOTTOM, RIGHT } = Astal.WindowAnchor
 
   return (

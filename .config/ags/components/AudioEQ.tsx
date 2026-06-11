@@ -7,6 +7,7 @@ import GLib from "gi://GLib"
 import Gdk from "gi://Gdk"
 import Gtk from "gi://Gtk"
 import Wp from "gi://AstalWp"
+import { px } from "../scale"
 
 const EQ_BANDS = [
   { label: "60", type: "bq_lowshelf", freq: 60 },
@@ -42,19 +43,27 @@ const [activePreset, setActivePreset] = createState("flat")
 
 let reloadTimer: number | null = null
 
-// Cava visualizer — 6 bars matching EQ bands, raw ASCII output
+// Cava visualizer — one bar per EQ band, raw ASCII output.
+// framerate 60 + low noise_reduction keep the bars snappy and in time with
+// the audio; cava's default (24fps, noise_reduction 0.77) lags the beat badly.
 const CAVA_CONF_PATH = "/tmp/ags-cava.conf"
-const CAVA_BARS = NUM_BANDS % 2 === 0 ? NUM_BANDS : NUM_BANDS + 1
+const CAVA_BARS = NUM_BANDS
 try {
   writeFile(CAVA_CONF_PATH, `[general]
 bars = ${CAVA_BARS}
-framerate = 24
+framerate = 60
+autosens = 1
 
 [output]
 method = raw
+channels = mono
+mono_option = average
 raw_target = /dev/stdout
 data_format = ascii
 ascii_max_range = ${SEGMENTS}
+
+[smoothing]
+noise_reduction = 0.30
 `)
 } catch {}
 
@@ -624,7 +633,7 @@ export default function AudioEQ() {
           propagate_natural_height: true,
         })
         scroll.set_name("eq-output-scroll")
-        scroll.set_max_content_height(300)
+        scroll.set_max_content_height(px(300))
         scroll.add(listBox)
 
         const revealer = new Gtk.Revealer({

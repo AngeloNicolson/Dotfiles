@@ -1,6 +1,29 @@
 import { createState } from "ags"
+import { readFile, writeFile } from "ags/file"
+import GLib from "gi://GLib"
 import Gtk from "gi://Gtk?version=3.0"
 import AstalHyprland from "gi://AstalHyprland"
+
+// Persisted UI state — survives AGS restart / reboot
+const UI_STATE_FILE = GLib.get_user_config_dir() + "/ags/ui-state.json"
+
+function loadUiState(): Record<string, any> {
+  try {
+    const raw = readFile(UI_STATE_FILE)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return {}
+}
+
+const uiState = loadUiState()
+
+function saveUiState() {
+  try {
+    writeFile(UI_STATE_FILE, JSON.stringify(uiState))
+  } catch (e) {
+    console.error("Failed to persist UI state:", e)
+  }
+}
 
 // Bar visibility state
 export const [barVisible, setBarVisible] = createState(false)
@@ -27,8 +50,18 @@ export const [syncDialogVisible, setSyncDialogVisible] = createState(false)
 // Sidebar pinned — when on, bar has exclusive zone and pushes windows away
 export const [sidebarPinned, setSidebarPinned] = createState(true)
 
-// Focused page — when set, bar always opens to this page
-export const [focusedPage, setFocusedPage] = createState<string | null>("page2")
+// Focused page — when set, bar always opens to this page. Defaults to HOME
+// (page1); the user's FOCUS choice is remembered across reboots.
+const [focusedPage, setFocusedPageState] = createState<string | null>(
+  uiState.focusedPage !== undefined ? uiState.focusedPage : "page1"
+)
+export { focusedPage }
+
+export function setFocusedPage(pageId: string | null) {
+  setFocusedPageState(pageId)
+  uiState.focusedPage = pageId
+  saveUiState()
+}
 
 export function toggleFocusedPage(pageId: string) {
   if (focusedPage.get() === pageId) {

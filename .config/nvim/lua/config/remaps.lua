@@ -39,7 +39,7 @@ vim.keymap.set("n", "<leader>bx", function()
 
 	local compiler = ext == "c" and "gcc" or "g++"
 	local command = string.format(
-		"cd %s && %s -g -O0 %s -o %s && %s",
+		"cd %s && %s -g -O0 -fopenmp %s -o %s && %s",
 		vim.fn.shellescape(dir),
 		compiler,
 		vim.fn.shellescape(file),

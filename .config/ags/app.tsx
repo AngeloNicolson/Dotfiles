@@ -1,6 +1,8 @@
 import app from "ags/gtk3/app"
+import { createState } from "ags"
 import { toggleBar, cyclePage, cyclePageBack, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable } from "./state"
-import { initTheme, applyTheme } from "./theme"
+import { initTheme, applyTheme, reapplyCss } from "./theme"
+import { recomputeScale } from "./scale"
 import Bar from "./components/Bar"
 import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
@@ -57,18 +59,44 @@ app.start({
     const display = Gdk.Display.get_default()
     const hyprland = AstalHyprland.get_default()
 
+    // Map a Hyprland monitor to its GDK monitor index by matching the logical
+    // origin (x,y). Robust across machines — replaces the old assumption that GDK
+    // indices are simply the reverse of Hyprland's order.
+    const gdkIndexForHypr = (mon: AstalHyprland.Monitor): number => {
+      const n = display?.get_n_monitors() ?? 1
+      const hx = mon.get_x()
+      const hy = mon.get_y()
+      for (let i = 0; i < n; i++) {
+        const gm = display?.get_monitor(i)
+        if (!gm) continue
+        const g = gm.get_geometry()
+        if (g.x === hx && g.y === hy) return i
+      }
+      return 0
+    }
+
+    // GDK index of the focused monitor — overlays bind to this so they always
+    // appear on the screen the user is looking at, not a hardcoded monitor 0.
+    const [overlayMonitor, setOverlayMonitor] = createState(0)
+    const updateOverlayMonitor = () => {
+      const focused = hyprland.get_focused_monitor()
+        || hyprland.get_focused_workspace()?.get_monitor()
+        || hyprland.get_monitors()[0]
+      if (focused) setOverlayMonitor(gdkIndexForHypr(focused))
+    }
+
+    // Recompute the display scale (U) from the focused monitor and re-apply the
+    // rescaled stylesheet if it changed.
+    const updateScale = () => {
+      if (recomputeScale()) reapplyCss()
+    }
+
     // Track bars by monitor name (stable identifier)
     const bars: Map<string, any> = new Map()
 
     // Sync bars with current monitors
     const syncBars = () => {
       const hyprMonitors = hyprland.get_monitors()
-
-      // Get current monitor names
-      const currentMonitors = new Set<string>()
-      hyprMonitors.forEach(mon => {
-        currentMonitors.add(mon.get_name())
-      })
 
       // Destroy all existing bars and recreate them
       // GDK monitor indices can shift when monitors are added/removed
@@ -79,10 +107,9 @@ app.start({
       bars.clear()
 
       // Create bars for all current monitors
-      hyprMonitors.forEach((mon, idx) => {
+      hyprMonitors.forEach((mon) => {
         const name = mon.get_name()
-        const numMonitors = display?.get_n_monitors() || 1
-        const gdkIndex = numMonitors > 1 ? (numMonitors - 1) - idx : 0
+        const gdkIndex = gdkIndexForHypr(mon)
         console.log(`Creating bar for monitor: ${name} (gdk index: ${gdkIndex})`)
         bars.set(name, Bar(gdkIndex, name))
       })
@@ -120,24 +147,34 @@ app.start({
       console.log(`Monitor added: ${mon.get_name()}`)
       syncBars()
       updateBarVisibility()
+      updateScale()
+      updateOverlayMonitor()
     })
 
     hyprland.connect("monitor-removed", (_hypr, name) => {
       console.log(`Monitor removed: ${name}`)
       syncBars()
       updateBarVisibility()
+      updateScale()
+      updateOverlayMonitor()
     })
 
-    hyprland.connect("notify::focused-workspace", updateBarVisibility)
+    hyprland.connect("notify::focused-workspace", () => {
+      updateBarVisibility()
+      updateScale()
+      updateOverlayMonitor()
+    })
 
     // Initial setup
     syncBars()
     updateBarVisibility()
+    updateOverlayMonitor()
 
-    // Create destination menu and galaxy overlay windows on primary monitor
-    DestinationWindow(0)
-    GalaxyWindow(0)
-    PeriodicTableWindow(0)
-    BreakPopupWindow(0)
+    // Overlay windows follow the focused monitor (reactive index) instead of
+    // being pinned to monitor 0.
+    DestinationWindow(overlayMonitor)
+    GalaxyWindow(overlayMonitor)
+    PeriodicTableWindow(overlayMonitor)
+    BreakPopupWindow(overlayMonitor)
   },
 })

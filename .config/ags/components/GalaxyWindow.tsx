@@ -5,7 +5,9 @@ import GalaxyOverlay from "./GalaxyOverlay"
 import Gdk from "gi://Gdk?version=3.0"
 import AstalHyprland from "gi://AstalHyprland"
 
-export default function GalaxyWindow(gdkMonitor: number) {
+// gdkMonitor may be a literal index or a reactive accessor so the overlay can
+// follow the focused monitor.
+export default function GalaxyWindow(gdkMonitor: number | any) {
   const { TOP, LEFT, BOTTOM, RIGHT } = Astal.WindowAnchor
   const hyprland = AstalHyprland.get_default()
 

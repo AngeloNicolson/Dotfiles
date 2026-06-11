@@ -4,6 +4,7 @@ import GdkPixbuf from "gi://GdkPixbuf"
 import GLib from "gi://GLib"
 import cairo from "cairo"
 import { setDestinationVisible } from "../state"
+import { px } from "../scale"
 
 // Background image path
 const BG_IMAGE_PATH = `${GLib.get_user_config_dir()}/ags/assets/director/nebula2.jpg`
@@ -470,14 +471,15 @@ export default function DestinationMenu() {
   })
 
   function drawTabs(cr: any, width: number, parallaxX: number) {
-    const tabWidth = 120
-    const tabHeight = 32
-    const totalWidth = TABS.length * tabWidth + (TABS.length - 1) * 20
+    const tabWidth = px(120)
+    const tabHeight = px(32)
+    const tabGap = px(20)
+    const totalWidth = TABS.length * tabWidth + (TABS.length - 1) * tabGap
     const startX = (width - totalWidth) / 2 + parallaxX * 5
-    const y = 25
+    const y = px(25)
 
     TABS.forEach((tab, i) => {
-      const x = startX + i * (tabWidth + 20)
+      const x = startX + i * (tabWidth + tabGap)
 
       if (tab.active) {
         cr.setSourceRGBA(0.15, 0.2, 0.3, 0.9)
@@ -501,7 +503,7 @@ export default function DestinationMenu() {
 
       cr.setSourceRGBA(tab.active ? 0.95 : 0.55, tab.active ? 0.97 : 0.6, tab.active ? 1 : 0.65, 1)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
-      cr.setFontSize(12)
+      cr.setFontSize(px(12))
       const extents = cr.textExtents(tab.label)
       cr.moveTo(x + (tabWidth - extents.width) / 2, y + tabHeight / 2 + 4)
       cr.showText(tab.label)
@@ -574,7 +576,7 @@ export default function DestinationMenu() {
       // Smaller labels for sidebar, below the icon
       cr.setSourceRGBA(0.9, 0.93, 0.98, 0.95 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
-      cr.setFontSize(10)
+      cr.setFontSize(px(10))
       const labelExtents = cr.textExtents(dest.label)
       cr.moveTo(x - labelExtents.width / 2, y + actualSize + 18)
       cr.showText(dest.label)
@@ -582,7 +584,7 @@ export default function DestinationMenu() {
       // Large labels with wide letter spacing, light weight
       cr.setSourceRGBA(0.78, 0.82, 0.88, 0.75 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.NORMAL)
-      cr.setFontSize(32)
+      cr.setFontSize(px(32))
 
       // Calculate total width with wide letter spacing
       const letterSpacing = 22
@@ -631,14 +633,14 @@ export default function DestinationMenu() {
     // Title at top
     cr.setSourceRGBA(0.9, 0.94, 1.0, alpha)
     cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
-    cr.setFontSize(24)
+    cr.setFontSize(px(24))
     const titleExtents = cr.textExtents(dest.label)
     cr.moveTo(centerX - titleExtents.width / 2 + parallaxX * 5, 90)
     cr.showText(dest.label)
 
     // Subtitle
     cr.setSourceRGBA(0.6, 0.7, 0.8, alpha * 0.7)
-    cr.setFontSize(12)
+    cr.setFontSize(px(12))
     const subtitle = "SELECT DESTINATION"
     const subExtents = cr.textExtents(subtitle)
     cr.moveTo(centerX - subExtents.width / 2 + parallaxX * 5, 115)
@@ -675,7 +677,7 @@ export default function DestinationMenu() {
     cr.showText(backIcon)
 
     cr.setSourceRGBA(0.7, 0.75, 0.85, alpha * 0.8)
-    cr.setFontSize(10)
+    cr.setFontSize(px(10))
     const backLabel = "BACK"
     const backLabelExt = cr.textExtents(backLabel)
     cr.moveTo(backX - backLabelExt.width / 2, backY + backSize + 18)
@@ -738,7 +740,7 @@ export default function DestinationMenu() {
       // Label
       cr.setSourceRGBA(0.8, 0.87, 0.94, 0.75 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
-      cr.setFontSize(10)
+      cr.setFontSize(px(10))
       const lExt = cr.textExtents(item.label)
       cr.moveTo(ix - lExt.width / 2, iy + iSize + 20)
       cr.showText(item.label)

@@ -9,6 +9,7 @@ import GLib from "gi://GLib"
 import { createState } from "ags"
 import { syncConnected, syncPeerCount, pendingChangeRequests, syncDialogVisible, setSyncDialogVisible } from "../state"
 import { lastSyncedFile, lastSyncTime, generateInvite, acceptInvite, getPeers } from "./SyncIndicator"
+import { px } from "../scale"
 
 const PLANS_DIR = GLib.get_home_dir() + "/.config/plans"
 const BOARDS_DIR = PLANS_DIR + "/boards"
@@ -236,9 +237,11 @@ function migrateKanbanIfNeeded() {
 
 const START_H = 4
 const END_H = 22
-const DEFAULT_ROW_H = 72
-const MIN_ROW_H = 24
-const MAX_ROW_H = 120
+// Row heights scale with the display (px()), so the calendar keeps the same
+// fraction of the panel on any screen. START_H/END_H are clock hours, not px.
+const DEFAULT_ROW_H = px(72)
+const MIN_ROW_H = px(24)
+const MAX_ROW_H = px(120)
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
@@ -879,8 +882,8 @@ export default function Planner() {
 
     const y = minToY(startMin)
     entry.set_margin_top(Math.round(y))
-    entry.set_margin_start(39)
-    entry.set_margin_end(4)
+    entry.set_margin_start(px(39))
+    entry.set_margin_end(px(4))
 
     const placeholder = `${formatTime(startMin)}-${formatTime(endMin)} Event`
     entry.set_placeholder_text(placeholder)
@@ -1074,16 +1077,16 @@ export default function Planner() {
 
     // Available width for column calculations
     const overlayW = gridOverlay.get_allocation().width
-    const cellW = overlayW > 50 ? overlayW - 41 : 220
-    const COL_GAP = 2
-    const EDGE = 8
+    const cellW = overlayW > 50 ? overlayW - px(41) : px(220)
+    const COL_GAP = px(2)
+    const EDGE = px(8)
 
     for (let idx = 0; idx < evList.length; idx++) {
       const ev = evList[idx]
       const { col, total } = columns[idx]
       const topY = Math.round(minToY(ev.startMin)) + 2
       const botY = Math.round(minToY(ev.endMin)) - 2
-      const cardH = Math.max(18, botY - topY)
+      const cardH = Math.max(px(18), botY - topY)
       const duration = ev.endMin - ev.startMin
 
       const timeStr = duration <= 15
@@ -1156,7 +1159,7 @@ export default function Planner() {
         const b = Math.round(parseInt(hex.slice(4, 6), 16) * 0.2)
         const bg = `#${r.toString(16).padStart(2,"0")}${g.toString(16).padStart(2,"0")}${b.toString(16).padStart(2,"0")}`
         const provider = new Gtk.CssProvider()
-        provider.load_from_data(`#plan-event { border-left: 3px solid ${ev.color}; background: ${bg}; }`)
+        provider.load_from_data(`#plan-event { border-left: ${px(3)}px solid ${ev.color}; background: ${bg}; }`)
         cardVisual.get_style_context().add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
       }
 
@@ -1182,12 +1185,12 @@ export default function Planner() {
       // Column positioning
       if (total > 1) {
         const colW = (cellW - COL_GAP * (total - 1)) / total
-        const colStart = 39 + col * (colW + COL_GAP)
+        const colStart = px(39) + col * (colW + COL_GAP)
         eb.set_margin_start(Math.round(colStart))
         eb.set_margin_end(Math.max(2, Math.round(overlayW - colStart - colW)))
       } else {
-        eb.set_margin_start(39)
-        eb.set_margin_end(2)
+        eb.set_margin_start(px(39))
+        eb.set_margin_end(px(2))
       }
 
       eb.add(clipScroll)
@@ -1353,7 +1356,7 @@ export default function Planner() {
     const nowMin = now.getHours() * 60 + now.getMinutes()
     const y = Math.round(minToY(nowMin))
     const line = (<box name="plan-now-line" hexpand={true} $={(self) => {
-      self.set_size_request(-1, 2)
+      self.set_size_request(-1, px(2))
       self.set_valign(Gtk.Align.START)
       self.set_margin_top(y)
     }} />) as Gtk.Widget
@@ -1448,7 +1451,7 @@ export default function Planner() {
           const halfLine = (<box name="plan-halfline" hexpand={true} $={(self) => {
             self.set_valign(Gtk.Align.START)
             self.set_margin_top(Math.round(h / 2))
-            self.set_margin_start(38)
+            self.set_margin_start(px(38))
           }} />) as Gtk.Widget
           rowOverlay.add_overlay(halfLine)
           rowOverlay.show_all()
@@ -1987,7 +1990,7 @@ export default function Planner() {
                 vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
               })
               descScroll.set_name("cd-desc-scroll")
-              descScroll.set_size_request(-1, 180)
+              descScroll.set_size_request(-1, px(180))
               const descView = new Gtk.TextView()
               descView.set_name("cd-desc-view")
               descView.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
@@ -2047,7 +2050,7 @@ export default function Planner() {
                 if (checklist.length > 0) {
                   const pbar = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
                   pbar.set_name("cd-progress-bar")
-                  pbar.set_size_request(-1, 8)
+                  pbar.set_size_request(-1, px(8))
                   const done = checklist.filter(i => i.checked).length
                   const pct = done / checklist.length
                   const fill = new Gtk.Box()
@@ -2058,7 +2061,7 @@ export default function Planner() {
                   pbar.pack_start(fill, false, false, 0)
                   pbar.pack_start(empty, true, true, 0)
                   pbar.connect("size-allocate", (_w: any, alloc: any) => {
-                    fill.set_size_request(Math.round(alloc.width * pct), 8)
+                    fill.set_size_request(Math.round(alloc.width * pct), px(8))
                   })
                   checkSection.pack_start(pbar, false, false, 4)
                 }
@@ -2393,9 +2396,9 @@ export default function Planner() {
         const dir = ev.get_scroll_direction()[1]
         const cur = rowH.get()
         if (dir === Gdk.ScrollDirection.UP) {
-          setRowH(Math.min(MAX_ROW_H, cur + 8))
+          setRowH(Math.min(MAX_ROW_H, cur + px(8)))
         } else if (dir === Gdk.ScrollDirection.DOWN) {
-          setRowH(Math.max(MIN_ROW_H, cur - 8))
+          setRowH(Math.max(MIN_ROW_H, cur - px(8)))
         }
         return true
       })
