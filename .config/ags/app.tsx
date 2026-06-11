@@ -166,6 +166,12 @@ app.start({
     })
 
     // Initial setup
+    // Recompute U from the now-ready focused monitor before anything is built.
+    // initTheme() above ran at import-time U (which falls back to 1 if Hyprland's
+    // monitor dims weren't populated yet); without this, a single-monitor machine
+    // that just boots never fires monitor-added/focus events, so U would stay 1 and
+    // the whole UI would render at full baseline size (too large on smaller screens).
+    updateScale()
     syncBars()
     updateBarVisibility()
     updateOverlayMonitor()
