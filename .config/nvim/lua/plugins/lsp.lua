@@ -173,6 +173,7 @@ return {
           },
         },
       },
+      clojure_lsp = { on_attach = on_attach },
       rust_analyzer = { on_attach = on_attach },
       ts_ls = {
         on_attach = on_attach,

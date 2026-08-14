@@ -1,4 +1,5 @@
 vim.g.mapleader = " "
+vim.g.maplocalleader = ","
 
 -- Global/editor mappings only. Plugin-specific mappings live with plugin configs.
 

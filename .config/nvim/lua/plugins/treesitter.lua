@@ -10,6 +10,7 @@ return {
 					"c",
 					"cmake",
 					"c_sharp",
+					"clojure",
 					"cpp",
 					"html",
 					"bash",

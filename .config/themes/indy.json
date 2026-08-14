@@ -1,0 +1,39 @@
+{
+  "name": "indy",
+  "displayName": "Indiana Jones",
+  "colors": {
+    "bg": "#1a120b",
+    "bg_dark": "#120c07",
+    "bg_light": "#2a1d10",
+    "bg_lighter": "#3c2a18",
+    "fg": "#d8c49a",
+    "fg_dim": "#9a8663",
+    "fg_bright": "#f0e2ba",
+    "accent": "#d4a030",
+    "red": "#a83828",
+    "red_bright": "#d04830",
+    "green": "#5a7838",
+    "green_bright": "#7aa048",
+    "yellow": "#c89830",
+    "yellow_bright": "#e8b840",
+    "blue": "#4878a0",
+    "blue_bright": "#68a0c8",
+    "magenta": "#8a5068",
+    "magenta_bright": "#aa6888",
+    "cyan": "#609888",
+    "cyan_bright": "#80b8a0",
+    "gray": "#7a6a52"
+  },
+  "gtk": {
+    "theme": "adw-gtk3-dark",
+    "iconTheme": "Tela-circle-black",
+    "cursorTheme": "Bibata-Modern-Ice",
+    "colorScheme": "prefer-dark"
+  },
+  "hyprland": {
+    "borderRadius": 8,
+    "gapsIn": 8,
+    "gapsOut": 15,
+    "borderSize": 1
+  }
+}

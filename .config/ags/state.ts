@@ -25,8 +25,10 @@ function saveUiState() {
   }
 }
 
-// Bar visibility state
-export const [barVisible, setBarVisible] = createState(false)
+// Bar visibility state. Starts true because GTK's show_all() reveals the
+// sidebar on startup regardless — false here just desyncs state from screen
+// until the first toggle.
+export const [barVisible, setBarVisible] = createState(true)
 
 // Destination menu visibility state
 export const [destinationVisible, setDestinationVisible] = createState(false)

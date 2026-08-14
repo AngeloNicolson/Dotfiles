@@ -71,6 +71,8 @@ function generateCSS(c: ThemeColors): string {
 
     * {
       font-family: "JetBrainsMono Nerd Font", "CaskaydiaCove Nerd Font", monospace;
+      text-shadow: none;
+      -gtk-icon-shadow: none;
     }
 
     window {
@@ -109,10 +111,10 @@ function generateCSS(c: ThemeColors): string {
 
     /* Sidebar container - Holographic */
     #sidebar-bg {
-      background: #040608;
+      background: ${c.bg_dark};
       border-radius: 0;
       padding: 0;
-      border: 1px solid #1a2530;
+      border: 1px solid ${c.bg_light};
       border-left: 2px solid #3a6080;
     }
 
@@ -125,83 +127,87 @@ function generateCSS(c: ThemeColors): string {
     #page-box {
       padding: 16px 14px;
       min-width: 260px;
-      background: #040608;
+      background: ${c.bg_dark};
     }
 
     /* Tab Bar - Holographic navigation */
     #tab-bar {
-      background: #040608;
-      border-bottom: 1px solid #1a2530;
+      background: ${c.bg_dark};
+      border-bottom: 1px solid ${c.bg_light};
       padding: 6px 6px;
     }
     #tab-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
-      border-radius: 4px;
-      padding: 8px 6px;
-      margin: 0 3px;
-      min-width: 46px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 4px 4px 0 0;
+      padding: 7px 8px 5px 8px;
+      margin: 0 2px;
+      min-width: 48px;
+      transition: all 150ms ease;
     }
     #tab-btn:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: alpha(${c.accent}, 0.07);
     }
     #tab-btn.active {
-      background: #152834;
-      border: 1px solid #60c0d0;
-      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+      background: linear-gradient(to top, alpha(${c.accent}, 0.16), alpha(${c.accent}, 0.02));
+      border-bottom: 2px solid ${c.accent};
+      box-shadow: 0 6px 14px -6px alpha(${c.accent}, 0.45);
     }
     #tab-icon {
-      font-size: 18px;
-      color: #4a6070;
-      margin-bottom: 2px;
+      font-size: 19px;
+      color: ${c.fg_dim};
+      margin-bottom: 3px;
     }
     #tab-btn:hover #tab-icon {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #tab-btn.active #tab-icon {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #tab-label {
-      font-size: 7px;
-      font-weight: 700;
+      font-size: 9px;
+      font-weight: 600;
       letter-spacing: 1px;
-      color: #4a6070;
+      margin-left: 1px;
+      color: ${c.fg_dim};
     }
     #tab-btn:hover #tab-label {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #tab-btn.active #tab-label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #tab-focus-btn {
-      background: #0a1218;
-      border: 1px solid #2a3a45;
-      border-radius: 10px;
-      padding: 2px 12px;
-      margin-top: 3px;
-      min-height: 16px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 1px 8px;
+      margin: 3px 6px 0 6px;
+      min-height: 14px;
+      transition: all 150ms ease;
     }
     #tab-focus-btn:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      border-color: ${c.bg_lighter};
+      background: alpha(${c.accent}, 0.05);
     }
     #tab-focus-btn.focused {
-      background: #152834;
-      border-color: #60c0d0;
-      box-shadow: inset 0 0 8px alpha(#60d0e0, 0.3);
+      background: alpha(${c.accent}, 0.12);
+      border-color: alpha(${c.accent}, 0.6);
+      box-shadow: 0 0 10px alpha(${c.accent}, 0.25);
     }
     #tab-focus-btn label {
-      font-size: 7px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: #3a5060;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin-left: 2px;
+      color: #4a6478;
     }
     #tab-focus-btn:hover label {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #tab-focus-btn.focused label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
 
     /* Typography - terminal style */
@@ -228,85 +234,85 @@ function generateCSS(c: ThemeColors): string {
     /* ============ PLANNER PAGE ============ */
     #planner-page {
       padding: 12px;
-      background: #040608;
+      background: ${c.bg_dark};
     }
     #planner-header {
       margin-bottom: 8px;
     }
     #planner-info-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 4px 8px;
       margin-right: 4px;
     }
     #planner-info-btn:hover {
-      background: #1b2730;
-      border-color: #60c0d0;
+      background: ${c.bg_light};
+      border-color: ${c.accent};
     }
     #planner-info-btn label {
-      color: #5a8090;
+      color: ${c.fg_dim};
       font-size: 10px;
       font-weight: 700;
       font-style: italic;
     }
     #planner-info-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #planner-info-panel {
-      background: alpha(#0a1520, 0.8);
-      border: 1px solid #2a3a45;
+      background: alpha(${c.bg}, 0.8);
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
       margin: 4px 8px 8px 8px;
     }
     #planner-info-text {
-      color: #5a8090;
+      color: ${c.fg_dim};
       font-size: 10px;
     }
     #planner-reload-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 4px 8px;
     }
     #planner-reload-btn:hover {
-      background: #1b2730;
-      border-color: #60c0d0;
+      background: ${c.bg_light};
+      border-color: ${c.accent};
     }
     #planner-reload-btn label {
-      color: #5a8090;
+      color: ${c.fg_dim};
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
     }
     #planner-reload-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #planner-date-nav {
       margin-bottom: 6px;
       padding: 4px 0;
     }
     #planner-nav-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 4px 10px;
       margin: 0 4px;
     }
     #planner-nav-btn:hover {
-      background: #1b2730;
-      border-color: #60c0d0;
+      background: ${c.bg_light};
+      border-color: ${c.accent};
     }
     #planner-nav-btn label {
-      color: #5a8090;
+      color: ${c.fg_dim};
       font-size: 12px;
     }
     #planner-nav-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #planner-date {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -327,7 +333,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* Half-hour line (faint) */
     #plan-halfline {
-      background: #253540;
+      background: ${c.bg_lighter};
       min-height: 1px;
     }
 
@@ -360,7 +366,7 @@ function generateCSS(c: ThemeColors): string {
     /* Event block */
     #plan-event {
       background: #1a3248;
-      border-left: 3px solid #50b8d0;
+      border-left: 3px solid ${c.accent};
       border-radius: 3px;
       padding: 1px 8px;
     }
@@ -370,7 +376,7 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 700;
     }
     #plan-event-text {
-      color: #c0e4f0;
+      color: ${c.fg_bright};
       font-size: 11px;
       font-weight: 600;
     }
@@ -392,23 +398,23 @@ function generateCSS(c: ThemeColors): string {
       min-height: 14px;
     }
     #planner-dots-btn:hover {
-      background: alpha(#60c0d0, 0.15);
+      background: alpha(${c.accent}, 0.15);
       border-radius: 3px;
     }
     #planner-dots-btn label {
-      color: #5a8090;
+      color: ${c.fg_dim};
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
     }
     #planner-dots-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
 
     /* Popover menu */
     popover.background {
-      background-color: #0a1520;
-      border: 1px solid #2a3a45;
+      background-color: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
     }
     popover contents {
@@ -422,15 +428,15 @@ function generateCSS(c: ThemeColors): string {
       padding: 6px 16px;
     }
     #planner-popover-item:hover {
-      background: alpha(#60c0d0, 0.15);
+      background: alpha(${c.accent}, 0.15);
     }
     #planner-popover-item label {
-      color: #c0e4f0;
+      color: ${c.fg_bright};
       font-size: 11px;
       font-weight: 600;
     }
     #planner-popover-item:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #planner-popover-item-danger {
       background: transparent;
@@ -453,12 +459,12 @@ function generateCSS(c: ThemeColors): string {
     /* Inline entry for adding/editing events */
     #plan-entry {
       background: #1a3248;
-      color: #c0e4f0;
-      border: 1px solid #50b8d0;
+      color: ${c.fg_bright};
+      border: 1px solid ${c.accent};
       border-radius: 3px;
       padding: 2px 8px;
       font-size: 10px;
-      caret-color: #50b8d0;
+      caret-color: ${c.accent};
     }
 
     /* Drag guide line — grey dotted, full pane width */
@@ -478,35 +484,35 @@ function generateCSS(c: ThemeColors): string {
       padding: 30px 20px;
     }
     #planner-empty-title {
-      color: #5090a0;
+      color: ${c.cyan};
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 2px;
       margin-bottom: 14px;
     }
     #planner-empty-path {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       font-size: 10px;
       font-weight: 600;
       letter-spacing: 1px;
       margin-bottom: 10px;
     }
     #planner-empty-hint {
-      color: #4a6070;
+      color: ${c.fg_dim};
       font-size: 9px;
       font-weight: 500;
       letter-spacing: 1px;
       margin-bottom: 2px;
     }
     #planner-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
     }
     #planner-create-btn {
-      background: #101820;
+      background: ${c.bg};
       border: 1px solid #2a4a35;
       border-radius: 4px;
       padding: 10px 20px;
@@ -530,7 +536,7 @@ function generateCSS(c: ThemeColors): string {
       padding: 4px 4px;
     }
     #planner-footer {
-      color: #3a5060;
+      color: ${c.fg_dim};
       font-size: 8px;
       font-weight: 600;
       letter-spacing: 2px;
@@ -542,20 +548,20 @@ function generateCSS(c: ThemeColors): string {
       padding: 0;
     }
     #planner-inner-tab {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 5px 12px;
       margin: 0 3px;
       min-width: 40px;
     }
     #planner-inner-tab:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: ${c.bg_light};
+      border-color: ${c.gray};
     }
     #planner-inner-tab.active {
-      background: #152834;
-      border: 1px solid #60c0d0;
+      background: ${c.bg_light};
+      border: 1px solid ${c.accent};
     }
     #planner-inner-tab label {
       font-size: 9px;
@@ -575,19 +581,19 @@ function generateCSS(c: ThemeColors): string {
       padding: 2px 0 6px 0;
     }
     #kanban-subpane-tab {
-      background: alpha(#1a2530, 0.4);
-      border: 1px solid #2a3a45;
+      background: alpha(${c.bg_light}, 0.4);
+      border: 1px solid ${c.bg_lighter};
       border-radius: 3px;
       padding: 4px 8px;
       margin: 0 2px;
     }
     #kanban-subpane-tab:hover {
-      background: alpha(#253540, 0.6);
-      border-color: #3a5060;
+      background: alpha(${c.bg_lighter}, 0.6);
+      border-color: ${c.gray};
     }
     #kanban-subpane-tab.active {
       background: alpha(#1a3040, 0.7);
-      border: 1px solid #60c0d0;
+      border: 1px solid ${c.accent};
     }
     #kanban-subpane-tab label {
       font-size: 9px;
@@ -608,16 +614,16 @@ function generateCSS(c: ThemeColors): string {
       min-height: 28px;
     }
     button#kanban-board-selector {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 2px 10px;
       margin: 0 3px;
       min-width: 40px;
     }
     button#kanban-board-selector:hover {
-      background: #1b2730;
-      border-color: #60c0d0;
+      background: ${c.bg_light};
+      border-color: ${c.accent};
     }
     button#kanban-board-selector label {
       font-size: 9px;
@@ -626,20 +632,20 @@ function generateCSS(c: ThemeColors): string {
       color: #5a7888;
     }
     button#kanban-board-selector:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #board-modal-backdrop {
       background: alpha(#000000, 0.6);
     }
     #board-modal {
       background: #0a1820;
-      border: 1px solid #2a3a45;
+      border: 1px solid ${c.bg_lighter};
       border-radius: 8px;
       padding: 20px 28px;
       min-width: 280px;
     }
     #board-modal-title {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 3px;
@@ -657,7 +663,7 @@ function generateCSS(c: ThemeColors): string {
     /* ── Kanban card ── */
     #kanban-card {
       background: #1a3248;
-      border-left: 3px solid #50b8d0;
+      border-left: 3px solid ${c.accent};
       border-radius: 3px;
       padding: 6px 8px;
       margin: 3px 4px;
@@ -667,7 +673,7 @@ function generateCSS(c: ThemeColors): string {
       border-left: 2px solid #1e3a48;
     }
     #kanban-card-title {
-      color: #c0e4f0;
+      color: ${c.fg_bright};
       font-size: 11px;
       font-weight: 600;
     }
@@ -683,8 +689,8 @@ function generateCSS(c: ThemeColors): string {
       color: #304858;
     }
     #kanban-card-badge {
-      color: #50b8d0;
-      background: alpha(#50b8d0, 0.12);
+      color: ${c.accent};
+      background: alpha(${c.accent}, 0.12);
       font-size: 8px;
       font-weight: 700;
       letter-spacing: 1px;
@@ -699,23 +705,23 @@ function generateCSS(c: ThemeColors): string {
 
     /* Move / delete buttons on cards */
     #kanban-move-btn {
-      background: alpha(#1a2530, 0.4);
-      border: 1px solid #2a3a45;
+      background: alpha(${c.bg_light}, 0.4);
+      border: 1px solid ${c.bg_lighter};
       border-radius: 3px;
       padding: 2px 6px;
       margin: 0 1px;
     }
     #kanban-move-btn:hover {
-      background: #1b2730;
-      border-color: #60c0d0;
+      background: ${c.bg_light};
+      border-color: ${c.accent};
     }
     #kanban-move-btn label {
       font-size: 10px;
       font-weight: 700;
-      color: #5a8090;
+      color: ${c.fg_dim};
     }
     #kanban-move-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #kanban-delete-btn {
       background: alpha(#2a1a1a, 0.4);
@@ -740,14 +746,14 @@ function generateCSS(c: ThemeColors): string {
     /* ── Add item button + entry ── */
     #kanban-add-btn {
       background: transparent;
-      border: 1px dashed #2a3a45;
+      border: 1px dashed ${c.bg_lighter};
       border-radius: 3px;
       padding: 6px 8px;
       margin: 6px 4px;
     }
     #kanban-add-btn:hover {
-      background: alpha(#253540, 0.4);
-      border-color: #60c0d0;
+      background: alpha(${c.bg_lighter}, 0.4);
+      border-color: ${c.accent};
     }
     #kanban-add-btn label {
       font-size: 9px;
@@ -760,13 +766,13 @@ function generateCSS(c: ThemeColors): string {
     }
     #kanban-add-entry {
       background: #1a3248;
-      color: #c0e4f0;
-      border: 1px solid #50b8d0;
+      color: ${c.fg_bright};
+      border: 1px solid ${c.accent};
       border-radius: 3px;
       padding: 4px 8px;
       margin: 4px 4px;
       font-size: 10px;
-      caret-color: #50b8d0;
+      caret-color: ${c.accent};
     }
     /* ── Checklist items on card ── */
     #kanban-card-checklist-box {
@@ -776,7 +782,7 @@ function generateCSS(c: ThemeColors): string {
       padding: 1px 0;
     }
     #kanban-card-check-icon {
-      color: #50b8d0;
+      color: ${c.accent};
       font-size: 8px;
       font-weight: 700;
       margin-right: 4px;
@@ -799,15 +805,15 @@ function generateCSS(c: ThemeColors): string {
 
     /* ══════════════════════════════════════════════
        Card detail modal — GitHub Issue exact clone
-       bg: #0d1117  surface: #161b22  border: #30363d
-       text: #e6edf3  muted: #8b949e  link: #58a6ff
+       bg: ${c.bg_dark}  surface: ${c.bg}  border: ${c.bg_lighter}
+       text: #e6edf3  muted: ${c.fg_dim}  link: ${c.blue_bright}
        ══════════════════════════════════════════════ */
     #cd-backdrop {
       background: alpha(#010409, 0.7);
     }
     #cd-panel {
-      background: #0d1117;
-      border: 1px solid #30363d;
+      background: ${c.bg_dark};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 12px;
       padding: 32px 40px;
       min-width: 900px;
@@ -827,14 +833,14 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 600;
     }
     #cd-title-entry {
-      background: #0d1117;
+      background: ${c.bg_dark};
       color: #e6edf3;
-      border: 1px solid #58a6ff;
+      border: 1px solid ${c.blue_bright};
       border-radius: 6px;
       padding: 8px 14px;
       font-size: 24px;
       font-weight: 600;
-      caret-color: #58a6ff;
+      caret-color: ${c.blue_bright};
     }
 
     /* Close X button */
@@ -845,10 +851,10 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 6px;
     }
     #cd-close-btn:hover {
-      background: alpha(#8b949e, 0.12);
+      background: alpha(${c.fg_dim}, 0.12);
     }
     #cd-close-btn label {
-      color: #8b949e;
+      color: ${c.fg_dim};
       font-size: 18px;
     }
     #cd-close-btn:hover label {
@@ -866,7 +872,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 24px;
     }
     #cd-status-badge.todo {
-      background: #30363d;
+      background: ${c.bg_lighter};
       color: #e6edf3;
     }
     #cd-status-badge.doing {
@@ -878,7 +884,7 @@ function generateCSS(c: ThemeColors): string {
       color: #e6edf3;
     }
     #cd-path-label {
-      color: #8b949e;
+      color: ${c.fg_dim};
       font-size: 12px;
       font-weight: 400;
     }
@@ -902,35 +908,35 @@ function generateCSS(c: ThemeColors): string {
 
     /* Description box (GitHub comment style) */
     #cd-desc-box {
-      border: 1px solid #30363d;
+      border: 1px solid ${c.bg_lighter};
       border-radius: 6px;
       margin-bottom: 24px;
     }
     #cd-desc-header {
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
+      background: ${c.bg};
+      border-bottom: 1px solid ${c.bg_lighter};
       border-radius: 6px 6px 0 0;
       padding: 10px 16px;
     }
     #cd-desc-header label {
       font-size: 13px;
       font-weight: 600;
-      color: #8b949e;
+      color: ${c.fg_dim};
     }
     #cd-desc-scroll {
-      background: #0d1117;
+      background: ${c.bg_dark};
       border: none;
       border-radius: 0 0 6px 6px;
       padding: 0;
     }
     textview#cd-desc-view {
-      background: #0d1117;
+      background: ${c.bg_dark};
       color: #e6edf3;
     }
     textview#cd-desc-view text {
-      background: #0d1117;
+      background: ${c.bg_dark};
       color: #e6edf3;
-      caret-color: #58a6ff;
+      caret-color: ${c.blue_bright};
       font-size: 14px;
     }
 
@@ -970,7 +976,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 6px;
     }
     #cd-check-row:hover {
-      background: alpha(#161b22, 0.8);
+      background: alpha(${c.bg}, 0.8);
     }
     #cd-checkbox {
       background: transparent;
@@ -981,7 +987,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 4px;
     }
     #cd-checkbox:hover {
-      background: alpha(#30363d, 0.5);
+      background: alpha(${c.bg_lighter}, 0.5);
     }
     #cd-checkbox label {
       font-size: 16px;
@@ -1008,19 +1014,19 @@ function generateCSS(c: ThemeColors): string {
 
     /* Add entry */
     #cd-add-entry {
-      background: #0d1117;
-      color: #8b949e;
-      border: 1px solid #30363d;
+      background: ${c.bg_dark};
+      color: ${c.fg_dim};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 6px;
       padding: 10px 14px;
       font-size: 13px;
-      caret-color: #58a6ff;
+      caret-color: ${c.blue_bright};
     }
     #cd-add-entry:focus {
-      background: #0d1117;
+      background: ${c.bg_dark};
       color: #e6edf3;
-      border-color: #58a6ff;
-      box-shadow: 0 0 0 3px alpha(#58a6ff, 0.3);
+      border-color: ${c.blue_bright};
+      box-shadow: 0 0 0 3px alpha(${c.blue_bright}, 0.3);
     }
 
     /* ── Right sidebar (GitHub style) ── */
@@ -1040,7 +1046,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 6px;
     }
     #cd-sidebar-value {
-      color: #8b949e;
+      color: ${c.fg_dim};
       font-size: 13px;
       font-weight: 400;
       margin-top: 2px;
@@ -1049,14 +1055,14 @@ function generateCSS(c: ThemeColors): string {
     /* Move buttons in sidebar */
     #cd-move-btn {
       background: #21262d;
-      border: 1px solid #30363d;
+      border: 1px solid ${c.bg_lighter};
       border-radius: 6px;
       padding: 6px 16px;
       margin-top: 8px;
     }
     #cd-move-btn:hover {
-      background: #30363d;
-      border-color: #8b949e;
+      background: ${c.bg_lighter};
+      border-color: ${c.fg_dim};
     }
     #cd-move-btn label {
       font-size: 12px;
@@ -1075,10 +1081,10 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 4px;
     }
     #cd-dots-btn:hover {
-      background: alpha(#8b949e, 0.12);
+      background: alpha(${c.fg_dim}, 0.12);
     }
     #cd-dots-btn label {
-      color: #8b949e;
+      color: ${c.fg_dim};
       font-size: 14px;
       font-weight: 700;
     }
@@ -1107,18 +1113,18 @@ function generateCSS(c: ThemeColors): string {
 
     #kanban-edit-entry {
       background: #1a3248;
-      color: #c0e4f0;
-      border: 1px solid #50b8d0;
+      color: ${c.fg_bright};
+      border: 1px solid ${c.accent};
       border-radius: 3px;
       padding: 1px 6px;
       font-size: 10px;
-      caret-color: #50b8d0;
+      caret-color: ${c.accent};
       min-width: 60px;
     }
 
     /* ============ HOME PAGE - Holographic Star Citizen Style ============ */
     #home-page-scroll {
-      background: #040608;
+      background: ${c.bg_dark};
     }
     #home-page-scroll scrollbar {
       opacity: 0;
@@ -1126,12 +1132,12 @@ function generateCSS(c: ThemeColors): string {
     }
     #home-page {
       padding: 12px;
-      background: #040608;
+      background: ${c.bg_dark};
     }
 
     /* Section Header */
     #section-header {
-      color: #5090a0;
+      color: ${c.cyan};
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -1143,8 +1149,8 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 12px;
     }
     #sys-toggle {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 9999px;
       padding: 12px;
       margin: 0 4px;
@@ -1152,8 +1158,8 @@ function generateCSS(c: ThemeColors): string {
       min-height: 52px;
     }
     #sys-toggle:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: ${c.bg_light};
+      border-color: ${c.gray};
     }
     #sys-toggle.active {
       background: #302200;
@@ -1164,10 +1170,10 @@ function generateCSS(c: ThemeColors): string {
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #sys-toggle:hover #sys-toggle-label {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #sys-toggle.active #sys-toggle-label {
       color: #f5c842;
@@ -1175,14 +1181,14 @@ function generateCSS(c: ThemeColors): string {
 
     /* Clock Panel */
     #clock-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 14px;
       margin-bottom: 10px;
     }
     #clock-time {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       font-size: 38px;
       font-weight: 700;
       letter-spacing: 4px;
@@ -1196,18 +1202,18 @@ function generateCSS(c: ThemeColors): string {
     }
     #clock-secondary {
       background: alpha(#0a1015, 0.5);
-      border-top: 1px solid #2a3a45;
+      border-top: 1px solid ${c.bg_lighter};
       padding: 8px 0 0 0;
       margin-top: 6px;
     }
     #clock-alt-label {
-      color: #4a6070;
+      color: ${c.fg_dim};
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
     }
     #clock-alt-time {
-      color: #5a8090;
+      color: ${c.fg_dim};
       font-size: 14px;
       font-weight: 600;
       letter-spacing: 2px;
@@ -1215,8 +1221,8 @@ function generateCSS(c: ThemeColors): string {
 
     /* Control Panels (Brightness/Volume) */
     #control-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
@@ -1226,7 +1232,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #control-icon {
       font-size: 14px;
-      color: #5a8090;
+      color: ${c.fg_dim};
       margin-right: 4px;
     }
     #control-icon-btn {
@@ -1236,18 +1242,18 @@ function generateCSS(c: ThemeColors): string {
       margin-right: 4px;
     }
     #control-icon-btn:hover #control-icon {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #control-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #control-value {
       font-size: 11px;
       font-weight: 700;
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       letter-spacing: 1px;
     }
     #control-bar-container {
@@ -1262,22 +1268,22 @@ function generateCSS(c: ThemeColors): string {
       margin: 1px 0;
     }
     #control-segment.unlit {
-      background: alpha(#2a3a45, 0.5);
+      background: alpha(${c.bg_lighter}, 0.5);
     }
     #control-segment.lit {
-      background: #60c0d0;
+      background: ${c.accent};
     }
     #control-segment:hover {
-      background: #3a5060;
+      background: ${c.gray};
     }
     #control-segment.lit:hover {
-      background: #80e0f0;
+      background: ${c.fg_bright};
     }
 
     /* Status Panel (Battery) */
     #status-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
     }
@@ -1314,8 +1320,8 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 12px;
     }
     #tool-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
       margin: 0 4px;
@@ -1323,26 +1329,26 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms linear;
     }
     #tool-btn:hover {
-      background: #152834;
-      border-color: #60c0d0;
-      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+      background: ${c.bg_light};
+      border-color: ${c.accent};
+      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
     }
     #tool-btn-icon {
       font-size: 20px;
-      color: #5a8090;
+      color: ${c.fg_dim};
       margin-bottom: 4px;
     }
     #tool-btn:hover #tool-btn-icon {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #tool-btn-label {
       font-size: 8px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #tool-btn:hover #tool-btn-label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
 
     /* Wallpaper selector styles */
@@ -1352,124 +1358,124 @@ function generateCSS(c: ThemeColors): string {
     }
     #core-reload-btn {
       background: transparent;
-      border: 1px solid #2a3a45;
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 4px 8px;
       transition: all 150ms linear;
     }
     #core-reload-btn:hover {
-      background: #1b2730;
-      border-color: #60c0d0;
+      background: ${c.bg_light};
+      border-color: ${c.accent};
     }
     #core-reload-btn label {
       font-size: 14px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #core-reload-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #wallpaper-tab-bar {
-      background: #040608;
-      border-bottom: 1px solid #1a2530;
+      background: ${c.bg_dark};
+      border-bottom: 1px solid ${c.bg_light};
       padding: 6px;
       margin-bottom: 4px;
     }
     #wallpaper-sub-tab-bar {
-      background: alpha(#040608, 0.6);
+      background: alpha(${c.bg_dark}, 0.6);
       padding: 4px 6px;
       margin-bottom: 4px;
     }
     #wallpaper-sub-tab-btn {
-      background: alpha(#1a2530, 0.4);
-      border: 1px solid #1a2530;
+      background: alpha(${c.bg_light}, 0.4);
+      border: 1px solid ${c.bg_light};
       border-radius: 3px;
       padding: 4px 8px;
       margin: 0 2px;
       transition: all 150ms linear;
     }
     #wallpaper-sub-tab-btn:hover {
-      background: alpha(#253540, 0.5);
-      border-color: #3a5060;
+      background: alpha(${c.bg_lighter}, 0.5);
+      border-color: ${c.gray};
     }
     #wallpaper-sub-tab-btn.active {
       background: alpha(#1a3040, 0.6);
-      border: 1px solid #60c0d0;
+      border: 1px solid ${c.accent};
     }
     #wallpaper-sub-tab-btn #tab-icon {
       font-size: 12px;
-      color: #4a6070;
+      color: ${c.fg_dim};
       margin-bottom: 1px;
     }
     #wallpaper-sub-tab-btn:hover #tab-icon {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #wallpaper-sub-tab-btn.active #tab-icon {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #wallpaper-sub-tab-btn #tab-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #wallpaper-sub-tab-btn:hover #tab-label {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #wallpaper-sub-tab-btn.active #tab-label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #wallpaper-tab-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 8px 12px;
       margin: 0 3px;
       transition: all 150ms linear;
     }
     #wallpaper-tab-btn:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: ${c.bg_light};
+      border-color: ${c.gray};
     }
     #wallpaper-tab-btn.active {
-      background: #152834;
-      border: 1px solid #60c0d0;
-      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+      background: ${c.bg_light};
+      border: 1px solid ${c.accent};
+      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
     }
     #wallpaper-tab-btn #tab-icon {
       font-size: 16px;
-      color: #4a6070;
+      color: ${c.fg_dim};
       margin-bottom: 2px;
     }
     #wallpaper-tab-btn:hover #tab-icon {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #wallpaper-tab-btn.active #tab-icon {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #wallpaper-tab-btn #tab-label {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #wallpaper-tab-btn:hover #tab-label {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #wallpaper-tab-btn.active #tab-label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #wallpaper-thumb {
-      background: alpha(#1a2530, 0.4);
-      border: 1px solid #2a3a45;
+      background: alpha(${c.bg_light}, 0.4);
+      border: 1px solid ${c.bg_lighter};
       border-radius: 6px;
       padding: 4px;
       margin: 4px 0;
       transition: all 150ms linear;
     }
     #wallpaper-thumb:hover {
-      background: alpha(#253540, 0.6);
-      border-color: #60c0d0;
-      box-shadow: 0 0 8px alpha(#60d0e0, 0.2);
+      background: alpha(${c.bg_lighter}, 0.6);
+      border-color: ${c.accent};
+      box-shadow: 0 0 8px alpha(${c.accent}, 0.2);
     }
     #video-badge {
       background: alpha(#000000, 0.7);
@@ -1479,12 +1485,12 @@ function generateCSS(c: ThemeColors): string {
     }
     #video-badge label {
       font-size: 12px;
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #video-name {
       font-size: 9px;
       font-weight: 600;
-      color: #5a8090;
+      color: ${c.fg_dim};
       margin-top: 4px;
       letter-spacing: 0.5px;
     }
@@ -1493,35 +1499,35 @@ function generateCSS(c: ThemeColors): string {
     }
     #wallpaper-empty #status-icon {
       font-size: 32px;
-      color: #3a5060;
+      color: ${c.fg_dim};
       margin-bottom: 12px;
     }
     #wallpaper-empty #status-label {
       font-size: 10px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #wallpaper-empty #status-sublabel {
       font-size: 8px;
-      color: #3a5060;
+      color: ${c.fg_dim};
       margin-top: 4px;
     }
     #movie-folder {
       margin: 2px 0;
     }
     #movie-folder-header {
-      background: alpha(#1a2530, 0.5);
-      border: 1px solid #2a3a45;
+      background: alpha(${c.bg_light}, 0.5);
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
       transition: all 150ms linear;
     }
     #movie-folder-header:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: ${c.bg_light};
+      border-color: ${c.gray};
     }
     #folder-arrow {
       font-size: 10px;
-      color: #60c0d0;
+      color: ${c.accent};
       margin-right: 8px;
     }
     #folder-name {
@@ -1532,7 +1538,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #folder-count {
       font-size: 9px;
-      color: #4a6070;
+      color: ${c.fg_dim};
       margin-right: 4px;
     }
     #movie-folder-content {
@@ -1549,8 +1555,8 @@ function generateCSS(c: ThemeColors): string {
       padding: 40px;
     }
     #destination-center {
-      background: radial-gradient(circle at 30% 30%, #60c0d0, #1a4050);
-      border: 2px solid #80e0f0;
+      background: radial-gradient(circle at 30% 30%, ${c.accent}, #1a4050);
+      border: 2px solid ${c.fg_bright};
       border-radius: 50%;
       box-shadow: 0 0 30px rgba(96, 192, 208, 0.5),
                   0 0 60px rgba(96, 192, 208, 0.2),
@@ -1564,18 +1570,17 @@ function generateCSS(c: ThemeColors): string {
                   inset 0 0 20px rgba(255, 255, 255, 0.2);
     }
     #destination-center.selected {
-      border-color: #ffffff;
+      border-color: ${c.fg_bright};
       box-shadow: 0 0 50px rgba(160, 240, 255, 0.8),
                   0 0 100px rgba(96, 192, 208, 0.4);
     }
     #destination-center #destination-icon {
       font-size: 32px;
-      color: #ffffff;
-      text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      color: ${c.fg_bright};
     }
     #destination-node {
       background: radial-gradient(circle at 30% 30%, #4a8090, #1a3040);
-      border: 2px solid #5090a0;
+      border: 2px solid ${c.cyan};
       border-radius: 50%;
       box-shadow: 0 0 15px rgba(80, 144, 160, 0.4),
                   0 0 30px rgba(80, 144, 160, 0.1),
@@ -1583,13 +1588,13 @@ function generateCSS(c: ThemeColors): string {
       transition: all 200ms ease;
     }
     #destination-node:hover {
-      border-color: #80e0f0;
+      border-color: ${c.fg_bright};
       box-shadow: 0 0 25px rgba(96, 192, 208, 0.6),
                   0 0 50px rgba(96, 192, 208, 0.2),
                   inset 0 0 15px rgba(255, 255, 255, 0.1);
     }
     #destination-node.selected {
-      background: radial-gradient(circle at 30% 30%, #60c0d0, #2a5060);
+      background: radial-gradient(circle at 30% 30%, ${c.accent}, #2a5060);
       border-color: #a0f0ff;
       box-shadow: 0 0 30px rgba(160, 240, 255, 0.7),
                   0 0 60px rgba(96, 192, 208, 0.3);
@@ -1597,10 +1602,9 @@ function generateCSS(c: ThemeColors): string {
     #destination-node #destination-icon {
       font-size: 20px;
       color: #a0d0e0;
-      text-shadow: 0 0 5px rgba(160, 208, 224, 0.3);
     }
     #destination-node:hover #destination-icon {
-      color: #ffffff;
+      color: ${c.fg_bright};
     }
 
     /* Legacy styles kept for compatibility */
@@ -1625,7 +1629,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #quick-toggle.active {
       background: #110808;
-      border: 1px solid #aa2233;
+      border: 1px solid ${c.red};
     }
     #quick-toggle.active:hover {
       background: #1a0a0a;
@@ -1638,7 +1642,7 @@ function generateCSS(c: ThemeColors): string {
       color: #662222;
     }
     #quick-toggle.active #toggle-icon {
-      color: #aa2233;
+      color: ${c.red};
     }
     #toggle-label-btn {
       background: transparent;
@@ -1648,7 +1652,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 0;
     }
     #toggle-label-btn:hover {
-      background: alpha(#aa2233, 0.1);
+      background: alpha(${c.red}, 0.1);
     }
     #toggle-label {
       font-size: 8px;
@@ -1679,7 +1683,7 @@ function generateCSS(c: ThemeColors): string {
     #led-segment.lit.green,
     #led-segment.lit.yellow,
     #led-segment.lit.red {
-      background: #aa2233;
+      background: ${c.red};
     }
     #led-segment:hover {
       background: #2a1010;
@@ -1696,7 +1700,7 @@ function generateCSS(c: ThemeColors): string {
       background: transparent;
       border-radius: 0;
       border: 1px solid #331111;
-      border-left: 2px solid #aa2233;
+      border-left: 2px solid ${c.red};
       padding: 10px 12px;
       margin-top: 10px;
     }
@@ -1705,7 +1709,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #brightness-icon {
       font-size: 14px;
-      color: #aa2233;
+      color: ${c.red};
       margin-right: 8px;
     }
     #brightness-title {
@@ -1717,7 +1721,7 @@ function generateCSS(c: ThemeColors): string {
     #brightness-percent {
       font-size: 11px;
       font-weight: 700;
-      color: #aa2233;
+      color: ${c.red};
       letter-spacing: 1px;
     }
 
@@ -1726,7 +1730,7 @@ function generateCSS(c: ThemeColors): string {
       background: transparent;
       border-radius: 0;
       border: 1px solid #331111;
-      border-left: 2px solid #aa2233;
+      border-left: 2px solid ${c.red};
       padding: 10px 12px;
       margin-top: 8px;
     }
@@ -1745,7 +1749,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #volume-icon {
       font-size: 14px;
-      color: #aa2233;
+      color: ${c.red};
     }
     #volume-title {
       font-size: 9px;
@@ -1756,7 +1760,7 @@ function generateCSS(c: ThemeColors): string {
     #volume-percent {
       font-size: 11px;
       font-weight: 700;
-      color: #aa2233;
+      color: ${c.red};
       letter-spacing: 1px;
     }
 
@@ -1765,7 +1769,7 @@ function generateCSS(c: ThemeColors): string {
       background: transparent;
       border-radius: 0;
       border: 1px solid #331111;
-      border-left: 2px solid #aa2233;
+      border-left: 2px solid ${c.red};
       padding: 10px 12px;
       margin-top: 10px;
       margin-bottom: 6px;
@@ -1775,7 +1779,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #battery-icon {
       font-size: 14px;
-      color: #aa2233;
+      color: ${c.red};
       margin-right: 8px;
     }
     #battery-title {
@@ -1787,12 +1791,12 @@ function generateCSS(c: ThemeColors): string {
     #battery-percent {
       font-size: 11px;
       font-weight: 700;
-      color: #aa2233;
+      color: ${c.red};
       letter-spacing: 1px;
     }
     #battery-status-icon {
       font-size: 10px;
-      color: #aa2233;
+      color: ${c.red};
     }
     #battery-level-bar {
       min-height: 8px;
@@ -1804,7 +1808,7 @@ function generateCSS(c: ThemeColors): string {
       min-height: 8px;
     }
     #battery-level-bar block.filled {
-      background: #aa2233;
+      background: ${c.red};
       border-radius: 0;
       min-height: 8px;
     }
@@ -1816,18 +1820,18 @@ function generateCSS(c: ThemeColors): string {
     #power-page {
       padding: 12px;
       min-width: 260px;
-      background: #040608;
+      background: ${c.bg_dark};
     }
     #power-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 12px;
     }
     #power-panel-header {
       margin-bottom: 10px;
       padding-bottom: 8px;
-      border-bottom: 1px solid #2a3a45;
+      border-bottom: 1px solid ${c.bg_lighter};
     }
     #power-panel-title {
       font-size: 10px;
@@ -1862,7 +1866,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* The bar frame */
     #power-bar-frame {
-      border: 2px solid #60c0d0;
+      border: 2px solid ${c.accent};
       min-width: 150px;
       min-height: 200px;
       padding: 4px;
@@ -1877,10 +1881,10 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 12px;
     }
     #power-segment.unlit {
-      background: alpha(#2a3a45, 0.5);
+      background: alpha(${c.bg_lighter}, 0.5);
     }
     #power-segment.lit {
-      background: #60c0d0;
+      background: ${c.accent};
     }
     #power-segment.discharge {
       background: #3a0a0a;
@@ -1933,7 +1937,7 @@ function generateCSS(c: ThemeColors): string {
     /* Footer data row */
     #power-panel-footer {
       padding-top: 8px;
-      border-top: 1px solid #2a3a45;
+      border-top: 1px solid ${c.bg_lighter};
     }
     #power-footer-data {
       font-size: 9px;
@@ -1944,8 +1948,8 @@ function generateCSS(c: ThemeColors): string {
 
     /* GPU Power Panel */
     #gpu-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 12px;
       margin-top: 10px;
@@ -1953,21 +1957,21 @@ function generateCSS(c: ThemeColors): string {
     #gpu-panel-header {
       margin-bottom: 10px;
       padding-bottom: 8px;
-      border-bottom: 1px solid #2a3a45;
+      border-bottom: 1px solid ${c.bg_lighter};
     }
     #gpu-mode-buttons {
       margin-top: 6px;
     }
     #gpu-mode-btn {
       background: #0a1015;
-      border: 1px solid #2a3a45;
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 6px;
       margin: 0 3px;
     }
     #gpu-mode-btn.active {
-      background: alpha(#60c0d0, 0.15);
-      border-color: #60c0d0;
+      background: alpha(${c.accent}, 0.15);
+      border-color: ${c.accent};
     }
     #gpu-mode-label {
       font-size: 11px;
@@ -1981,10 +1985,9 @@ function generateCSS(c: ThemeColors): string {
     #gpu-mode-watts {
       font-size: 13px;
       font-weight: 600;
-      color: #607080;
+      color: #8095a8;
       letter-spacing: 0;
       margin-top: 2px;
-      text-shadow: none;
     }
     #gpu-mode-btn.active #gpu-mode-watts {
       color: #a0e0f0;
@@ -1995,18 +1998,18 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 10px;
     }
     #app-search {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 14px;
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       font-size: 11px;
       font-weight: 500;
       letter-spacing: 1px;
     }
     #app-search:focus {
-      background: #1b2730;
-      border-color: #60c0d0;
+      background: ${c.bg_light};
+      border-color: ${c.accent};
     }
     #app-page-scroll,
     #app-page-scroll frame,
@@ -2020,30 +2023,30 @@ function generateCSS(c: ThemeColors): string {
       margin-top: 10px;
     }
     #app-item {
-      background: #101820;
+      background: ${c.bg};
       border: none;
       border-radius: 4px;
       padding: 8px 10px;
       margin: 3px 0;
     }
     #app-item:hover {
-      background: alpha(#253540, 0.8);
+      background: alpha(${c.bg_lighter}, 0.8);
     }
     #app-item:active {
       background: alpha(#1a3040, 0.9);
-      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
     }
     #app-icon {
-      color: #5a8090;
+      color: ${c.fg_dim};
       font-size: 20px;
       min-width: 20px;
       min-height: 20px;
     }
     #app-item:hover #app-icon {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
     }
     #app-name {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       font-size: 10px;
       font-weight: 600;
     }
@@ -2051,7 +2054,7 @@ function generateCSS(c: ThemeColors): string {
     /* ============ POMODORO PAGE - Holographic Style ============ */
     #pomo-page {
       padding: 12px;
-      background: #040608;
+      background: ${c.bg_dark};
     }
 
     /* Timer display panel */
@@ -2067,7 +2070,7 @@ function generateCSS(c: ThemeColors): string {
       letter-spacing: 4px;
     }
     #pomo-phase-label {
-      color: #5090a0;
+      color: ${c.cyan};
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -2082,13 +2085,13 @@ function generateCSS(c: ThemeColors): string {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #pomo-mode-row #sys-toggle.active #pomo-mode-label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #pomo-mode-row #sys-toggle:hover #pomo-mode-label {
-      color: #6080a0;
+      color: ${c.fg};
     }
 
     /* Ratio presets row */
@@ -2096,33 +2099,33 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 8px;
     }
     #pomo-preset-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 6px 8px;
       margin: 0 3px;
       min-width: 44px;
     }
     #pomo-preset-btn:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: ${c.bg_light};
+      border-color: ${c.gray};
     }
     #pomo-preset-btn.active {
-      background: #152834;
-      border: 1px solid #60c0d0;
-      box-shadow: inset 0 0 12px alpha(#60d0e0, 0.3);
+      background: ${c.bg_light};
+      border: 1px solid ${c.accent};
+      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
     }
     #pomo-preset-btn label {
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #pomo-preset-btn:hover label {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #pomo-preset-btn.active label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
 
     /* Time adjusters */
@@ -2136,33 +2139,33 @@ function generateCSS(c: ThemeColors): string {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #5090a0;
+      color: ${c.cyan};
       min-width: 50px;
     }
     #pomo-adj-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 4px 10px;
       margin: 0 2px;
       min-width: 28px;
     }
     #pomo-adj-btn:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: ${c.bg_light};
+      border-color: ${c.gray};
     }
     #pomo-adj-btn label {
       font-size: 12px;
       font-weight: 700;
-      color: #5a8090;
+      color: ${c.fg_dim};
     }
     #pomo-adj-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #pomo-adj-value {
       font-size: 14px;
       font-weight: 700;
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       letter-spacing: 1px;
       min-width: 40px;
     }
@@ -2187,8 +2190,8 @@ function generateCSS(c: ThemeColors): string {
       min-width: 10px;
       min-height: 10px;
       border-radius: 5px;
-      background: alpha(#2a3a45, 0.3);
-      border: 1px solid #2a3a45;
+      background: alpha(${c.bg_lighter}, 0.3);
+      border: 1px solid ${c.bg_lighter};
     }
     #pomo-block-dot-btn.selected #pomo-block-dot {
       background: #8b0000;
@@ -2196,8 +2199,8 @@ function generateCSS(c: ThemeColors): string {
       box-shadow: 0 0 6px alpha(#c03030, 0.5);
     }
     #pomo-block-dot-btn.completed #pomo-block-dot {
-      background: alpha(#1a2530, 0.2);
-      border: 1px solid alpha(#2a3a45, 0.2);
+      background: alpha(${c.bg_light}, 0.2);
+      border: 1px solid alpha(${c.bg_lighter}, 0.2);
       box-shadow: none;
     }
 
@@ -2206,7 +2209,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 10px;
     }
     #pomo-start-btn {
-      background: #101820;
+      background: ${c.bg};
       border: 1px solid #2a4a35;
       border-radius: 4px;
       padding: 10px 14px;
@@ -2230,7 +2233,7 @@ function generateCSS(c: ThemeColors): string {
       color: #c0a050;
     }
     #pomo-stop-btn {
-      background: #101820;
+      background: ${c.bg};
       border: 1px solid #4a2a2a;
       border-radius: 4px;
       padding: 10px 14px;
@@ -2264,13 +2267,13 @@ function generateCSS(c: ThemeColors): string {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       margin: 0 8px;
       min-width: 80px;
     }
     #pomo-volume-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
@@ -2278,8 +2281,8 @@ function generateCSS(c: ThemeColors): string {
 
     /* Vim focus highlight */
     .focused {
-      box-shadow: 0 0 6px alpha(#60c0d0, 0.8), inset 0 0 4px alpha(#60c0d0, 0.3);
-      border-color: #80e0f0;
+      box-shadow: 0 0 6px alpha(${c.accent}, 0.8), inset 0 0 4px alpha(${c.accent}, 0.3);
+      border-color: ${c.fg_bright};
     }
 
     /* Audio/Voice tab switcher */
@@ -2288,7 +2291,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-tab-btn {
       background: #0a1018;
-      border: 1px solid #2a3a45;
+      border: 1px solid ${c.bg_lighter};
       border-bottom: none;
       border-radius: 4px 4px 0 0;
       padding: 4px 8px;
@@ -2298,27 +2301,27 @@ function generateCSS(c: ThemeColors): string {
       background: #152028;
     }
     #eq-tab-btn.active {
-      background: #101820;
-      border-color: #2a3a45;
-      border-bottom: 1px solid #101820;
+      background: ${c.bg};
+      border-color: ${c.bg_lighter};
+      border-bottom: 1px solid ${c.bg};
     }
     #eq-tab-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #3a5060;
+      color: ${c.fg_dim};
     }
     #eq-tab-btn:hover #eq-tab-label {
-      color: #5a8090;
+      color: ${c.fg_dim};
     }
     #eq-tab-btn.active #eq-tab-label {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
     }
 
     /* ============ EQ PANELS (Audio & Display) ============ */
     #eq-panel {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
@@ -2348,12 +2351,12 @@ function generateCSS(c: ThemeColors): string {
     }
     /* Unlit */
     #eq-seg.unlit {
-      background: alpha(#2a3a45, 0.3);
+      background: alpha(${c.bg_lighter}, 0.3);
     }
     /* Default lit (cyan) — fallback */
     #eq-seg.lit {
-      background: #60c0d0;
-      box-shadow: inset 0 0 2px alpha(#80e0f0, 0.3);
+      background: ${c.accent};
+      box-shadow: inset 0 0 2px alpha(${c.fg_bright}, 0.3);
     }
     /* Visualizer tiers — famicom red, fades up */
     #eq-seg.lit-hi {
@@ -2385,7 +2388,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-warm {
       background: #ffe0a0;
-      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#d0a060, 0.4);
+      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#d0a060, 0.4);
     }
     /* Gamma (purple) */
     #eq-seg.lit.eq-gamma {
@@ -2394,7 +2397,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-gamma {
       background: #d0b0ff;
-      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#a080d0, 0.4);
+      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#a080d0, 0.4);
     }
     /* Red */
     #eq-seg.lit.eq-red {
@@ -2403,7 +2406,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-red {
       background: #ff9090;
-      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#d06060, 0.4);
+      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#d06060, 0.4);
     }
     /* Green */
     #eq-seg.lit.eq-green {
@@ -2412,7 +2415,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-green {
       background: #a0ffa0;
-      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#60d070, 0.4);
+      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#60d070, 0.4);
     }
     /* Blue */
     #eq-seg.lit.eq-blue {
@@ -2421,7 +2424,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-blue {
       background: #a0c0ff;
-      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#6080d0, 0.4);
+      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#6080d0, 0.4);
     }
     /* White cap */
     #eq-seg.lit.eq-cap {
@@ -2430,13 +2433,13 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-cap {
       background: #c0c8c8;
-      box-shadow: inset 0 0 3px alpha(#ffffff, 0.4), 0 0 4px alpha(#909898, 0.4);
+      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#909898, 0.4);
     }
     #eq-label {
-      font-size: 7px;
+      font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #4a6070;
+      color: ${c.fg_dim};
       margin-top: 4px;
     }
     /* Horizontal volume/brightness bar */
@@ -2461,43 +2464,43 @@ function generateCSS(c: ThemeColors): string {
       margin: 0;
     }
     #eq-hseg.unlit {
-      background: alpha(#2a3a45, 0.3);
+      background: alpha(${c.bg_lighter}, 0.3);
     }
     #eq-hseg.lit {
-      background: #60c0d0;
-      box-shadow: inset 0 0 2px alpha(#80e0f0, 0.3);
+      background: ${c.accent};
+      box-shadow: inset 0 0 2px alpha(${c.fg_bright}, 0.3);
     }
     /* Preset buttons */
     #eq-presets {
       margin-top: 8px;
     }
     #eq-preset-btn {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 3px;
       padding: 4px 6px;
       margin: 0 2px;
     }
     #eq-preset-btn:hover {
-      background: #1b2730;
-      border-color: #3a5060;
+      background: ${c.bg_light};
+      border-color: ${c.gray};
     }
     #eq-preset-btn.active {
-      background: #152834;
-      border: 1px solid #60c0d0;
-      box-shadow: inset 0 0 8px alpha(#60d0e0, 0.3);
+      background: ${c.bg_light};
+      border: 1px solid ${c.accent};
+      box-shadow: inset 0 0 8px alpha(${c.accent}, 0.3);
     }
     #eq-preset-label {
-      font-size: 8px;
+      font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #eq-preset-btn:hover #eq-preset-label {
-      color: #6080a0;
+      color: ${c.fg};
     }
     #eq-preset-btn.active #eq-preset-label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
 
     /* Muted state — dims header, red icon */
@@ -2522,21 +2525,21 @@ function generateCSS(c: ThemeColors): string {
 
     /* Noise cancellation toggle */
     #voice-nc-toggle {
-      background: #101820;
-      border: 1px solid #2a3a45;
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
       border-radius: 3px;
       padding: 2px 8px;
       margin-right: 8px;
     }
     #voice-nc-toggle:hover {
-      border-color: #3a5060;
+      border-color: ${c.gray};
     }
     #voice-nc-toggle.active {
       background: alpha(#40c060, 0.15);
       border-color: #40c060;
     }
     #voice-nc-toggle #control-label {
-      color: #4a6070;
+      color: ${c.fg_dim};
     }
     #voice-nc-toggle.active #control-label {
       color: #40c060;
@@ -2547,39 +2550,39 @@ function generateCSS(c: ThemeColors): string {
 
     /* Output device selector button */
     #eq-output-selector {
-      background: alpha(#1a2530, 0.4);
-      border: 1px solid #2a3a45;
+      background: alpha(${c.bg_light}, 0.4);
+      border: 1px solid ${c.bg_lighter};
       border-radius: 3px;
       padding: 6px 10px;
       margin-bottom: 4px;
     }
     #eq-output-selector:hover {
-      background: alpha(#253540, 0.6);
-      border-color: #3a5060;
+      background: alpha(${c.bg_lighter}, 0.6);
+      border-color: ${c.gray};
     }
     #eq-output-icon {
       font-size: 12px;
-      color: #5a8090;
+      color: ${c.fg_dim};
       margin-right: 8px;
     }
     #eq-output-name {
       font-size: 10px;
       font-weight: 600;
       letter-spacing: 1px;
-      color: #5a8090;
+      color: ${c.fg_dim};
     }
     #eq-output-selector:hover #eq-output-name {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #eq-output-arrow {
       font-size: 10px;
-      color: #4a6070;
+      color: ${c.fg_dim};
       margin-left: 6px;
     }
 
     /* Output device overlay dropdown */
     #eq-output-scroll {
-      background: #0a1520;
+      background: ${c.bg};
       border: 1px solid #2a4a5a;
       border-radius: 4px;
       min-width: 216px;
@@ -2591,7 +2594,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-output-btn {
       background: #10202e;
-      border: 1px solid #2a3a45;
+      border: 1px solid ${c.bg_lighter};
       border-radius: 3px;
       padding: 8px 12px;
       margin: 1px 0;
@@ -2600,11 +2603,11 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-output-btn:hover {
       background: #1a3040;
-      border-color: #3a5060;
+      border-color: ${c.gray};
     }
     #eq-output-btn.active {
       background: #1a3040;
-      border-color: #60c0d0;
+      border-color: ${c.accent};
     }
     #eq-output-btn label {
       font-size: 9px;
@@ -2614,10 +2617,10 @@ function generateCSS(c: ThemeColors): string {
       transition: none;
     }
     #eq-output-btn:hover label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #eq-output-btn.active label {
-      color: #80e0f0;
+      color: ${c.fg_bright};
     }
     #eq-output-list,
     #eq-output-list * {
@@ -2626,50 +2629,118 @@ function generateCSS(c: ThemeColors): string {
 
     /* ============ BREAK POPUP OVERLAY ============ */
     #break-popup-overlay {
-      background: alpha(#040608, 0.85);
+      background: alpha(${c.bg_dark}, 0.85);
     }
     #break-popup-panel {
-      background: alpha(#0a1520, 0.95);
-      border: 2px solid #60c0d0;
+      background: alpha(${c.bg}, 0.95);
+      border: 2px solid ${c.accent};
       border-radius: 8px;
       padding: 40px 50px;
-      box-shadow: 0 0 40px alpha(#60d0e0, 0.3),
-                  0 0 80px alpha(#60d0e0, 0.1);
+      box-shadow: 0 0 40px alpha(${c.accent}, 0.3),
+                  0 0 80px alpha(${c.accent}, 0.1);
     }
     #break-popup-title {
-      color: #80e0f0;
+      color: ${c.fg_bright};
       font-size: 20px;
       font-weight: 700;
       letter-spacing: 4px;
       margin-bottom: 16px;
     }
     #break-popup-timer {
-      color: #70c0d0;
+      color: ${c.cyan_bright};
       font-size: 56px;
       font-weight: 700;
       letter-spacing: 4px;
       margin-bottom: 12px;
     }
     #break-popup-block-label {
-      color: #5090a0;
+      color: ${c.cyan};
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 2px;
       margin-bottom: 20px;
     }
     #break-popup-hint {
-      color: #3a5060;
+      color: ${c.fg_dim};
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 2px;
     }
 
+    /* ============ THEME SELECTOR ============ */
+    #theme-selector {
+      padding: 4px 12px 10px 12px;
+    }
+    #theme-header {
+      color: ${c.cyan};
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+    #theme-selector flowboxchild {
+      background: transparent;
+      padding: 0;
+      border: none;
+    }
+    #theme-btn {
+      background: ${c.bg};
+      border: 1px solid ${c.bg_lighter};
+      border-radius: 6px;
+      padding: 4px 10px;
+      transition: all 150ms ease;
+    }
+    #theme-btn:hover {
+      border-color: ${c.gray};
+      background: ${c.bg_light};
+    }
+    #theme-btn.active {
+      border-color: ${c.accent};
+      background: ${c.bg_light};
+      box-shadow: 0 0 10px alpha(${c.accent}, 0.25);
+    }
+    #theme-swatch {
+      font-size: 11px;
+    }
+    #theme-name {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-left: 1px;
+      color: ${c.fg_dim};
+    }
+    #theme-btn.active #theme-name {
+      color: ${c.fg_bright};
+    }
+
+    /* ============ WORKSPACE OSD ============ */
+    #ws-osd {
+      background: alpha(${c.bg}, 0.92);
+      border: 1px solid ${c.accent};
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      padding: 8px 22px;
+      box-shadow: 0 0 24px alpha(${c.accent}, 0.25),
+                  0 0 48px alpha(${c.accent}, 0.08);
+    }
+    #ws-osd-label {
+      color: ${c.fg_bright};
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      margin: 0 12px;
+    }
+    #ws-osd-brackets {
+      color: ${c.fg_dim};
+      font-size: 12px;
+    }
+
     /* ============ TASK POPUP OVERLAY ============ */
     #task-popup-overlay {
-      background: alpha(#040608, 0.75);
+      background: alpha(${c.bg_dark}, 0.75);
     }
     #task-popup-panel {
-      background: alpha(#0a1520, 0.95);
+      background: alpha(${c.bg}, 0.95);
       border: 2px solid #d4a847;
       border-radius: 8px;
       padding: 32px 44px;
@@ -2691,7 +2762,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 16px;
     }
     #task-popup-hint {
-      color: #3a5060;
+      color: ${c.fg_dim};
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 2px;

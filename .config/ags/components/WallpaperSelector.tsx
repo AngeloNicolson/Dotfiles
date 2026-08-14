@@ -4,6 +4,7 @@ import GdkPixbuf from "gi://GdkPixbuf"
 import { execAsync } from "ags/process"
 import { createState } from "ags"
 import { px } from "../scale"
+import ThemeSelector from "./ThemeSelector"
 
 const WALLPAPER_DIR = GLib.get_home_dir() + "/.config/ags/wallpapers"
 const SWWW_DIR = GLib.get_home_dir() + "/.config/awww"
@@ -586,6 +587,7 @@ export default function WallpaperSelector() {
           <label label="" />
         </button>
       </box>
+      <ThemeSelector />
       <box name="wallpaper-tab-bar">
         <button
           name="wallpaper-tab-btn"

@@ -30,6 +30,19 @@ LSP servers and formatters are auto-installed via Mason. Language runtimes may b
 - **JavaScript/TypeScript**: node, npm
 - **Rust**: rustc, cargo
 - **C/C++**: gcc, clang
+- **Clojure**: jdk-openjdk, clojure, rlwrap, babashka-bin, clojure-lsp-bin
+
+### Clojure REPL
+Open a Clojure file and start an nREPL in a terminal:
+```bash
+bb nrepl-server
+```
+
+Then use Conjure from Neovim:
+- `,ee` - evaluate current form
+- `,er` - evaluate root form
+- `,eb` - evaluate buffer
+- `,lv` - open the evaluation log
 
 ## Theme Synchronization
 

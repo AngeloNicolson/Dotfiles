@@ -16,6 +16,13 @@ starship
 neovim
 ripgrep
 
+# Clojure
+jdk-openjdk
+clojure
+rlwrap
+babashka-bin
+clojure-lsp-bin
+
 # Document Viewer
 zathura
 zathura-pdf-poppler

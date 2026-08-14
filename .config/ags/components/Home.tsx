@@ -34,13 +34,13 @@ function SystemToggle({
 
 // Time display - styled as main panel
 function Clock() {
+  // Follows the system timezone, so `timedatectl set-timezone` is enough to move it.
   const localTime = createPoll("00:00", 1000, () => {
     const now = new Date()
     return now.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-      timeZone: "Pacific/Auckland",
     })
   })
 
@@ -53,13 +53,13 @@ function Clock() {
     }).toUpperCase()
   })
 
-  const tennesseeTime = createPoll("00:00", 1000, () => {
+  const nzTime = createPoll("00:00", 1000, () => {
     const now = new Date()
     return now.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-      timeZone: "America/Chicago",
+      timeZone: "Pacific/Auckland",
     })
   })
 
@@ -68,9 +68,9 @@ function Clock() {
       <label name="clock-time" label={localTime} />
       <label name="clock-date" label={date} />
       <box name="clock-secondary">
-        <label name="clock-alt-label" label="NSH" />
+        <label name="clock-alt-label" label="NZ" />
         <box hexpand />
-        <label name="clock-alt-time" label={tennesseeTime} />
+        <label name="clock-alt-time" label={nzTime} />
       </box>
     </box>
   )

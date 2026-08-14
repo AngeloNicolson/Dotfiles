@@ -8,12 +8,12 @@ import WallpaperSelector from "./WallpaperSelector"
 import Pomodoro, { secondsRemaining, phase } from "./Pomodoro"
 
 const tabs = [
-  { id: "page1", icon: "", label: "HOME" },
-  { id: "page2", icon: "", label: "PLAN" },
-  { id: "page3", icon: "", label: "POMO" },
-  { id: "page4", icon: "", label: "APPS" },
-  { id: "page5", icon: "", label: "CORE" },
-  { id: "page6", icon: "", label: "PWR" },
+  { id: "page1", icon: "", label: "HOME" },
+  { id: "page2", icon: "", label: "PLAN" },
+  { id: "page3", icon: "", label: "POMO" },
+  { id: "page4", icon: "", label: "APPS" },
+  { id: "page5", icon: "", label: "CORE" },
+  { id: "page6", icon: "", label: "PWR" },
 ]
 
 export default function Sidebar({ monitorName }: { monitorName: string }) {
