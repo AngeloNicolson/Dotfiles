@@ -1,13 +1,14 @@
 import { createState } from "ags"
 import { createPoll } from "ags/time"
 import { type Accessor } from "gnim"
-import { execAsync, createSubprocess } from "ags/process"
+import { exec, execAsync, createSubprocess } from "ags/process"
 import { writeFile, readFile } from "ags/file"
 import GLib from "gi://GLib"
 import Gdk from "gi://Gdk"
 import Gtk from "gi://Gtk"
 import Wp from "gi://AstalWp"
 import { px } from "../scale"
+import { barVisible } from "../state"
 
 const EQ_BANDS = [
   { label: "60", type: "bq_lowshelf", freq: 60 },
@@ -70,10 +71,27 @@ noise_reduction = 0.30
 const ZERO_LEVELS = new Array(NUM_BANDS).fill(0)
 let cavaLevels: ReturnType<typeof createSubprocess<number[]>> | null = null
 try {
+  // Self-healing: cava is subscribed once at startup (the sidebar Stack keeps
+  // Home mounted for AGS's lifetime), so createSubprocess never sees a 0->1
+  // transition again and would never respawn cava on its own. cava dies if it
+  // starts before the eq6 sink exists or when startFilterChain rebuilds the
+  // filter chain — so wrap it in a loop that restarts it, keeping the bars live.
+  // The wrapper loop outlives AGS (ags quit only kills gjs), so reap any loops
+  // leaked by previous instances before spawning ours.
+  try {
+    exec(["pkill", "-f", `cava -p ${CAVA_CONF_PATH}`])
+  } catch {
+    // pkill exits non-zero when nothing matched — fine
+  }
   cavaLevels = createSubprocess(
     ZERO_LEVELS,
-    ["cava", "-p", CAVA_CONF_PATH],
+    ["bash", "-c", `while true; do cava -p ${CAVA_CONF_PATH}; sleep 1; done`],
     (line) => {
+      // While the bar is hidden, feed a constant zero frame: 60fps level
+      // updates in the collapsed (1px) revealer force a GTK relayout storm
+      // ("Negative content width" warnings) that costs more CPU than the
+      // visible bars do.
+      if (!barVisible.get()) return ZERO_LEVELS
       const vals = line.split(";").filter(s => s.length > 0).map(Number)
       return vals.length >= NUM_BANDS ? vals.slice(0, NUM_BANDS) : ZERO_LEVELS
     },

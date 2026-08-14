@@ -8,6 +8,7 @@ import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
 import PeriodicTableWindow from "./components/PeriodicTableWindow"
 import BreakPopupWindow from "./components/BreakPopupWindow"
+import WorkspaceOsdWindow from "./components/WorkspaceOsd"
 import AstalHyprland from "gi://AstalHyprland"
 import { Gdk } from "ags/gtk3"
 
@@ -182,5 +183,6 @@ app.start({
     GalaxyWindow(overlayMonitor)
     PeriodicTableWindow(overlayMonitor)
     BreakPopupWindow(overlayMonitor)
+    WorkspaceOsdWindow(overlayMonitor)
   },
 })

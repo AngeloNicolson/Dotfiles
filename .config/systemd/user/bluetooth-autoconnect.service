@@ -1,0 +1,10 @@
+[Unit]
+Description=Auto-connect trusted Bluetooth devices at login
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/bt-autoconnect
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
