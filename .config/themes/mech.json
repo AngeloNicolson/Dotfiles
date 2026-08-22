@@ -25,7 +25,7 @@
     "gray": "#928374"
   },
   "gtk": {
-    "theme": "Gruvbox-Retro",
+    "theme": "adw-gtk3-dark",
     "iconTheme": "Tela-circle-black",
     "cursorTheme": "Bibata-Modern-Ice",
     "colorScheme": "prefer-dark"

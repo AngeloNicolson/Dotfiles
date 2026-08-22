@@ -1,0 +1,13 @@
+# Machine-specific foot overrides — copy to host.ini (gitignored).
+# Included last from foot.ini, so anything here overrides the shared config.
+# Leave sections empty to keep the defaults.
+
+[main]
+# Bigger/smaller terminal text on this screen (logical points; tracks the
+# compositor scale). The shared default is 11.2.
+# font=JetBrainsMono Nerd Font:size=12, Noto Sans CJK JP:size=12
+
+[colors-dark]
+# Terminal background transparency on this machine (0 = clear, 1 = opaque).
+# Keep < 1 if you want blur — foot only requests blur when it is transparent.
+# alpha=0.75

@@ -2,8 +2,10 @@
 .config/fish/fish_variables
 .config/fish/system-local.fish
 
+# Foot (per-machine overrides, see host.ini.example)
+.config/foot/host.ini
+
 # Neovim
-.config/nvim/lazy-lock.json
 .config/nvim/node_modules/
 .config/nvim/.luarc.json
 .config/nvim/virtual-environments/
