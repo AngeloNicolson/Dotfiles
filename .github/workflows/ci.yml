@@ -19,7 +19,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed git shellcheck jq hyprland foot sudo
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: shellcheck (installer + portability scripts)
         run: |
