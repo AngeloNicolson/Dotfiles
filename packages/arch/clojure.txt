@@ -1,0 +1,6 @@
+# Clojure toolchain (nvim LSP setup targets it)
+jdk-openjdk
+clojure
+rlwrap
+babashka-bin
+clojure-lsp-bin

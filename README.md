@@ -25,10 +25,16 @@ cd ~/dotfiles
 (`--depth 1` is fine — wallpapers are not in git; the `wallpapers` module pulls
 them from the `wallpapers-v1` release.)
 
-The installer detects your distro, prompts for optional components, then handles everything.
+The installer detects your distro, shows what is always installed, asks a yes/no
+question per optional component (lock screen, idle dimming, themed look, Neovim,
+tmux, media, wallpaper pack, NVIDIA, Firefox, …), then handles everything.
+Answers are saved to a gitignored `install.conf` and honoured by every later run
+(`packages`, `doctor`, `wallpapers`); edit or delete it to be asked again.
 Flags: `--dry-run` prints every change without touching the system, `--yes` runs
-non-interactively (optional components come from `OPT_NVIDIA=y` etc.), and
-`./install.sh doctor` audits a machine against what the config expects.
+non-interactively (components from `OPT_<NAME>=y|n` env → `install.conf` → defaults),
+and `./install.sh doctor` audits a machine against what the config expects *for
+the components you chose* — e.g. no lock screen selected, no complaint that
+hyprlock is missing.
 
 ```
   ┌─────────────────────────────────────┐
@@ -38,14 +44,28 @@ non-interactively (optional components come from `OPT_NVIDIA=y` etc.), and
 
   :: Detected distro: arch
 
-  Optional components:
+  Always installed (required by the config):
+    Hyprland, AGS shell, foot + fish, fonts, PipeWire, wallpaper daemon, ...
 
-    NVIDIA drivers (VA-API, CUDA)? [y/n]
-    Ollama (local LLMs, ~18GB download)? [y/n]
-    OpenTabletDriver (Wacom tablet)? [y/n]
-    Firefox (browser + custom CSS)? [y/n]
-    Extras (kitty, ktouch, rnote)? [y/n]
+  Optional components (Enter keeps the default shown; saved to install.conf)
+
+    Themed look: adw-gtk3 GTK theme, Tela icons, Bibata cursor ... [Y/n]
+    Idle management: dim after 2.5 min, screen off after 5 min (hypridle) [Y/n]
+    Lock screen: hyprlock on lid-close / power key (skip if you never lock) [y/N]
+    Neovim: editor with LSP/Treesitter, plugins pinned by lazy-lock.json [Y/n]
+    Tmux: multiplexer with powerline + tpm plugins [Y/n]
+    ...
+    Wallpaper pack: download ~2 GB of images/videos from the GitHub release [y/N]
+    NVIDIA: VA-API driver + CUDA build of ollama [y/N]
+    Ollama: local LLM server (~18 GB model download) [y/N]
 ```
+
+Each component maps to `packages/<distro>/<id>.txt` (the required set is
+`core.txt`) and may switch installer modules on or off (`neovim` → plugin
+restore, `tmux` → tpm, `firefox` → profile CSS, …). Things the config calls
+that belong to an optional component degrade when it is off: the lid-close and
+power-key bindings go through `scripts/lock.sh`, which is a no-op without a
+locker, and `hypridle` only starts if installed.
 
 ### Modules
 

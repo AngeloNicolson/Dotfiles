@@ -1,79 +1,47 @@
-# Core Window Manager
-hyprland
-hyprlock
-xdg-desktop-portal-hyprland
-hypridle
+# Required — always installed. Everything the tracked config cannot run without.
+# Optional components live in their own lists (lockscreen.txt, idle.txt, ...)
+# and are chosen on the ./install.sh setup screen.
 
-# Desktop UI
+# Compositor
+hyprland
+xdg-desktop-portal-hyprland
+
+# Desktop UI (AGS shell)
 aylurs-gtk-shell-git
 gjs
 libastal-meta
 
-# Terminal
+# Terminal + shell
 foot
 fish
 starship
 
-# Editor
-neovim
-ripgrep
-
-# Clojure
-jdk-openjdk
-clojure
-rlwrap
-babashka-bin
-clojure-lsp-bin
-
-# Document Viewer
-zathura
-zathura-pdf-poppler
-
-# Terminal Multiplexer
-tmux
-
-# Fonts (gtk-font-name / theme.conf assume these exist — see ./install.sh doctor)
+# Fonts the config names (gtk-font-name, theme.conf, foot.ini)
 noto-fonts
+noto-fonts-cjk
 ttf-jetbrains-mono-nerd
 ttf-cascadia-code-nerd
 ttf-font-awesome
 ttf-nerd-fonts-meta
-noto-fonts-cjk
 
-# Look & feel (themes referenced by gtk settings.ini / themes/*.json)
-adw-gtk-theme
-tela-circle-icon-theme-black
-tela-circle-icon-theme-red
-bibata-cursor-theme-bin
-
-# System
+# System plumbing
 polkit-kde-agent
 python
 python-gobject
 gtk3
 gtk4
-
-# Audio/Media
-cava
 pipewire
 wireplumber
-pavucontrol
-mpv
 socat
 
-# Chromecast (install via pipx)
-# pipx install catt
-
-# Wallpaper
+# Wallpaper daemon + default-wallpaper/thumbnail generation
 awww
-mpvpaper
 ffmpeg
 
 # Notifications
 dunst
 
-# Utilities
-swaylock
+# Scripts depend on these (volume/brightness/screenshot/clipboard keybinds)
 brightnessctl
 pamixer
 wl-clipboard
@@ -83,10 +51,3 @@ slurp
 swappy
 jq
 wl-color-picker
-
-# Display controls
-wl-gammarelay-rs
-hyprshade
-
-# Filesystem
-ntfs-3g

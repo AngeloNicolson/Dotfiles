@@ -40,6 +40,9 @@ __pycache__/
 # Study cleanup list (local-only)
 to-be-deleted.txt
 
+# Installer component choices (per machine)
+install.conf
+
 # General
 *.swp
 *.swo

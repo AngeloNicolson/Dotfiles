@@ -21,7 +21,7 @@ case "$1" in
             hyprctl keyword monitor "$LAPTOP,disable"
             hyprctl keyword monitor "$EXTERNAL,preferred,0x0,1"
         else
-            hyprlock &
+            ~/.config/hypr/scripts/lock.sh &
             sleep 0.5
             systemctl suspend
         fi

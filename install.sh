@@ -32,6 +32,63 @@ run() {
 # true if $1 >= $2 (dotted versions)
 version_ge() { [[ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]; }
 
+# ─── Components ────────────────────────────────────────────────────────────
+# Everything beyond the required core is a component the setup screen asks
+# about. Each has a package list packages/<distro>/<id>.txt (if it installs
+# anything) and may gate installer modules / doctor checks.
+#   id | default | one-line description shown in the prompt
+COMPONENTS=(
+    "themes|y|Themed look: adw-gtk3 GTK theme, Tela icons, Bibata cursor (the config is written for these)"
+    "idle|y|Idle management: dim after 2.5 min, screen off after 5 min (hypridle)"
+    "lockscreen|n|Lock screen: hyprlock on lid-close / power key (skip if you never lock)"
+    "neovim|y|Neovim: editor with LSP/Treesitter, plugins pinned by lazy-lock.json"
+    "tmux|y|Tmux: multiplexer with powerline + tpm plugins"
+    "zathura|y|Zathura: PDF viewer"
+    "media|y|Media: mpv, live video wallpapers (mpvpaper), cava visualiser, pavucontrol"
+    "display|y|Display controls: colour temperature/gamma (wl-gammarelay), shaders (hyprshade)"
+    "wallpapers|n|Wallpaper pack: download ~2 GB of images/videos from the GitHub release"
+    "clojure|n|Clojure toolchain: JDK, clojure, babashka, clojure-lsp"
+    "nvidia|n|NVIDIA: VA-API driver + CUDA build of ollama"
+    "firefox|n|Firefox: browser + custom CSS / Sidebery theme"
+    "tablet|n|OpenTabletDriver: Wacom tablet support"
+    "extras|n|Extras: kitty, ktouch, rnote"
+    "ntfs|n|NTFS: mount Windows drives (ntfs-3g)"
+    "ollama|n|Ollama: local LLM server (~18 GB model download)"
+)
+REQUIRED_SUMMARY="Hyprland, AGS shell, foot + fish, fonts, PipeWire, wallpaper daemon, notifications, screenshot/clipboard/volume/brightness tools"
+CHOICES_FILE="$DOTFILES_DIR/install.conf"   # gitignored, per machine
+declare -A CHOICE
+
+comp_ids()     { local c; for c in "${COMPONENTS[@]}"; do echo "${c%%|*}"; done; }
+comp_default() { local c; for c in "${COMPONENTS[@]}"; do [[ "${c%%|*}" == "$1" ]] && { c="${c#*|}"; echo "${c%%|*}"; return; }; done; echo n; }
+comp_desc()    { local c; for c in "${COMPONENTS[@]}"; do [[ "${c%%|*}" == "$1" ]] && { echo "${c##*|}"; return; }; done; }
+chosen()       { [[ "${CHOICE[$1]:-n}" == "y" ]]; }
+
+# Precedence: OPT_<ID>=y|n in the environment > saved install.conf > default.
+load_choices() {
+    local id val
+    for id in $(comp_ids); do CHOICE[$id]="$(comp_default "$id")"; done
+    if [[ -f "$CHOICES_FILE" ]]; then
+        while IFS='=' read -r id val; do
+            [[ -z "$id" || "$id" == \#* ]] && continue
+            [[ -n "${CHOICE[$id]+x}" ]] && CHOICE[$id]="$val"
+        done < "$CHOICES_FILE"
+    fi
+    for id in $(comp_ids); do
+        local envvar="OPT_${id^^}"
+        [[ -n "${!envvar:-}" ]] && CHOICE[$id]="${!envvar}"
+    done
+}
+
+save_choices() {
+    [[ "$DRY_RUN" == "1" ]] && return 0
+    {
+        echo "# Component choices for this machine — written by ./install.sh, read by"
+        echo "# every later run (packages, doctor, wallpapers...). Edit or delete to re-ask."
+        local id; for id in $(comp_ids); do echo "$id=${CHOICE[$id]}"; done
+    } > "$CHOICES_FILE"
+}
+
 # ─── Colors & output ───────────────────────────────────────────────────────
 
 BOLD='\033[1m'
@@ -270,12 +327,13 @@ mod_packages() {
     local pkgs=""
     pkgs="$(parse_packages "$PKG_DIR/core.txt")"
 
-    local groups="core"
-    [[ "$OPT_NVIDIA" == "y" ]]  && pkgs="$pkgs $(parse_packages "$PKG_DIR/nvidia.txt")" && groups="$groups, nvidia"
-    [[ "$OPT_OLLAMA" == "y" ]]  && pkgs="$pkgs $(parse_packages "$PKG_DIR/ollama.txt")" && groups="$groups, ollama"
-    [[ "$OPT_TABLET" == "y" ]]  && pkgs="$pkgs $(parse_packages "$PKG_DIR/tablet.txt")" && groups="$groups, tablet"
-    [[ "$OPT_FIREFOX" == "y" ]] && pkgs="$pkgs $(parse_packages "$PKG_DIR/firefox.txt")" && groups="$groups, firefox"
-    [[ "$OPT_EXTRAS" == "y" ]]  && pkgs="$pkgs $(parse_packages "$PKG_DIR/extras.txt")" && groups="$groups, extras"
+    local groups="core" id
+    for id in $(comp_ids); do
+        chosen "$id" || continue
+        [[ -f "$PKG_DIR/$id.txt" ]] || continue   # component with no packages (e.g. wallpapers)
+        pkgs="$pkgs $(parse_packages "$PKG_DIR/$id.txt")"
+        groups="$groups, $id"
+    done
 
     # Deduplicate
     pkgs="$(echo "$pkgs" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
@@ -657,7 +715,11 @@ mod_wallpapers() {
     success "awww state dir"
 
     # Wallpapers are not in git (2 GB) — fetch them from the wallpapers-v1
-    # release of this repo, skipping anything already present.
+    # release of this repo, skipping anything already present. Only when the
+    # component was chosen, or this module was asked for by name.
+    if ! chosen wallpapers && [[ " ${EXPLICIT_MODULES[*]:-} " != *" wallpapers "* ]]; then
+        skip "wallpaper pack not selected (enable in ./install.sh, or run: ./install.sh wallpapers)"
+    else
     local api="https://api.github.com/repos/AngeloNicolson/Dotfiles/releases/tags/wallpapers-v1"
     local dl="https://github.com/AngeloNicolson/Dotfiles/releases/download/wallpapers-v1"
     local assets
@@ -680,6 +742,7 @@ mod_wallpapers() {
             fi
         done <<< "$assets"
         success "Wallpapers: $got downloaded, $have already present"
+    fi
     fi
 
     if ! find -L "$walls" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | grep -q .; then
@@ -742,13 +805,28 @@ mod_doctor() {
     header "Doctor"
     DOCTOR_FAILS=0
 
+    local on="" off="" id
+    for id in $(comp_ids); do chosen "$id" && on="$on $id" || off="$off $id"; done
+    info "Components on:${on:- (none)}"
+    echo -e "     ${DIM}off:${off:- (none)}  — change with ./install.sh (setup screen) or edit install.conf${NC}"
+
     info "Binaries"
     local bin
-    for bin in Hyprland hyprctl foot fish ags gjs nvim jq brightnessctl grim slurp wl-copy awww ffmpeg fc-list gsettings dunst pamixer socat; do
+    for bin in Hyprland hyprctl foot fish ags gjs jq brightnessctl grim slurp wl-copy awww ffmpeg fc-list gsettings dunst pamixer socat; do
         if command -v "$bin" &>/dev/null; then d_ok "$bin"; else d_bad "$bin missing"; fi
     done
-    for bin in hyprlock hypridle npm git tmux; do
+    for bin in npm git; do
         command -v "$bin" &>/dev/null && d_ok "$bin" || d_warn "$bin missing (optional but used)"
+    done
+    # Component binaries: required only if the component was chosen
+    local cid cbin
+    for cid in lockscreen:hyprlock idle:hypridle neovim:nvim tmux:tmux zathura:zathura media:mpv display:hyprshade; do
+        cbin="${cid#*:}"; cid="${cid%%:*}"
+        if chosen "$cid"; then
+            command -v "$cbin" &>/dev/null && d_ok "$cbin ($cid)" || d_bad "$cbin missing but component '$cid' is on — run: ./install.sh packages"
+        else
+            command -v "$cbin" &>/dev/null && d_ok "$cbin (present; component '$cid' off)" || skip "$cbin — component '$cid' off"
+        fi
     done
 
     info "Minimum versions"
@@ -771,6 +849,7 @@ mod_doctor() {
         if fc-list 2>/dev/null | grep -qi "$font"; then d_ok "$font"; else d_bad "font missing: $font"; fi
     done
 
+    if chosen themes; then
     info "Themes / cursors / icons"
     local d found
     for d in "themes/adw-gtk3-dark:GTK theme adw-gtk3-dark" "icons/Tela-circle-black:icon theme Tela-circle-black" "icons/Bibata-Modern-Ice:cursor Bibata-Modern-Ice"; do
@@ -780,6 +859,9 @@ mod_doctor() {
         done
         if [[ $found -eq 1 ]]; then d_ok "${d#*:}"; else d_bad "${d#*:} not installed"; fi
     done
+    else
+        skip "themes component off — GTK falls back to Adwaita/default cursor"
+    fi
 
     info "Machine-specific files"
     local f
@@ -870,9 +952,10 @@ mod_lock() {
 # ─── Interactive prompts ───────────────────────────────────────────────────
 
 ask_yn() {
-    local prompt="$1" default="$2" reply
+    local prompt="$1" default="$2" reply hint
+    [[ "$default" == "y" ]] && hint="[Y/n]" || hint="[y/N]"
     while true; do
-        read -rp "    $prompt [y/n] " reply
+        read -rp "    $prompt $hint " reply
         reply="${reply:-$default}"
         case "$reply" in
             [Yy]) echo "y"; return ;;
@@ -882,17 +965,25 @@ ask_yn() {
 }
 
 interactive_prompts() {
-    if [[ "$ASSUME_YES" == "1" ]]; then
-        info "Non-interactive: optional components from environment (OPT_NVIDIA/OPT_OLLAMA/OPT_TABLET/OPT_FIREFOX/OPT_EXTRAS)"
-        return 0
-    fi
-    echo -e "  ${BOLD}Optional components:${NC}"
+    echo -e "  ${BOLD}Always installed (required by the config):${NC}"
+    echo -e "    ${DIM}$REQUIRED_SUMMARY${NC}"
     echo ""
-    OPT_NVIDIA="$(ask_yn  "NVIDIA drivers (VA-API, CUDA)?" "n")"
-    OPT_OLLAMA="$(ask_yn  "Ollama (local LLMs, ~18GB download)?" "n")"
-    OPT_TABLET="$(ask_yn  "OpenTabletDriver (Wacom tablet)?" "n")"
-    OPT_FIREFOX="$(ask_yn "Firefox (browser + custom CSS)?" "n")"
-    OPT_EXTRAS="$(ask_yn  "Extras (kitty, ktouch, rnote)?" "n")"
+    if [[ "$ASSUME_YES" == "1" ]]; then
+        info "Non-interactive: components from OPT_<NAME>=y|n env, else install.conf, else defaults"
+    else
+        echo -e "  ${BOLD}Optional components${NC} ${DIM}(Enter keeps the default shown; saved to install.conf)${NC}"
+        echo ""
+        local id def
+        for id in $(comp_ids); do
+            def="${CHOICE[$id]}"
+            CHOICE[$id]="$(ask_yn "$(comp_desc "$id")" "$def")"
+        done
+    fi
+    echo ""
+    local on="" id
+    for id in $(comp_ids); do chosen "$id" && on="$on $id"; done
+    info "Components:${on:- (none beyond required)}"
+    save_choices
 }
 
 # ─── Module runner ─────────────────────────────────────────────────────────
@@ -944,7 +1035,7 @@ print_summary() {
     echo -e "  ${DIM}3.${NC} Tweak machine-specific files if needed:"
     echo -e "     ${DIM}~/.config/hypr/custom/*.conf  ·  ~/.config/foot/host.ini  ·  ~/.config/fish/system-local.fish${NC}"
     echo -e "  ${DIM}4.${NC} Check everything: ${CYAN}./install.sh doctor${NC}"
-    [[ "$OPT_FIREFOX" == "y" ]] && echo -e "  ${DIM}5.${NC} Restart Firefox to apply custom CSS"
+    chosen firefox && echo -e "  ${DIM}5.${NC} Restart Firefox to apply custom CSS"
     echo ""
 }
 
@@ -964,12 +1055,8 @@ set -- "${ARGS[@]}"
 [[ "$DRY_RUN" == "1" ]] && echo -e "  ${YELLOW}${BOLD}DRY RUN${NC} — nothing will be changed"
 
 detect_distro
-
-OPT_NVIDIA="${OPT_NVIDIA:-n}"
-OPT_OLLAMA="${OPT_OLLAMA:-n}"
-OPT_TABLET="${OPT_TABLET:-n}"
-OPT_FIREFOX="${OPT_FIREFOX:-n}"
-OPT_EXTRAS="${OPT_EXTRAS:-n}"
+load_choices
+EXPLICIT_MODULES=("$@")
 
 if [[ $# -eq 0 ]]; then
     banner
@@ -977,13 +1064,15 @@ if [[ $# -eq 0 ]]; then
     echo ""
     interactive_prompts
 
-    CORE_MODULES=(packages symlinks scripts templates dirs wallpapers services ags theme nvim tmux shell hostconfig)
+    CORE_MODULES=(packages symlinks scripts templates dirs wallpapers services ags theme shell hostconfig)
     OPTIONAL_MODULES=()
 
-    [[ "$OPT_FIREFOX" == "y" ]] && OPTIONAL_MODULES+=(firefox)
-    [[ "$OPT_TABLET" == "y" ]] && OPTIONAL_MODULES+=(tablet)
-    [[ "$OPT_EXTRAS" == "y" ]] && OPTIONAL_MODULES+=(rnote)
-    [[ "$OPT_OLLAMA" == "y" ]] && OPTIONAL_MODULES+=(ollama)
+    chosen neovim  && OPTIONAL_MODULES+=(nvim)
+    chosen tmux    && OPTIONAL_MODULES+=(tmux)
+    chosen firefox && OPTIONAL_MODULES+=(firefox)
+    chosen tablet  && OPTIONAL_MODULES+=(tablet)
+    chosen extras  && OPTIONAL_MODULES+=(rnote)
+    chosen ollama  && OPTIONAL_MODULES+=(ollama)
 
     ALL_MODULES=("${CORE_MODULES[@]}" "${OPTIONAL_MODULES[@]}" doctor)
     TOTAL_MODULES=${#ALL_MODULES[@]}
