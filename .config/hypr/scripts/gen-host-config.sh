@@ -45,7 +45,9 @@ done
 command -v jq >/dev/null      || { echo "gen-host-config: jq is required" >&2; exit 1; }
 command -v hyprctl >/dev/null || { echo "gen-host-config: hyprctl not found" >&2; exit 1; }
 json="$(hyprctl monitors all -j 2>/dev/null || true)"
-if [ -z "$json" ] || [ "$json" = "[]" ]; then
+# Outside a session hyprctl prints an error string, not JSON — insist on a
+# non-empty array before doing anything.
+if ! printf '%s' "$json" | jq -e 'type == "array" and length > 0' >/dev/null 2>&1; then
     echo "gen-host-config: no monitors reported — is Hyprland running?" >&2
     exit 1
 fi
