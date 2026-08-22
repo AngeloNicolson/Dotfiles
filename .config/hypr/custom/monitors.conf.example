@@ -1,0 +1,16 @@
+# Machine-specific monitor layout (gitignored). Sourced by hyprland.conf before
+# custom/general.conf, so anything in general.conf still wins.
+#
+# Don't write this by hand — generate it from the monitors that are actually
+# connected (resolution, DPI-based scale, left-to-right layout):
+#
+#   ~/.config/hypr/scripts/gen-host-config.sh            # first time
+#   ~/.config/hypr/scripts/gen-host-config.sh --force    # regenerate
+#   ~/.config/hypr/scripts/gen-host-config.sh --dry-run  # preview only
+#
+# Until then the universal fallback in hyprland.conf applies:
+#   monitor = ,preferred,auto,1
+#
+# Format reminder: monitor = NAME, MODE, POSITION, SCALE
+# monitor = eDP-1, highrr, 0x0, 1.25
+# monitor = HDMI-A-1, preferred, 2048x0, 1
