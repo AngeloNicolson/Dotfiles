@@ -1,0 +1,6 @@
+# swappy rewrites this file on every screenshot (save_filename_format gets the
+# last timestamp), so the live `config` is gitignored and created from this
+# template by ./install.sh templates (@HOME@ is substituted).
+[Default]
+save_dir=@HOME@/Pictures/Screenshots
+save_filename_format=%y%m%d_%Hh%Mm%Ss_screenshot.png

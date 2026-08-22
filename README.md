@@ -17,10 +17,13 @@ Personal configuration files for a Wayland desktop built on Hyprland, AGS, Neovi
 ## Installation
 
 ```bash
-git clone https://github.com/AngeloNicolson/Dotfiles.git ~/dotfiles
+git clone --depth 1 https://github.com/AngeloNicolson/Dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 ```
+
+(`--depth 1` is fine — wallpapers are not in git; the `wallpapers` module pulls
+them from the `wallpapers-v1` release.)
 
 The installer detects your distro, prompts for optional components, then handles everything.
 Flags: `--dry-run` prints every change without touching the system, `--yes` runs
@@ -56,7 +59,7 @@ non-interactively (optional components come from `OPT_NVIDIA=y` etc.), and
 | `services` | Enables systemd user services |
 | `ags` | Runs `npm install`, clears compiled bundle |
 | `theme` | Applies default theme (mech) |
-| `wallpapers` | Ensures awww state dir; generates a default wallpaper if the dir is empty |
+| `wallpapers` | Downloads wallpapers from the `wallpapers-v1` GitHub release (skips existing); generates a default if none |
 | `nvim` | `Lazy! restore` — installs the exact plugin versions in `lazy-lock.json` |
 | `tmux` | Clones tpm and installs tmux plugins |
 | `shell` | `chsh` to fish (skips when already set / no TTY) |
@@ -103,6 +106,7 @@ The installer is idempotent — safe to re-run at any time.
 | `hypr/custom/general.conf`, `rules.conf`, `keybinds.conf`, `execs.conf` | Local overrides, sourced last |
 | `foot/host.ini` | Terminal font size / alpha for this screen (included last by `foot.ini`) |
 | `fish/system-local.fish` | Paths and env vars |
+| `swappy/config` | Screenshot save dir (swappy rewrites this file itself) |
 
 ### How sizing stays consistent across screens
 

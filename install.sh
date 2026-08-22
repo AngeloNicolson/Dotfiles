@@ -448,20 +448,23 @@ mod_templates() {
         fi
     done
 
-    # Single-file templates: fish system-local, foot host overrides.
-    # foot refuses to start without host.ini (it is `include`d), so this is
-    # not optional.
+    # Single-file templates (@HOME@ in the .example is substituted):
+    #   fish system-local, foot host overrides (foot refuses to start without
+    #   host.ini since it is `include`d), swappy config (the app rewrites it).
     local pair
     for pair in \
         "$DOTFILES_DIR/.config/fish/system-local.fish" \
-        "$DOTFILES_DIR/.config/foot/host.ini"; do
+        "$DOTFILES_DIR/.config/foot/host.ini" \
+        "$DOTFILES_DIR/.config/swappy/config"; do
         local example="$pair.example"
         [[ -f "$example" ]] || continue
         if [[ -f "$pair" ]]; then
-            skip "$(basename "$pair")"
+            skip "$(basename "$(dirname "$pair")")/$(basename "$pair")"
+        elif [[ "$DRY_RUN" == "1" ]]; then
+            echo -e "  ${DIM}(dry-run) create $pair from template${NC}"
         else
-            run cp "$example" "$pair"
-            success "Created: $(basename "$pair")"
+            sed "s|@HOME@|$HOME|g" "$example" > "$pair"
+            success "Created: $(basename "$(dirname "$pair")")/$(basename "$pair")"
         fi
     done
 }
@@ -653,6 +656,32 @@ mod_wallpapers() {
     run mkdir -p "$HOME/.config/awww" "$walls"
     success "awww state dir"
 
+    # Wallpapers are not in git (2 GB) — fetch them from the wallpapers-v1
+    # release of this repo, skipping anything already present.
+    local api="https://api.github.com/repos/AngeloNicolson/Dotfiles/releases/tags/wallpapers-v1"
+    local dl="https://github.com/AngeloNicolson/Dotfiles/releases/download/wallpapers-v1"
+    local assets
+    assets="$(curl -fsSL "$api" 2>/dev/null | grep '"name"' | sed 's/.*"name": "//;s/".*//' | grep -vE '^(Wallpapers v1|wallpapers-v1)$' || true)"
+    if [[ -z "$assets" ]]; then
+        warn "Could not list the wallpapers-v1 release (offline, or not published yet)"
+    else
+        local asset got=0 have=0
+        while read -r asset; do
+            [[ -z "$asset" ]] && continue
+            if [[ -f "$walls/$asset" ]]; then ((have++)); continue; fi
+            if [[ "$DRY_RUN" == "1" ]]; then
+                echo -e "  ${DIM}(dry-run) download $asset${NC}"; continue
+            fi
+            info "Downloading $asset..."
+            if curl -fsSL "$dl/$asset" -o "$walls/$asset.part" && mv "$walls/$asset.part" "$walls/$asset"; then
+                ((got++))
+            else
+                rm -f "$walls/$asset.part"; warn "Failed: $asset"
+            fi
+        done <<< "$assets"
+        success "Wallpapers: $got downloaded, $have already present"
+    fi
+
     if ! find -L "$walls" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | grep -q .; then
         if command -v ffmpeg &>/dev/null; then
             run ffmpeg -loglevel error -y -f lavfi -i "gradients=s=2560x1600:c0=0x1a120b:c1=0x3a2a1a:nb_colors=2:x0=0:y0=0:x1=2560:y1=1600" -frames:v 1 "$walls/default.png" \
@@ -759,6 +788,7 @@ mod_doctor() {
     done
     [[ -f "$DOTFILES_DIR/.config/foot/host.ini" ]] && d_ok "foot host.ini" || d_bad "foot/host.ini missing (foot will not start) — run: ./install.sh templates"
     [[ -f "$DOTFILES_DIR/.config/fish/system-local.fish" ]] && d_ok "fish system-local.fish" || d_warn "fish/system-local.fish missing — run: ./install.sh templates"
+    [[ -f "$DOTFILES_DIR/.config/swappy/config" ]] && d_ok "swappy config" || d_warn "swappy/config missing — run: ./install.sh templates"
     if grep -qE '^[[:space:]]*monitor[[:space:]]*=' "$DOTFILES_DIR/.config/hypr/custom/monitors.conf" "$DOTFILES_DIR/.config/hypr/custom/general.conf" 2>/dev/null; then
         d_ok "monitor layout defined (custom/monitors.conf or general.conf)"
     else
