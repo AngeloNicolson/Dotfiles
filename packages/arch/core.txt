@@ -1,6 +1,7 @@
 # Core Window Manager
 hyprland
 xdg-desktop-portal-hyprland
+hypridle
 
 # Desktop UI
 aylurs-gtk-shell-git
