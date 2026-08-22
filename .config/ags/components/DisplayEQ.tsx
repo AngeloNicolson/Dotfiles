@@ -22,7 +22,11 @@ const CAP_MIN = 0.3
 const CAP_MAX = 1.0
 const CAP_RANGE = CAP_MAX - CAP_MIN
 
-const CONF_PATH = GLib.get_home_dir() + "/.config/ags/display-eq.json"
+// Machine-local state lives in the XDG state dir, not the (git-tracked) config dir.
+const STATE_DIR = GLib.get_user_state_dir() + "/ags"
+const CONF_PATH = STATE_DIR + "/display-eq.json"
+const LEGACY_CONF_PATH = GLib.get_home_dir() + "/.config/ags/display-eq.json"
+GLib.mkdir_with_parents(STATE_DIR, 0o755)
 const SHADER_PATH = GLib.get_home_dir() + "/.config/hypr/shaders/rgb-tint.glsl"
 
 const COLOR_PROFILES: Record<string, { label: string, temp: number, gamma: number, rgb: [number, number, number], cap: number }> = {
@@ -43,7 +47,9 @@ export const [activeProfile, setActiveProfile] = createState("default")
 
 // Load saved settings
 try {
-  const saved = readFile(CONF_PATH)
+  let saved = ""
+  try { saved = readFile(CONF_PATH) || "" } catch {}
+  if (!saved) { try { saved = readFile(LEGACY_CONF_PATH) || "" } catch {} }
   if (saved) {
     const parsed = JSON.parse(saved)
     if (parsed.temperature) setTemperature(parsed.temperature)

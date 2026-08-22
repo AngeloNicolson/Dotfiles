@@ -1,5 +1,6 @@
 import { createSubprocess, execAsync } from "ags/process"
 import { createState } from "ags"
+import caps from "../capabilities"
 import {
   setSyncConnected,
   setSyncPeerCount,
@@ -34,8 +35,9 @@ function updateState() {
   setPendingChangeRequests(pendingCRs)
 }
 
-// Start daemon subprocess — outputs JSON lines
-export const syncDaemon = createSubprocess(
+// Start daemon subprocess — outputs JSON lines. Only spawned when the plansync
+// binary exists on this machine; everything downstream just sees "no peers".
+export const syncDaemon = caps.plansync ? createSubprocess(
   { type: "starting" } as SyncEvent,
   ["plansync", "daemon"],
   (line: string) => {
@@ -84,7 +86,7 @@ export const syncDaemon = createSubprocess(
       return { type: "parse_error" } as SyncEvent
     }
   },
-)
+) : null
 
 // CLI helper — run plansync commands through the daemon's IPC
 export async function plansyncCmd(cmd: string): Promise<any> {
