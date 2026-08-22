@@ -1,5 +1,6 @@
 # Core Window Manager
 hyprland
+hyprlock
 xdg-desktop-portal-hyprland
 hypridle
 
@@ -31,12 +32,19 @@ zathura-pdf-poppler
 # Terminal Multiplexer
 tmux
 
-# Fonts
+# Fonts (gtk-font-name / theme.conf assume these exist — see ./install.sh doctor)
+noto-fonts
 ttf-jetbrains-mono-nerd
 ttf-cascadia-code-nerd
 ttf-font-awesome
 ttf-nerd-fonts-meta
 noto-fonts-cjk
+
+# Look & feel (themes referenced by gtk settings.ini / themes/*.json)
+adw-gtk-theme
+tela-circle-icon-theme-black
+tela-circle-icon-theme-red
+bibata-cursor-theme-bin
 
 # System
 polkit-kde-agent

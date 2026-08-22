@@ -1,10 +1,8 @@
 # Locked AUR package versions — generated from working system
 # Format: package=version
-# The script will use cached packages from GitHub releases
 # Update by running: ./install.sh lock
-aylurs-gtk-shell-git=3.1.0.r1.ge169694-1
-gjs=2:1.86.0-2
-hyprshade=4.0.1-1
+aylurs-gtk-shell-git=3.1.2.r0.gbbee2f1-2
 libastal-meta=1-8
 mpvpaper=1.8-1
 wl-gammarelay-rs=1.0.1-1
+hyprshade=4.0.1-1
