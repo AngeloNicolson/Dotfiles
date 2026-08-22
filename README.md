@@ -22,7 +22,10 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-The installer detects your distro, prompts for optional components, then handles everything:
+The installer detects your distro, prompts for optional components, then handles everything.
+Flags: `--dry-run` prints every change without touching the system, `--yes` runs
+non-interactively (optional components come from `OPT_NVIDIA=y` etc.), and
+`./install.sh doctor` audits a machine against what the config expects.
 
 ```
   ┌─────────────────────────────────────┐
@@ -53,8 +56,16 @@ The installer detects your distro, prompts for optional components, then handles
 | `services` | Enables systemd user services |
 | `ags` | Runs `npm install`, clears compiled bundle |
 | `theme` | Applies default theme (mech) |
+| `wallpapers` | Ensures awww state dir; generates a default wallpaper if the dir is empty |
+| `nvim` | `Lazy! restore` — installs the exact plugin versions in `lazy-lock.json` |
+| `tmux` | Clones tpm and installs tmux plugins |
+| `shell` | `chsh` to fish (skips when already set / no TTY) |
+| `hostconfig` | Runs `gen-host-config.sh` (monitors + scale) when inside a Hyprland session |
+| `doctor` | Read-only audit: binaries, min versions, fonts, themes, templates, config parse, symlinks (exit 1 on problems) |
 | `firefox` | Symlinks chrome/ + user.js into Firefox profile |
+| `rnote` | Loads rnote dconf settings (extras) |
 | `ollama` | Enables service, pulls AI model |
+| `lock` | Regenerates `packages/arch/versions.lock` from the running system |
 
 ### Running individual modules
 
@@ -62,9 +73,59 @@ The installer detects your distro, prompts for optional components, then handles
 ./install.sh symlinks        # Only re-link configs
 ./install.sh theme           # Re-apply theme
 ./install.sh packages ags    # Multiple modules
+./install.sh --dry-run       # Show what a full install would do
+./install.sh doctor          # Is this machine missing anything the config needs?
 ```
 
 The installer is idempotent — safe to re-run at any time.
+
+### New machine checklist
+
+1. `./install.sh` (or `./install.sh --yes` unattended) — packages, symlinks, templates,
+   plugins, shell, services, theme.
+2. Log into Hyprland (`start-hyprland` from a TTY), then generate the monitor layout
+   and scale for the displays actually connected:
+   ```bash
+   ~/.config/hypr/scripts/gen-host-config.sh && hyprctl reload
+   ```
+   This writes the gitignored `hypr/custom/monitors.conf` (resolution, DPI-derived
+   scale snapped to an integer logical size, left-to-right layout) and sets
+   `LAPTOP_SCALE` in `custom/env.conf`. Use `--dry-run` to preview, `--force` to
+   regenerate, `--scale 1.5` to pin the laptop panel.
+3. `./install.sh doctor` — fix anything it lists.
+
+### Per-machine files (gitignored, created from `.example` templates)
+
+| File | Purpose |
+|------|---------|
+| `hypr/custom/monitors.conf` | Generated monitor layout + scale (see above) |
+| `hypr/custom/env.conf` | GPU backend env, `BACKLIGHT_DEVICE`, `LAPTOP_SCALE` |
+| `hypr/custom/general.conf`, `rules.conf`, `keybinds.conf`, `execs.conf` | Local overrides, sourced last |
+| `foot/host.ini` | Terminal font size / alpha for this screen (included last by `foot.ini`) |
+| `fish/system-local.fish` | Paths and env vars |
+
+### How sizing stays consistent across screens
+
+Everything is authored against a 2048×1280 *logical* reference (2560×1600 @ 1.25)
+and scales from there:
+
+- **Hyprland** — `monitor = ,preferred,auto,1` is the universal fallback;
+  `gen-host-config.sh` picks a scale from the panel's physical DPI.
+- **AGS** — `scale.ts` computes one unit `U` from the focused monitor's logical
+  short side and scales the whole stylesheet and JS-sized widgets (see
+  `PORTABILITY_PLAN.md`).
+- **foot** — `dpi-aware=no`, sizes in logical points so text tracks the compositor
+  scale; bump per machine in `foot/host.ini`.
+- **GTK** — no hardcoded `gtk-xft-dpi`; cursor theme/size come from one place
+  (`Bibata-Modern-Ice`, 20) in both `gtk-3.0/4.0/settings.ini` and `hypr/theme.conf`.
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push: shellcheck on the installer and
+portability scripts, a fresh-user install of the non-package modules in an Arch
+container, then `Hyprland --verify-config` and `foot --check-config` against the
+resulting tree. If it goes red, the repo no longer installs cleanly on a machine
+that isn't this one.
 
 ### Multi-distro support
 
@@ -90,25 +151,11 @@ Supported package managers: pacman/yay/paru (Arch), apt (Ubuntu/Debian), dnf (Fe
 
 ## Post-installation
 
-1. **Edit machine-specific configs** (created from templates):
-   - `~/.config/hypr/custom/*.conf` — monitors, keybinds, rules
-   - `~/.config/fish/system-local.fish` — paths and env vars
-
-2. **Install Neovim plugins:**
-   ```bash
-   nvim --headless "+Lazy! sync" +qa
-   ```
-
-3. **Install tmux plugins:**
-   ```bash
-   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-   # Then in tmux: prefix + I
-   ```
-
-4. **Set fish as default shell:**
-   ```bash
-   chsh -s /usr/bin/fish
-   ```
+The `nvim`, `tmux` and `shell` modules now handle plugin install and `chsh`;
+see the **New machine checklist** above for the two remaining manual steps
+(generate the monitor config inside Hyprland, run the doctor). Plugin versions
+are pinned by the tracked `nvim/lazy-lock.json` and `packages/arch/versions.lock`
+(`./install.sh lock` refreshes the latter from a working system).
 
 ## Theme system
 

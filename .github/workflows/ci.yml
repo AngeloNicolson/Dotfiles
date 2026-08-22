@@ -1,0 +1,66 @@
+# Smoke test: does this repo install cleanly on a machine that is NOT the one
+# it was authored on? Runs the non-package, non-session parts of install.sh as
+# a throwaway user inside an Arch container, then parses the resulting Hyprland
+# and foot configs with the real binaries.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install toolchain
+        run: |
+          pacman -Syu --noconfirm --needed git shellcheck jq hyprland foot sudo
+
+      - uses: actions/checkout@v4
+
+      - name: shellcheck (installer + portability scripts)
+        run: |
+          shellcheck -S error \
+            install.sh \
+            .config/hypr/scripts/gen-host-config.sh \
+            .config/hypr/scripts/wallpaperdaemon.sh \
+            .config/hypr/scripts/idle-brightness.sh \
+            .config/hypr/scripts/init-backlight.sh \
+            .config/hypr/scripts/monitor-helpers.sh
+
+      - name: Install as a fresh user (symlinks, templates, dirs, wallpapers)
+        run: |
+          useradd -m tester
+          cp -r "$GITHUB_WORKSPACE" /home/tester/dotfiles
+          chown -R tester:tester /home/tester
+          sudo -u tester -H bash -c '
+            cd ~/dotfiles &&
+            ./install.sh --yes --dry-run symlinks templates &&
+            ./install.sh --yes symlinks scripts templates dirs wallpapers
+          '
+
+      - name: Hyprland --verify-config (as tester)
+        run: |
+          sudo -u tester -H bash -c '
+            set -o pipefail
+            Hyprland --verify-config 2>&1 | tee /tmp/verify.log | tail -n 5
+            grep -q "config ok" /tmp/verify.log
+          '
+
+      - name: foot --check-config (as tester)
+        run: sudo -u tester -H foot --check-config
+
+      - name: Generator --help / dry-run degrade gracefully without a session
+        run: |
+          sudo -u tester -H bash -c '
+            ~/.config/hypr/scripts/gen-host-config.sh --help >/dev/null
+            # no Hyprland running: must fail loudly (exit 1), not write files
+            if ~/.config/hypr/scripts/gen-host-config.sh --dry-run; then exit 1; fi
+          '
+
+      - name: Doctor (informational — fonts/themes are not installed in CI)
+        run: |
+          sudo -u tester -H bash -c 'cd ~/dotfiles && ./install.sh doctor' || true
