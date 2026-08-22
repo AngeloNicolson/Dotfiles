@@ -1,0 +1,3 @@
+# Lock screen (hyprlock). Used by lid-close and the power key via scripts/lock.sh,
+# which silently does nothing when this is not installed.
+hyprlock

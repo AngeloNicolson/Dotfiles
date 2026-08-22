@@ -1,0 +1,3 @@
+# Display controls used by the AGS display page (gamma/temperature, shaders)
+wl-gammarelay-rs
+hyprshade

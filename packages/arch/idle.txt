@@ -1,0 +1,2 @@
+# Idle management: dim after 2.5 min, panel off after 5 min (hypridle.conf).
+hypridle

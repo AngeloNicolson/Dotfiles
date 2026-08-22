@@ -1,0 +1,5 @@
+# Media: mpv player, live (video) wallpapers, audio visualiser, mixer GUI
+mpv
+mpvpaper
+cava
+pavucontrol
