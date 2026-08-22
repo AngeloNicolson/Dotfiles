@@ -7,6 +7,7 @@ import Gtk from "gi://Gtk?version=3.0"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
 import { sidebarPinned, setSidebarPinned } from "../state"
+import caps from "../capabilities"
 import AudioEQ, { toggleHwMute, localMuted } from "./AudioEQ"
 import DisplayEQ, { applyProfile, activeProfile } from "./DisplayEQ"
 import VoiceControl, { toggleMicMute, micMuted } from "./VoiceControl"
@@ -190,7 +191,7 @@ export default function Home() {
           />,
           <WiFiToggle />,
           <BluetoothToggle />,
-          <DNDToggle />,
+          ...(caps.dunst ? [<DNDToggle />] : []),
           <NightLightToggle />,
           <SystemToggle
             active={localMuted}

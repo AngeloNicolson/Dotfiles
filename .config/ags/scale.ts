@@ -16,7 +16,7 @@
 // focus moves. There is no per-window stylesheet, so mixed-DPI monitors share one
 // scale — the focused one wins.
 
-import AstalHyprland from "gi://AstalHyprland"
+import { getFocusedMonitor, type MonitorInfo } from "./compositor"
 
 // Logical short-side of the reference display (eDP-1 2560x1600 @ 1.25 = 2048x1280).
 export const BASELINE_MIN = 1280
@@ -25,17 +25,14 @@ export const BASELINE_MIN = 1280
 const MIN_U = 0.6
 const MAX_U = 2.5
 
-function logicalMinDim(mon: AstalHyprland.Monitor): number {
-  const scale = mon.get_scale() || 1
-  const w = mon.get_width() / scale
-  const h = mon.get_height() / scale
-  return Math.min(w, h)
+function logicalMinDim(mon: MonitorInfo): number {
+  const scale = mon.scale || 1
+  return Math.min(mon.width / scale, mon.height / scale)
 }
 
 function computeU(): number {
   try {
-    const hypr = AstalHyprland.get_default()
-    const mon = hypr.get_focused_monitor() || hypr.get_monitors()[0]
+    const mon = getFocusedMonitor()
     if (!mon) return 1
     const u = logicalMinDim(mon) / BASELINE_MIN
     if (!isFinite(u) || u <= 0) return 1

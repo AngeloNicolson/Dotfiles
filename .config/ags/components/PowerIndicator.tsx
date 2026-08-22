@@ -1,6 +1,11 @@
 import { createState } from "ags"
 import { createPoll } from "ags/time"
 import { execAsync, createSubprocess } from "ags/process"
+import caps, { readSysfs } from "../capabilities"
+
+// Rough draw of everything RAPL+nvidia-smi can't see (display, RAM, NVMe,
+// fans, board). Marks the OUT-while-charging figure as an estimate.
+const SYS_BASE_W = 8
 
 const gpuModes = [
   { label: "ECO", watts: 95, boost: false },
@@ -13,17 +18,123 @@ const sysModes = [
   { label: "PERF", profile: "performance" },
 ]
 
+interface BatSample {
+  level: number
+  status: string
+  ac: boolean
+  usbc: boolean
+  cycles: number
+  watts: string
+  time: string
+}
+
+// Poll battery + power-source state. Paths come from capability probing so any
+// BAT*/AC-name layout works; `rd` tolerates missing attributes (e.g. desktops,
+// or charge_* vs energy_* batteries). USB-C PD input is detected via the UCSI
+// source supplies: online=1 on a port means power is coming in over that USB-C
+// port right now.
+function batteryScript(): string {
+  const bat = caps.battery ?? ""
+  const ac = caps.mains ?? ""
+  const ucsi = caps.usbcSources.map((p) => `${p}/online`).join(" ")
+  return `
+    rd() { [ -f "$1" ] && cat "$1" 2>/dev/null || echo 0; }
+    while true; do
+      cap=$(rd "${bat}/capacity"); st=$(cat "${bat}/status" 2>/dev/null || echo Unknown)
+      ac=$(rd "${ac}/online")
+      usbc=0
+      for u in ${ucsi}; do [ "$(rd "$u")" = "1" ] && usbc=1; done
+      if [ -f "${bat}/charge_now" ]; then
+        mode=charge
+        vo=$(rd "${bat}/voltage_now"); cu=$(rd "${bat}/current_now")
+        cn=$(rd "${bat}/charge_now"); cf=$(rd "${bat}/charge_full")
+      else
+        mode=energy
+        vo=0; cu=$(rd "${bat}/power_now")
+        cn=$(rd "${bat}/energy_now"); cf=$(rd "${bat}/energy_full")
+      fi
+      cc=$(rd "${bat}/cycle_count")
+      echo "$cap|$st|$ac|$usbc|$mode|$vo|$cu|$cn|$cf|$cc"
+      sleep 5
+    done`
+}
+
+function parseBatLine(line: string): BatSample {
+  const [cap, st, ac, usbc, mode, vo, cu, cn, cf, cc] = line.split("|")
+  const level = parseInt(cap) || 0
+  const status = st || "Unknown"
+  const c = parseInt(cu) || 0
+  // charge mode: µV * µA -> W;  energy mode: power_now is µW -> W
+  const watts = mode === "charge" ? ((parseInt(vo) || 0) * c) / 1e12 : c / 1e6
+  let time = "--"
+  if (c > 0) {
+    // Same ratio works for both modes: µAh/µA or µWh/µW = hours.
+    let hours = 0
+    if (status === "Discharging") hours = parseInt(cn) / c
+    else if (status === "Charging") hours = (parseInt(cf) - parseInt(cn)) / c
+    if (hours > 0) {
+      const h = Math.floor(hours)
+      const m = Math.round((hours - h) * 60)
+      time = `${h}h${m.toString().padStart(2, "0")}m`
+    }
+  }
+  return {
+    level,
+    status,
+    ac: ac === "1",
+    usbc: usbc === "1",
+    cycles: parseInt(cc) || 0,
+    watts: watts > 0 ? `${watts.toFixed(1)}W` : "0W",
+    time,
+  }
+}
+
+function powerSourceLabel(d: BatSample): string {
+  if (d.usbc) return "▶ USB-C"
+  if (d.ac) return "▶ AC"
+  return "● BAT"
+}
+
 export default function PowerIndicator() {
+  let gpuWatts = 0
   const gpu = createPoll(
     { power: 0, temp: 0, limit: 95 },
     3000,
-    () => execAsync("nvidia-smi --query-gpu=power.draw,temperature.gpu,enforced.power.limit --format=csv,noheader,nounits")
-      .then((out) => {
-        const [p, t, l] = out.split(",").map((s) => parseFloat(s.trim()))
-        return { power: p || 0, temp: t || 0, limit: l || 95 }
-      })
-      .catch(() => ({ power: 0, temp: 0, limit: 95 })),
+    () => caps.nvidia
+      ? execAsync("nvidia-smi --query-gpu=power.draw,temperature.gpu,enforced.power.limit --format=csv,noheader,nounits")
+          .then((out) => {
+            const [p, t, l] = out.split(",").map((s) => parseFloat(s.trim()))
+            gpuWatts = p || 0
+            return { power: p || 0, temp: t || 0, limit: l || 95 }
+          })
+          .catch(() => ({ power: 0, temp: 0, limit: 95 }))
+      : Promise.resolve({ power: 0, temp: 0, limit: 95 }),
   )
+
+  // CPU package power from the RAPL energy counter (µJ), sampled as a delta
+  // each poll. Reads fail silently while energy_uj is root-only and start
+  // working the moment permissions open up — no restart needed.
+  let lastRapl: { t: number; uj: number } | null = null
+  const cpuWatts = createPoll(0, 3000, () => {
+    if (!caps.rapl) return 0
+    const uj = parseInt(readSysfs(`${caps.rapl}/energy_uj`))
+    if (!isFinite(uj)) { lastRapl = null; return 0 }
+    const t = Date.now()
+    let w = 0
+    if (lastRapl && uj >= lastRapl.uj && t > lastRapl.t) {
+      w = (uj - lastRapl.uj) / ((t - lastRapl.t) * 1000)
+    }
+    lastRapl = { t, uj }
+    return w
+  })
+
+  const [gpuName, setGpuName] = createState("GPU")
+  if (caps.nvidia) {
+    execAsync("nvidia-smi --query-gpu=name --format=csv,noheader")
+      // "NVIDIA GeForce RTX 5090 Laptop GPU" -> "RTX 5090"
+      .then((out) => setGpuName(out.trim().replace(/NVIDIA|GeForce|Laptop GPU/g, "").trim() || "GPU"))
+      .catch(() => {})
+  }
 
   const setGpuPower = (mode: typeof gpuModes[number]) => {
     if (!mode.boost) {
@@ -49,177 +160,175 @@ export default function PowerIndicator() {
   const setSysProfile = (profile: string) => {
     execAsync(`powerprofilesctl set ${profile}`).catch((e) => console.error("Profile set failed:", e))
   }
+
   const bat = createSubprocess(
-    { level: 100, status: "Unknown", ac: false, cycles: 0, watts: "--W", time: "--" },
-    ["bash", "-c", 'while true; do read -r cap < /sys/class/power_supply/BAT0/capacity; read -r st < /sys/class/power_supply/BAT0/status; read -r ac < /sys/class/power_supply/AC/online; read -r vo < /sys/class/power_supply/BAT0/voltage_now; read -r cu < /sys/class/power_supply/BAT0/current_now; read -r cn < /sys/class/power_supply/BAT0/charge_now; read -r cf < /sys/class/power_supply/BAT0/charge_full; read -r cfd < /sys/class/power_supply/BAT0/charge_full_design; read -r cc < /sys/class/power_supply/BAT0/cycle_count; echo "$cap|$st|$ac|$vo|$cu|$cn|$cf|$cfd|$cc"; sleep 5; done'],
-    (line) => {
-      const [cap, st, ac, vo, cu, cn, cf, cfd, cc] = line.split("|")
-      const level = parseInt(cap) || 0
-      const status = st || "Unknown"
-      const v = parseInt(vo) || 0
-      const c = parseInt(cu) || 0
-      const watts = (v * c) / 1e12
-      let time = "--"
-      if (c > 0) {
-        let hours = 0
-        if (status === "Discharging") hours = parseInt(cn) / c
-        else if (status === "Charging") hours = (parseInt(cf) - parseInt(cn)) / c
-        if (hours > 0) {
-          const h = Math.floor(hours)
-          const m = Math.round((hours - h) * 60)
-          time = `${h}h${m.toString().padStart(2, "0")}m`
-        }
-      }
-      return {
-        level,
-        status,
-        ac: ac === "1",
-        cycles: parseInt(cc) || 0,
-        watts: watts > 0 ? `${watts.toFixed(1)}W` : "0W",
-        time,
-      }
-    },
+    { level: 100, status: "Unknown", ac: false, usbc: false, cycles: 0, watts: "--W", time: "--" } as BatSample,
+    ["bash", "-c", batteryScript()],
+    parseBatLine,
   )
 
   const powerProfile = createPoll("balanced", 5000, () => {
-    return execAsync("powerprofilesctl get")
-      .then((out) => out.trim())
-      .catch(() => "balanced")
+    return caps.powerProfiles
+      ? execAsync("powerprofilesctl get").then((out) => out.trim()).catch(() => "balanced")
+      : Promise.resolve("balanced")
   })
 
   return (
     <box name="power-page" vertical>
-      <box name="power-panel" vertical>
-        {/* Header — title, watts, time, badge */}
-        <box name="power-panel-header">
-          <label name="power-panel-title" label="POWER // CORE" />
-          <box hexpand />
-          <label name="power-header-stat" label={bat.as((d) => d.watts)} />
-          <label name="power-header-stat" label={bat.as((d) => d.time !== "--" ? d.time : "")} />
+      {caps.battery && (
+        <box name="power-panel" vertical>
+          {/* Header — title, watts, time, badge */}
+          <box name="power-panel-header">
+            <label name="power-panel-title" label="POWER // CORE" />
+            <box hexpand />
+            {/* Battery power flow: IN = charging watts, OUT = discharge draw */}
+            <label name="power-header-stat" label={bat.as((d) =>
+              d.status === "Charging" ? `IN ${d.watts}`
+              : d.status === "Discharging" ? `OUT ${d.watts}`
+              : d.watts)} />
+            {/* While charging the battery-side OUT is ~0, so show what the
+                system itself is drawing: CPU pkg (RAPL) + GPU + base. Hidden
+                until RAPL is readable. */}
+            <label name="power-header-stat" label={cpuWatts.as((cw) => {
+              const d = bat.get()
+              if (d.status !== "Charging" || cw <= 0) return ""
+              return `OUT ~${(cw + gpuWatts + SYS_BASE_W).toFixed(0)}W`
+            })} />
+            {/* Time to full when charging, time to empty when draining */}
+            <label name="power-header-stat" label={bat.as((d) =>
+              d.time === "--" ? ""
+              : d.status === "Charging" ? `FULL ${d.time}`
+              : d.status === "Discharging" ? `LEFT ${d.time}`
+              : "")} />
+            <label
+              name="power-status-badge"
+              css={bat.as((d) => d.status === "Charging"
+                ? "background: #2a2e0a; border-color: #6e7116; color: #b8bb26;"
+                : d.status === "Discharging"
+                ? "background: #2e0a0a; border-color: #992222; color: #cc4444;"
+                : "background: #3c3836; border-color: #504945; color: #a89984;")}
+              label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
+            />
+          </box>
+
+          {/* Battery bar */}
+          <box hexpand>
+            <box hexpand />
+            <box name="power-bar-container">
+              <box name="power-scale" vertical>
+                <label name="power-scale-mark" label="100" />
+                <box vexpand />
+                <label name="power-scale-mark" label="50" />
+                <box vexpand />
+                <label name="power-scale-mark" label="0" />
+              </box>
+
+              <box name="power-bar-frame" vertical>
+                <box name="power-segments" vertical>
+                  {Array(10).fill(0).map((_, i) => {
+                    const segmentIndex = 9 - i
+                    return (
+                      <box
+                        name="power-segment"
+                        class={bat.as((d) => {
+                          const threshold = (segmentIndex + 1) * 10
+                          if (d.level >= threshold) {
+                            return d.status === "Discharging" ? "discharge" : "lit"
+                          }
+                          return "unlit"
+                        })}
+                        vexpand
+                        hexpand
+                      />
+                    )
+                  })}
+                </box>
+              </box>
+
+              <box name="power-indicators" vertical>
+                <label
+                  name="power-indicator"
+                  label={bat.as(powerSourceLabel)}
+                />
+                <box vexpand />
+                <label
+                  name="power-indicator"
+                  label={powerProfile.as((p) => p === "performance" ? "PERF" : p === "power-saver" ? "SAVE" : "BAL")}
+                />
+                <box vexpand />
+                <label
+                  name="power-indicator"
+                  label={bat.as((d) => `C:${d.cycles}`)}
+                />
+              </box>
+            </box>
+            <box hexpand />
+          </box>
+
+          {/* Big percentage */}
           <label
-            name="power-status-badge"
-            css={bat.as((d) => d.status === "Charging"
-              ? "background: #2a2e0a; border-color: #6e7116; color: #b8bb26;"
-              : d.status === "Discharging"
-              ? "background: #2e0a0a; border-color: #992222; color: #cc4444;"
-              : "background: #3c3836; border-color: #504945; color: #a89984;")}
-            label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
+            name="power-big-percent"
+            label={bat.as((d) => `${d.level}%`)}
           />
         </box>
-
-        {/* Battery bar */}
-        <box hexpand>
-          <box hexpand />
-          <box name="power-bar-container">
-            <box name="power-scale" vertical>
-              <label name="power-scale-mark" label="100" />
-              <box vexpand />
-              <label name="power-scale-mark" label="50" />
-              <box vexpand />
-              <label name="power-scale-mark" label="0" />
-            </box>
-
-            <box name="power-bar-frame" vertical>
-              <box name="power-segments" vertical>
-                {Array(10).fill(0).map((_, i) => {
-                  const segmentIndex = 9 - i
-                  return (
-                    <box
-                      name="power-segment"
-                      class={bat.as((d) => {
-                        const threshold = (segmentIndex + 1) * 10
-                        if (d.level >= threshold) {
-                          return d.status === "Discharging" ? "discharge" : "lit"
-                        }
-                        return "unlit"
-                      })}
-                      vexpand
-                      hexpand
-                    />
-                  )
-                })}
-              </box>
-            </box>
-
-            <box name="power-indicators" vertical>
-              <label
-                name="power-indicator"
-                label={bat.as((d) => d.ac ? "▶ AC" : "● BAT")}
-              />
-              <box vexpand />
-              <label
-                name="power-indicator"
-                label={powerProfile.as((p) => p === "performance" ? "PERF" : p === "power-saver" ? "SAVE" : "BAL")}
-              />
-              <box vexpand />
-              <label
-                name="power-indicator"
-                label={bat.as((d) => `C:${d.cycles}`)}
-              />
-            </box>
-          </box>
-          <box hexpand />
-        </box>
-
-        {/* Big percentage */}
-        <label
-          name="power-big-percent"
-          label={bat.as((d) => `${d.level}%`)}
-        />
-      </box>
+      )}
 
       {/* System Power Profile */}
-      <box name="gpu-panel" vertical>
-        <box name="gpu-panel-header">
-          <label name="power-panel-title" label="SYS // i9 275HX" />
-          <box hexpand />
-          <label name="power-header-stat" label={cpu.as((c) => `${c.freq}GHz`)} />
-          <label name="power-header-stat" label={cpu.as((c) => `${c.temp}°C`)} />
-        </box>
+      {caps.powerProfiles && (
+        <box name="gpu-panel" vertical>
+          <box name="gpu-panel-header">
+            <label name="power-panel-title" label={`SYS // ${caps.cpuName}`} />
+            <box hexpand />
+            <label name="power-header-stat" label={cpu.as((c) => `${c.freq}GHz`)} />
+            <label name="power-header-stat" label={cpu.as((c) => `${c.temp}°C`)} />
+          </box>
 
-        <box name="gpu-mode-buttons" homogeneous>
-          {sysModes.map((mode) => (
-            <button
-              name="gpu-mode-btn"
-              class={powerProfile.as((p) => p === mode.profile ? "active" : "")}
-              onClicked={() => setSysProfile(mode.profile)}
-            >
-              <box vertical>
-                <label name="gpu-mode-label" label={mode.label} />
-                <label name="gpu-mode-watts" label={mode.profile} />
-              </box>
-            </button>
-          ))}
+          <box name="gpu-mode-buttons" homogeneous>
+            {sysModes.map((mode) => (
+              <button
+                name="gpu-mode-btn"
+                class={powerProfile.as((p) => p === mode.profile ? "active" : "")}
+                onClicked={() => setSysProfile(mode.profile)}
+              >
+                <box vertical>
+                  <label name="gpu-mode-label" label={mode.label} />
+                  <label name="gpu-mode-watts" label={mode.profile} />
+                </box>
+              </button>
+            ))}
+          </box>
         </box>
-      </box>
+      )}
 
       {/* GPU Power Mode */}
-      <box name="gpu-panel" vertical>
-        <box name="gpu-panel-header">
-          <label name="power-panel-title" label="GPU // RTX 5090" />
-          <box hexpand />
-          <label name="power-header-stat" label={gpu.as((g) => `${g.power.toFixed(0)}W`)} />
-          <label name="power-header-stat" label={gpu.as((g) => `${g.temp}°C`)} />
-        </box>
+      {caps.nvidia && (
+        <box name="gpu-panel" vertical>
+          <box name="gpu-panel-header">
+            <label name="power-panel-title" label={gpuName.as((n) => `GPU // ${n}`)} />
+            <box hexpand />
+            <label name="power-header-stat" label={gpu.as((g) => `${g.power.toFixed(0)}W`)} />
+            <label name="power-header-stat" label={gpu.as((g) => `${g.temp}°C`)} />
+          </box>
 
-        <box name="gpu-mode-buttons" homogeneous>
-          {gpuModes.map((mode) => (
-            <button
-              name="gpu-mode-btn"
-              class={gpu.as((g) => {
-                if (!mode.boost) return g.limit <= 96 ? "active" : ""
-                return g.limit > 96 ? "active" : ""
-              })}
-              onClicked={() => setGpuPower(mode)}
-            >
-              <box vertical>
-                <label name="gpu-mode-label" label={mode.label} />
-                <label name="gpu-mode-watts" label={`${mode.watts}W`} />
-              </box>
-            </button>
-          ))}
+          <box name="gpu-mode-buttons" homogeneous>
+            {gpuModes.map((mode) => (
+              <button
+                name="gpu-mode-btn"
+                class={gpu.as((g) => {
+                  if (!mode.boost) return g.limit <= 96 ? "active" : ""
+                  return g.limit > 96 ? "active" : ""
+                })}
+                onClicked={() => setGpuPower(mode)}
+              >
+                <box vertical>
+                  <label name="gpu-mode-label" label={mode.label} />
+                  <label name="gpu-mode-watts" label={`${mode.watts}W`} />
+                </box>
+              </button>
+            ))}
+          </box>
         </box>
-      </box>
+      )}
     </box>
   )
 }

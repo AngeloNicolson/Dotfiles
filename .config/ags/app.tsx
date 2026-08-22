@@ -1,89 +1,75 @@
 import app from "ags/gtk3/app"
 import { createState } from "ags"
-import { toggleBar, cyclePage, cyclePageBack, removeSidebarStack, toggleDestination, toggleGalaxy, togglePeriodicTable } from "./state"
+import {
+  toggleBar, cyclePage, cyclePageBack, removeSidebarStack,
+  toggleDestination, toggleGalaxy, togglePeriodicTable, getSidebarStacks,
+} from "./state"
 import { initTheme, applyTheme, reapplyCss } from "./theme"
 import { recomputeScale } from "./scale"
+import * as compositor from "./compositor"
 import Bar from "./components/Bar"
 import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
 import PeriodicTableWindow from "./components/PeriodicTableWindow"
 import BreakPopupWindow from "./components/BreakPopupWindow"
 import WorkspaceOsdWindow from "./components/WorkspaceOsd"
-import AstalHyprland from "gi://AstalHyprland"
-import { Gdk } from "ags/gtk3"
+
+// `ags request <cmd> [args...]` handlers. Adding a command = adding an entry;
+// `ags request help` lists them all.
+const commands: Record<string, (args: string[]) => string> = {
+  "toggle-bar": () => {
+    toggleBar()
+    return "toggled"
+  },
+  "cycle-sidebar": () => {
+    cyclePage()
+    return "cycled"
+  },
+  "cycle-sidebar-back": () => {
+    cyclePageBack()
+    return "cycled back"
+  },
+  "toggle-destination": () => {
+    toggleDestination()
+    return "destination toggled"
+  },
+  "toggle-galaxy": () => {
+    toggleGalaxy()
+    return "galaxy toggled"
+  },
+  "toggle-periodic-table": () => {
+    togglePeriodicTable()
+    return "periodic table toggled"
+  },
+  "debug-stacks": () =>
+    `Registered stacks: ${JSON.stringify(Array.from(getSidebarStacks().keys()))}`,
+  "theme": ([themeName]) => {
+    if (!themeName) return "usage: theme <name>"
+    applyTheme(themeName)
+    return `theme set to ${themeName}`
+  },
+  "help": () => `commands: ${Object.keys(commands).sort().join(", ")}`,
+}
 
 app.start({
   requestHandler(request: string[], response: (res: string) => void) {
-    const cmd = request[0]
+    const [cmd, ...args] = request
     if (!cmd) {
       response("no command provided")
       return
     }
-    if (cmd === "toggle-bar") {
-      print("app.tsx: calling toggleBar")
-      toggleBar()
-      response("toggled")
-    } else if (cmd === "cycle-sidebar") {
-      cyclePage()
-      response("cycled")
-    } else if (cmd === "cycle-sidebar-back") {
-      cyclePageBack()
-      response("cycled back")
-    } else if (cmd === "toggle-destination") {
-      toggleDestination()
-      response("destination toggled")
-    } else if (cmd === "toggle-galaxy") {
-      toggleGalaxy()
-      response("galaxy toggled")
-    } else if (cmd === "toggle-periodic-table") {
-      togglePeriodicTable()
-      response("periodic table toggled")
-    } else if (cmd === "debug-stacks") {
-      const { getSidebarStacks } = require("./state")
-      const stacks = getSidebarStacks()
-      response(`Registered stacks: ${JSON.stringify(Array.from(stacks.keys()))}`)
-    } else if (cmd === "theme") {
-      const themeName = request[1]
-      if (themeName) {
-        applyTheme(themeName)
-        response(`theme set to ${themeName}`)
-      } else {
-        response("usage: theme <name>")
-      }
-    } else {
-      response(`unknown command: ${cmd}`)
-    }
+    const handler = commands[cmd]
+    response(handler ? handler(args) : `unknown command: ${cmd} (try: help)`)
   },
   main() {
     initTheme()
-
-    const display = Gdk.Display.get_default()
-    const hyprland = AstalHyprland.get_default()
-
-    // Map a Hyprland monitor to its GDK monitor index by matching the logical
-    // origin (x,y). Robust across machines — replaces the old assumption that GDK
-    // indices are simply the reverse of Hyprland's order.
-    const gdkIndexForHypr = (mon: AstalHyprland.Monitor): number => {
-      const n = display?.get_n_monitors() ?? 1
-      const hx = mon.get_x()
-      const hy = mon.get_y()
-      for (let i = 0; i < n; i++) {
-        const gm = display?.get_monitor(i)
-        if (!gm) continue
-        const g = gm.get_geometry()
-        if (g.x === hx && g.y === hy) return i
-      }
-      return 0
-    }
 
     // GDK index of the focused monitor — overlays bind to this so they always
     // appear on the screen the user is looking at, not a hardcoded monitor 0.
     const [overlayMonitor, setOverlayMonitor] = createState(0)
     const updateOverlayMonitor = () => {
-      const focused = hyprland.get_focused_monitor()
-        || hyprland.get_focused_workspace()?.get_monitor()
-        || hyprland.get_monitors()[0]
-      if (focused) setOverlayMonitor(gdkIndexForHypr(focused))
+      const focused = compositor.getFocusedMonitor()
+      if (focused) setOverlayMonitor(compositor.gdkIndexFor(focused))
     }
 
     // Recompute the display scale (U) from the focused monitor and re-apply the
@@ -97,8 +83,6 @@ app.start({
 
     // Sync bars with current monitors
     const syncBars = () => {
-      const hyprMonitors = hyprland.get_monitors()
-
       // Destroy all existing bars and recreate them
       // GDK monitor indices can shift when monitors are added/removed
       bars.forEach((bar, name) => {
@@ -108,11 +92,10 @@ app.start({
       bars.clear()
 
       // Create bars for all current monitors
-      hyprMonitors.forEach((mon) => {
-        const name = mon.get_name()
-        const gdkIndex = gdkIndexForHypr(mon)
-        console.log(`Creating bar for monitor: ${name} (gdk index: ${gdkIndex})`)
-        bars.set(name, Bar(gdkIndex, name))
+      compositor.getMonitors().forEach((mon) => {
+        const gdkIndex = compositor.gdkIndexFor(mon)
+        console.log(`Creating bar for monitor: ${mon.name} (gdk index: ${gdkIndex})`)
+        bars.set(mon.name, Bar(gdkIndex, mon.name))
       })
 
       console.log(`Active bars: ${Array.from(bars.keys()).join(", ")}`)
@@ -120,47 +103,32 @@ app.start({
 
     // Update which bar is visible based on focus
     const updateBarVisibility = () => {
-      const numMonitors = display?.get_n_monitors() || 1
-
       // Single monitor - just show it
-      if (numMonitors <= 1) {
+      if (bars.size <= 1) {
         bars.forEach(bar => bar.visible = true)
         return
       }
 
-      const focusedWorkspace = hyprland.get_focused_workspace()
-      const focusedMonitor = focusedWorkspace?.get_monitor()
-
-      if (!focusedMonitor) {
+      const focusedName = compositor.getFocusedMonitorName()
+      if (!focusedName) {
         bars.forEach(bar => bar.visible = true)
         return
       }
-
-      const focusedName = focusedMonitor.get_name()
 
       bars.forEach((bar, name) => {
         bar.visible = name === focusedName
       })
     }
 
-    // Listen for monitor changes from Hyprland
-    hyprland.connect("monitor-added", (_hypr, mon) => {
-      console.log(`Monitor added: ${mon.get_name()}`)
+    compositor.onMonitorsChanged(() => {
+      console.log("Monitor layout changed")
       syncBars()
       updateBarVisibility()
       updateScale()
       updateOverlayMonitor()
     })
 
-    hyprland.connect("monitor-removed", (_hypr, name) => {
-      console.log(`Monitor removed: ${name}`)
-      syncBars()
-      updateBarVisibility()
-      updateScale()
-      updateOverlayMonitor()
-    })
-
-    hyprland.connect("notify::focused-workspace", () => {
+    compositor.onFocusChanged(() => {
       updateBarVisibility()
       updateScale()
       updateOverlayMonitor()
@@ -168,7 +136,7 @@ app.start({
 
     // Initial setup
     // Recompute U from the now-ready focused monitor before anything is built.
-    // initTheme() above ran at import-time U (which falls back to 1 if Hyprland's
+    // initTheme() above ran at import-time U (which falls back to 1 if the
     // monitor dims weren't populated yet); without this, a single-monitor machine
     // that just boots never fires monitor-added/focus events, so U would stay 1 and
     // the whole UI would render at full baseline size (too large on smaller screens).

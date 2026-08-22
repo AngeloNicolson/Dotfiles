@@ -431,7 +431,7 @@ export default function WallpaperSelector() {
       const ipcSocket = "/tmp/mpvpaper-ipc"
       execAsync(["rm", "-f", ipcSocket]).catch(() => {})
       execAsync([
-        "mpvpaper", "-f", "-o", `hwdec=nvdec-copy no-audio loop panscan=1.0 vf=fade=t=in:st=0:d=0.8 input-ipc-server=${ipcSocket}`,
+        "mpvpaper", "-f", "-o", `hwdec=nvdec-copy no-audio loop panscan=1.0 stop-screensaver=no vf=fade=t=in:st=0:d=0.8 input-ipc-server=${ipcSocket}`,
         monitor, path
       ]).catch(() => {})
 
@@ -442,7 +442,7 @@ export default function WallpaperSelector() {
     } else {
       // Same wallpaper (service restart) - no fade
       execAsync([
-        "mpvpaper", "-f", "-o", "hwdec=nvdec-copy no-audio loop panscan=1.0",
+        "mpvpaper", "-f", "-o", "hwdec=nvdec-copy no-audio loop panscan=1.0 stop-screensaver=no",
         monitor, path
       ]).catch(() => {})
     }

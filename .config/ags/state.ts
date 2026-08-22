@@ -2,14 +2,27 @@ import { createState } from "ags"
 import { readFile, writeFile } from "ags/file"
 import GLib from "gi://GLib"
 import Gtk from "gi://Gtk?version=3.0"
-import AstalHyprland from "gi://AstalHyprland"
+import { getFocusedMonitorName } from "./compositor"
+import { pageIds, LEGACY_PAGE_IDS } from "./pages"
 
-// Persisted UI state — survives AGS restart / reboot
-const UI_STATE_FILE = GLib.get_user_config_dir() + "/ags/ui-state.json"
+// Persisted UI state — survives AGS restart / reboot. Lives in the XDG state
+// dir (machine-local), NOT the config dir, which is a symlink into the dotfiles
+// repo — state files don't belong in git.
+const STATE_DIR = GLib.get_user_state_dir() + "/ags"
+const UI_STATE_FILE = STATE_DIR + "/ui-state.json"
+const LEGACY_UI_STATE_FILE = GLib.get_user_config_dir() + "/ags/ui-state.json"
+
+function tryRead(path: string): string {
+  try {
+    return readFile(path) || ""
+  } catch {
+    return ""
+  }
+}
 
 function loadUiState(): Record<string, any> {
   try {
-    const raw = readFile(UI_STATE_FILE)
+    const raw = tryRead(UI_STATE_FILE) || tryRead(LEGACY_UI_STATE_FILE)
     if (raw) return JSON.parse(raw)
   } catch {}
   return {}
@@ -19,10 +32,19 @@ const uiState = loadUiState()
 
 function saveUiState() {
   try {
+    GLib.mkdir_with_parents(STATE_DIR, 0o755)
     writeFile(UI_STATE_FILE, JSON.stringify(uiState))
   } catch (e) {
     console.error("Failed to persist UI state:", e)
   }
+}
+
+const HOME_PAGE = pageIds[0]
+
+// Map any persisted pre-registry page id ("page1".."page6") to its new name.
+function normalizePageId(id: string | null): string | null {
+  if (id === null) return null
+  return LEGACY_PAGE_IDS[id] ?? (pageIds.includes(id) ? id : HOME_PAGE)
 }
 
 // Bar visibility state. Starts true because GTK's show_all() reveals the
@@ -52,10 +74,10 @@ export const [syncDialogVisible, setSyncDialogVisible] = createState(false)
 // Sidebar pinned — when on, bar has exclusive zone and pushes windows away
 export const [sidebarPinned, setSidebarPinned] = createState(true)
 
-// Focused page — when set, bar always opens to this page. Defaults to HOME
-// (page1); the user's FOCUS choice is remembered across reboots.
+// Focused page — when set, bar always opens to this page. Defaults to HOME;
+// the user's FOCUS choice is remembered across reboots.
 const [focusedPage, setFocusedPageState] = createState<string | null>(
-  uiState.focusedPage !== undefined ? uiState.focusedPage : "page1"
+  uiState.focusedPage !== undefined ? normalizePageId(uiState.focusedPage) : HOME_PAGE
 )
 export { focusedPage }
 
@@ -104,7 +126,7 @@ export function toggleBar() {
 
   if (newVisible) {
     // Set page BEFORE showing bar to avoid flicker
-    const targetPage = focusedPage.get() || "page1"
+    const targetPage = focusedPage.get() || HOME_PAGE
     const targetIndex = pages.indexOf(targetPage)
     sidebarStacks.forEach((stack, monitorName) => {
       stack.set_visible_child_name(targetPage)
@@ -117,17 +139,17 @@ export function toggleBar() {
     setBarVisible(false)
     // Reset to home after hiding so stack is pre-positioned
     sidebarStacks.forEach((stack, monitorName) => {
-      stack.set_visible_child_name("page1")
+      stack.set_visible_child_name(HOME_PAGE)
       pageIndices.set(monitorName, 0)
       const [, setPageState] = getPageState(monitorName)
-      setPageState("page1")
+      setPageState(HOME_PAGE)
     })
   }
 }
 
 // Page cycling state - track all sidebar stacks by monitor NAME (stable identifier)
 const sidebarStacks: Map<string, Gtk.Stack> = new Map()
-export const pages = ["page1", "page2", "page3", "page4", "page5", "page6"]
+export const pages = pageIds
 const pageIndices: Map<string, number> = new Map()
 
 // Reactive state for current page per monitor - components can subscribe to this
@@ -135,7 +157,7 @@ const pageStates: Map<string, ReturnType<typeof createState<string>>> = new Map(
 
 export function getPageState(monitorName: string) {
   if (!pageStates.has(monitorName)) {
-    pageStates.set(monitorName, createState("page1"))
+    pageStates.set(monitorName, createState(HOME_PAGE))
   }
   return pageStates.get(monitorName)!
 }
@@ -165,61 +187,38 @@ export function getSidebarStacks() {
   return sidebarStacks
 }
 
+// Monitor whose sidebar cycling commands should act on: the focused one, or
+// the only registered one when the compositor can't tell us focus.
+function targetMonitorName(): string | null {
+  const focused = getFocusedMonitorName()
+  if (focused && sidebarStacks.has(focused)) return focused
+  const first = sidebarStacks.keys().next()
+  return first.done ? null : first.value
+}
+
+function cycleBy(delta: number) {
+  const monitorName = targetMonitorName()
+  if (!monitorName) {
+    console.error("cyclePage: no sidebar stacks registered")
+    return
+  }
+  const stack = sidebarStacks.get(monitorName)!
+  const currentIndex = pageIndices.get(monitorName) || 0
+  const nextIndex = (currentIndex + delta + pages.length) % pages.length
+  pageIndices.set(monitorName, nextIndex)
+  stack.set_visible_child_name(pages[nextIndex])
+
+  // Update reactive state so buttons reflect the change
+  const [, setPageState] = getPageState(monitorName)
+  setPageState(pages[nextIndex])
+}
+
 export function cyclePage() {
-  const hyprland = AstalHyprland.get_default()
-  const focusedWorkspace = hyprland.get_focused_workspace()
-  if (!focusedWorkspace) {
-    console.error("cyclePage: No focused workspace")
-    return
-  }
-
-  const focusedMonitor = focusedWorkspace.get_monitor()
-  if (!focusedMonitor) {
-    console.error("cyclePage: No focused monitor")
-    return
-  }
-
-  const monitorName = focusedMonitor.get_name()
-  console.log(`cyclePage: Focused monitor: ${monitorName}`)
-  console.log(`cyclePage: Available stacks:`, Array.from(sidebarStacks.keys()))
-
-  const stack = sidebarStacks.get(monitorName)
-
-  if (stack) {
-    const currentIndex = pageIndices.get(monitorName) || 0
-    const nextIndex = (currentIndex + 1) % pages.length
-    pageIndices.set(monitorName, nextIndex)
-    console.log(`cyclePage: Cycling from ${pages[currentIndex]} to ${pages[nextIndex]}`)
-    stack.set_visible_child_name(pages[nextIndex])
-
-    // Update reactive state so buttons reflect the change
-    const [, setPage] = getPageState(monitorName)
-    setPage(pages[nextIndex])
-  } else {
-    console.error(`cyclePage: No stack found for monitor ${monitorName}`)
-  }
+  cycleBy(1)
 }
 
 export function cyclePageBack() {
-  const hyprland = AstalHyprland.get_default()
-  const focusedWorkspace = hyprland.get_focused_workspace()
-  if (!focusedWorkspace) return
-
-  const focusedMonitor = focusedWorkspace.get_monitor()
-  if (!focusedMonitor) return
-
-  const monitorName = focusedMonitor.get_name()
-  const stack = sidebarStacks.get(monitorName)
-
-  if (stack) {
-    const currentIndex = pageIndices.get(monitorName) || 0
-    const prevIndex = (currentIndex - 1 + pages.length) % pages.length
-    pageIndices.set(monitorName, prevIndex)
-    stack.set_visible_child_name(pages[prevIndex])
-
-    const [, setPage] = getPageState(monitorName)
-    setPage(pages[prevIndex])
-  }
+  cycleBy(-1)
 }
 
 // Set page directly (used by tab buttons)

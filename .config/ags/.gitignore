@@ -1,2 +1,4 @@
 node_modules/
 @girs/
+ui-state.json
+display-eq.json

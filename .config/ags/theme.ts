@@ -64,9 +64,10 @@ export function loadTheme(themeName: string): Theme | null {
   }
 }
 
-// Generate CSS from theme colors using widget names
-function generateCSS(c: ThemeColors): string {
-  return `
+// The structural stylesheet is static — every color is a GTK named color
+// (@bg, @accent, ...) resolved by the @define-color header that generateCSS()
+// prepends from the active theme. Swapping themes only swaps that header.
+const STATIC_CSS = `
     /* === STAR WARS TERMINAL THEME === */
 
     * {
@@ -111,10 +112,10 @@ function generateCSS(c: ThemeColors): string {
 
     /* Sidebar container - Holographic */
     #sidebar-bg {
-      background: ${c.bg_dark};
+      background: @bg_dark;
       border-radius: 0;
       padding: 0;
-      border: 1px solid ${c.bg_light};
+      border: 1px solid @bg_light;
       border-left: 2px solid #3a6080;
     }
 
@@ -127,13 +128,13 @@ function generateCSS(c: ThemeColors): string {
     #page-box {
       padding: 16px 14px;
       min-width: 260px;
-      background: ${c.bg_dark};
+      background: @bg_dark;
     }
 
     /* Tab Bar - Holographic navigation */
     #tab-bar {
-      background: ${c.bg_dark};
-      border-bottom: 1px solid ${c.bg_light};
+      background: @bg_dark;
+      border-bottom: 1px solid @bg_light;
       padding: 6px 6px;
     }
     #tab-btn {
@@ -147,36 +148,36 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms ease;
     }
     #tab-btn:hover {
-      background: alpha(${c.accent}, 0.07);
+      background: alpha(@accent, 0.07);
     }
     #tab-btn.active {
-      background: linear-gradient(to top, alpha(${c.accent}, 0.16), alpha(${c.accent}, 0.02));
-      border-bottom: 2px solid ${c.accent};
-      box-shadow: 0 6px 14px -6px alpha(${c.accent}, 0.45);
+      background: linear-gradient(to top, alpha(@accent, 0.16), alpha(@accent, 0.02));
+      border-bottom: 2px solid @accent;
+      box-shadow: 0 6px 14px -6px alpha(@accent, 0.45);
     }
     #tab-icon {
       font-size: 19px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-bottom: 3px;
     }
     #tab-btn:hover #tab-icon {
-      color: ${c.fg};
+      color: @fg;
     }
     #tab-btn.active #tab-icon {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #tab-label {
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 1px;
       margin-left: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #tab-btn:hover #tab-label {
-      color: ${c.fg};
+      color: @fg;
     }
     #tab-btn.active #tab-label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #tab-focus-btn {
       background: transparent;
@@ -188,13 +189,13 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms ease;
     }
     #tab-focus-btn:hover {
-      border-color: ${c.bg_lighter};
-      background: alpha(${c.accent}, 0.05);
+      border-color: @bg_lighter;
+      background: alpha(@accent, 0.05);
     }
     #tab-focus-btn.focused {
-      background: alpha(${c.accent}, 0.12);
-      border-color: alpha(${c.accent}, 0.6);
-      box-shadow: 0 0 10px alpha(${c.accent}, 0.25);
+      background: alpha(@accent, 0.12);
+      border-color: alpha(@accent, 0.6);
+      box-shadow: 0 0 10px alpha(@accent, 0.25);
     }
     #tab-focus-btn label {
       font-size: 8px;
@@ -204,10 +205,10 @@ function generateCSS(c: ThemeColors): string {
       color: #4a6478;
     }
     #tab-focus-btn:hover label {
-      color: ${c.fg};
+      color: @fg;
     }
     #tab-focus-btn.focused label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
 
     /* Typography - terminal style */
@@ -234,85 +235,85 @@ function generateCSS(c: ThemeColors): string {
     /* ============ PLANNER PAGE ============ */
     #planner-page {
       padding: 12px;
-      background: ${c.bg_dark};
+      background: @bg_dark;
     }
     #planner-header {
       margin-bottom: 8px;
     }
     #planner-info-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 4px 8px;
       margin-right: 4px;
     }
     #planner-info-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
+      background: @bg_light;
+      border-color: @accent;
     }
     #planner-info-btn label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 10px;
       font-weight: 700;
       font-style: italic;
     }
     #planner-info-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #planner-info-panel {
-      background: alpha(${c.bg}, 0.8);
-      border: 1px solid ${c.bg_lighter};
+      background: alpha(@bg, 0.8);
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
       margin: 4px 8px 8px 8px;
     }
     #planner-info-text {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 10px;
     }
     #planner-reload-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 4px 8px;
     }
     #planner-reload-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
+      background: @bg_light;
+      border-color: @accent;
     }
     #planner-reload-btn label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
     }
     #planner-reload-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #planner-date-nav {
       margin-bottom: 6px;
       padding: 4px 0;
     }
     #planner-nav-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 4px 10px;
       margin: 0 4px;
     }
     #planner-nav-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
+      background: @bg_light;
+      border-color: @accent;
     }
     #planner-nav-btn label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 12px;
     }
     #planner-nav-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #planner-date {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -333,7 +334,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* Half-hour line (faint) */
     #plan-halfline {
-      background: ${c.bg_lighter};
+      background: @bg_lighter;
       min-height: 1px;
     }
 
@@ -366,7 +367,7 @@ function generateCSS(c: ThemeColors): string {
     /* Event block */
     #plan-event {
       background: #1a3248;
-      border-left: 3px solid ${c.accent};
+      border-left: 3px solid @accent;
       border-radius: 3px;
       padding: 1px 8px;
     }
@@ -376,7 +377,7 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 700;
     }
     #plan-event-text {
-      color: ${c.fg_bright};
+      color: @fg_bright;
       font-size: 11px;
       font-weight: 600;
     }
@@ -398,23 +399,23 @@ function generateCSS(c: ThemeColors): string {
       min-height: 14px;
     }
     #planner-dots-btn:hover {
-      background: alpha(${c.accent}, 0.15);
+      background: alpha(@accent, 0.15);
       border-radius: 3px;
     }
     #planner-dots-btn label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
     }
     #planner-dots-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
 
     /* Popover menu */
     popover.background {
-      background-color: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background-color: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
     }
     popover contents {
@@ -428,15 +429,15 @@ function generateCSS(c: ThemeColors): string {
       padding: 6px 16px;
     }
     #planner-popover-item:hover {
-      background: alpha(${c.accent}, 0.15);
+      background: alpha(@accent, 0.15);
     }
     #planner-popover-item label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
       font-size: 11px;
       font-weight: 600;
     }
     #planner-popover-item:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #planner-popover-item-danger {
       background: transparent;
@@ -459,12 +460,12 @@ function generateCSS(c: ThemeColors): string {
     /* Inline entry for adding/editing events */
     #plan-entry {
       background: #1a3248;
-      color: ${c.fg_bright};
-      border: 1px solid ${c.accent};
+      color: @fg_bright;
+      border: 1px solid @accent;
       border-radius: 3px;
       padding: 2px 8px;
       font-size: 10px;
-      caret-color: ${c.accent};
+      caret-color: @accent;
     }
 
     /* Drag guide line — grey dotted, full pane width */
@@ -484,35 +485,35 @@ function generateCSS(c: ThemeColors): string {
       padding: 30px 20px;
     }
     #planner-empty-title {
-      color: ${c.cyan};
+      color: @cyan;
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 2px;
       margin-bottom: 14px;
     }
     #planner-empty-path {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       font-size: 10px;
       font-weight: 600;
       letter-spacing: 1px;
       margin-bottom: 10px;
     }
     #planner-empty-hint {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 9px;
       font-weight: 500;
       letter-spacing: 1px;
       margin-bottom: 2px;
     }
     #planner-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
     }
     #planner-create-btn {
-      background: ${c.bg};
+      background: @bg;
       border: 1px solid #2a4a35;
       border-radius: 4px;
       padding: 10px 20px;
@@ -536,7 +537,7 @@ function generateCSS(c: ThemeColors): string {
       padding: 4px 4px;
     }
     #planner-footer {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 8px;
       font-weight: 600;
       letter-spacing: 2px;
@@ -548,20 +549,20 @@ function generateCSS(c: ThemeColors): string {
       padding: 0;
     }
     #planner-inner-tab {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 5px 12px;
       margin: 0 3px;
       min-width: 40px;
     }
     #planner-inner-tab:hover {
-      background: ${c.bg_light};
-      border-color: ${c.gray};
+      background: @bg_light;
+      border-color: @gray;
     }
     #planner-inner-tab.active {
-      background: ${c.bg_light};
-      border: 1px solid ${c.accent};
+      background: @bg_light;
+      border: 1px solid @accent;
     }
     #planner-inner-tab label {
       font-size: 9px;
@@ -581,19 +582,19 @@ function generateCSS(c: ThemeColors): string {
       padding: 2px 0 6px 0;
     }
     #kanban-subpane-tab {
-      background: alpha(${c.bg_light}, 0.4);
-      border: 1px solid ${c.bg_lighter};
+      background: alpha(@bg_light, 0.4);
+      border: 1px solid @bg_lighter;
       border-radius: 3px;
       padding: 4px 8px;
       margin: 0 2px;
     }
     #kanban-subpane-tab:hover {
-      background: alpha(${c.bg_lighter}, 0.6);
-      border-color: ${c.gray};
+      background: alpha(@bg_lighter, 0.6);
+      border-color: @gray;
     }
     #kanban-subpane-tab.active {
       background: alpha(#1a3040, 0.7);
-      border: 1px solid ${c.accent};
+      border: 1px solid @accent;
     }
     #kanban-subpane-tab label {
       font-size: 9px;
@@ -614,16 +615,16 @@ function generateCSS(c: ThemeColors): string {
       min-height: 28px;
     }
     button#kanban-board-selector {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 2px 10px;
       margin: 0 3px;
       min-width: 40px;
     }
     button#kanban-board-selector:hover {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
+      background: @bg_light;
+      border-color: @accent;
     }
     button#kanban-board-selector label {
       font-size: 9px;
@@ -632,20 +633,20 @@ function generateCSS(c: ThemeColors): string {
       color: #5a7888;
     }
     button#kanban-board-selector:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #board-modal-backdrop {
       background: alpha(#000000, 0.6);
     }
     #board-modal {
       background: #0a1820;
-      border: 1px solid ${c.bg_lighter};
+      border: 1px solid @bg_lighter;
       border-radius: 8px;
       padding: 20px 28px;
       min-width: 280px;
     }
     #board-modal-title {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 3px;
@@ -663,7 +664,7 @@ function generateCSS(c: ThemeColors): string {
     /* ── Kanban card ── */
     #kanban-card {
       background: #1a3248;
-      border-left: 3px solid ${c.accent};
+      border-left: 3px solid @accent;
       border-radius: 3px;
       padding: 6px 8px;
       margin: 3px 4px;
@@ -673,7 +674,7 @@ function generateCSS(c: ThemeColors): string {
       border-left: 2px solid #1e3a48;
     }
     #kanban-card-title {
-      color: ${c.fg_bright};
+      color: @fg_bright;
       font-size: 11px;
       font-weight: 600;
     }
@@ -689,8 +690,8 @@ function generateCSS(c: ThemeColors): string {
       color: #304858;
     }
     #kanban-card-badge {
-      color: ${c.accent};
-      background: alpha(${c.accent}, 0.12);
+      color: @accent;
+      background: alpha(@accent, 0.12);
       font-size: 8px;
       font-weight: 700;
       letter-spacing: 1px;
@@ -705,23 +706,23 @@ function generateCSS(c: ThemeColors): string {
 
     /* Move / delete buttons on cards */
     #kanban-move-btn {
-      background: alpha(${c.bg_light}, 0.4);
-      border: 1px solid ${c.bg_lighter};
+      background: alpha(@bg_light, 0.4);
+      border: 1px solid @bg_lighter;
       border-radius: 3px;
       padding: 2px 6px;
       margin: 0 1px;
     }
     #kanban-move-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
+      background: @bg_light;
+      border-color: @accent;
     }
     #kanban-move-btn label {
       font-size: 10px;
       font-weight: 700;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #kanban-move-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #kanban-delete-btn {
       background: alpha(#2a1a1a, 0.4);
@@ -746,14 +747,14 @@ function generateCSS(c: ThemeColors): string {
     /* ── Add item button + entry ── */
     #kanban-add-btn {
       background: transparent;
-      border: 1px dashed ${c.bg_lighter};
+      border: 1px dashed @bg_lighter;
       border-radius: 3px;
       padding: 6px 8px;
       margin: 6px 4px;
     }
     #kanban-add-btn:hover {
-      background: alpha(${c.bg_lighter}, 0.4);
-      border-color: ${c.accent};
+      background: alpha(@bg_lighter, 0.4);
+      border-color: @accent;
     }
     #kanban-add-btn label {
       font-size: 9px;
@@ -766,13 +767,13 @@ function generateCSS(c: ThemeColors): string {
     }
     #kanban-add-entry {
       background: #1a3248;
-      color: ${c.fg_bright};
-      border: 1px solid ${c.accent};
+      color: @fg_bright;
+      border: 1px solid @accent;
       border-radius: 3px;
       padding: 4px 8px;
       margin: 4px 4px;
       font-size: 10px;
-      caret-color: ${c.accent};
+      caret-color: @accent;
     }
     /* ── Checklist items on card ── */
     #kanban-card-checklist-box {
@@ -782,7 +783,7 @@ function generateCSS(c: ThemeColors): string {
       padding: 1px 0;
     }
     #kanban-card-check-icon {
-      color: ${c.accent};
+      color: @accent;
       font-size: 8px;
       font-weight: 700;
       margin-right: 4px;
@@ -805,15 +806,15 @@ function generateCSS(c: ThemeColors): string {
 
     /* ══════════════════════════════════════════════
        Card detail modal — GitHub Issue exact clone
-       bg: ${c.bg_dark}  surface: ${c.bg}  border: ${c.bg_lighter}
-       text: #e6edf3  muted: ${c.fg_dim}  link: ${c.blue_bright}
+       bg: @bg_dark  surface: @bg  border: @bg_lighter
+       text: #e6edf3  muted: @fg_dim  link: @blue_bright
        ══════════════════════════════════════════════ */
     #cd-backdrop {
       background: alpha(#010409, 0.7);
     }
     #cd-panel {
-      background: ${c.bg_dark};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg_dark;
+      border: 1px solid @bg_lighter;
       border-radius: 12px;
       padding: 32px 40px;
       min-width: 900px;
@@ -833,14 +834,14 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 600;
     }
     #cd-title-entry {
-      background: ${c.bg_dark};
+      background: @bg_dark;
       color: #e6edf3;
-      border: 1px solid ${c.blue_bright};
+      border: 1px solid @blue_bright;
       border-radius: 6px;
       padding: 8px 14px;
       font-size: 24px;
       font-weight: 600;
-      caret-color: ${c.blue_bright};
+      caret-color: @blue_bright;
     }
 
     /* Close X button */
@@ -851,10 +852,10 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 6px;
     }
     #cd-close-btn:hover {
-      background: alpha(${c.fg_dim}, 0.12);
+      background: alpha(@fg_dim, 0.12);
     }
     #cd-close-btn label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 18px;
     }
     #cd-close-btn:hover label {
@@ -872,7 +873,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 24px;
     }
     #cd-status-badge.todo {
-      background: ${c.bg_lighter};
+      background: @bg_lighter;
       color: #e6edf3;
     }
     #cd-status-badge.doing {
@@ -884,7 +885,7 @@ function generateCSS(c: ThemeColors): string {
       color: #e6edf3;
     }
     #cd-path-label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 12px;
       font-weight: 400;
     }
@@ -908,35 +909,35 @@ function generateCSS(c: ThemeColors): string {
 
     /* Description box (GitHub comment style) */
     #cd-desc-box {
-      border: 1px solid ${c.bg_lighter};
+      border: 1px solid @bg_lighter;
       border-radius: 6px;
       margin-bottom: 24px;
     }
     #cd-desc-header {
-      background: ${c.bg};
-      border-bottom: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border-bottom: 1px solid @bg_lighter;
       border-radius: 6px 6px 0 0;
       padding: 10px 16px;
     }
     #cd-desc-header label {
       font-size: 13px;
       font-weight: 600;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #cd-desc-scroll {
-      background: ${c.bg_dark};
+      background: @bg_dark;
       border: none;
       border-radius: 0 0 6px 6px;
       padding: 0;
     }
     textview#cd-desc-view {
-      background: ${c.bg_dark};
+      background: @bg_dark;
       color: #e6edf3;
     }
     textview#cd-desc-view text {
-      background: ${c.bg_dark};
+      background: @bg_dark;
       color: #e6edf3;
-      caret-color: ${c.blue_bright};
+      caret-color: @blue_bright;
       font-size: 14px;
     }
 
@@ -976,7 +977,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 6px;
     }
     #cd-check-row:hover {
-      background: alpha(${c.bg}, 0.8);
+      background: alpha(@bg, 0.8);
     }
     #cd-checkbox {
       background: transparent;
@@ -987,7 +988,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 4px;
     }
     #cd-checkbox:hover {
-      background: alpha(${c.bg_lighter}, 0.5);
+      background: alpha(@bg_lighter, 0.5);
     }
     #cd-checkbox label {
       font-size: 16px;
@@ -1014,19 +1015,19 @@ function generateCSS(c: ThemeColors): string {
 
     /* Add entry */
     #cd-add-entry {
-      background: ${c.bg_dark};
-      color: ${c.fg_dim};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg_dark;
+      color: @fg_dim;
+      border: 1px solid @bg_lighter;
       border-radius: 6px;
       padding: 10px 14px;
       font-size: 13px;
-      caret-color: ${c.blue_bright};
+      caret-color: @blue_bright;
     }
     #cd-add-entry:focus {
-      background: ${c.bg_dark};
+      background: @bg_dark;
       color: #e6edf3;
-      border-color: ${c.blue_bright};
-      box-shadow: 0 0 0 3px alpha(${c.blue_bright}, 0.3);
+      border-color: @blue_bright;
+      box-shadow: 0 0 0 3px alpha(@blue_bright, 0.3);
     }
 
     /* ── Right sidebar (GitHub style) ── */
@@ -1046,7 +1047,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 6px;
     }
     #cd-sidebar-value {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 13px;
       font-weight: 400;
       margin-top: 2px;
@@ -1055,14 +1056,14 @@ function generateCSS(c: ThemeColors): string {
     /* Move buttons in sidebar */
     #cd-move-btn {
       background: #21262d;
-      border: 1px solid ${c.bg_lighter};
+      border: 1px solid @bg_lighter;
       border-radius: 6px;
       padding: 6px 16px;
       margin-top: 8px;
     }
     #cd-move-btn:hover {
-      background: ${c.bg_lighter};
-      border-color: ${c.fg_dim};
+      background: @bg_lighter;
+      border-color: @fg_dim;
     }
     #cd-move-btn label {
       font-size: 12px;
@@ -1081,10 +1082,10 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 4px;
     }
     #cd-dots-btn:hover {
-      background: alpha(${c.fg_dim}, 0.12);
+      background: alpha(@fg_dim, 0.12);
     }
     #cd-dots-btn label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 14px;
       font-weight: 700;
     }
@@ -1113,18 +1114,18 @@ function generateCSS(c: ThemeColors): string {
 
     #kanban-edit-entry {
       background: #1a3248;
-      color: ${c.fg_bright};
-      border: 1px solid ${c.accent};
+      color: @fg_bright;
+      border: 1px solid @accent;
       border-radius: 3px;
       padding: 1px 6px;
       font-size: 10px;
-      caret-color: ${c.accent};
+      caret-color: @accent;
       min-width: 60px;
     }
 
     /* ============ HOME PAGE - Holographic Star Citizen Style ============ */
     #home-page-scroll {
-      background: ${c.bg_dark};
+      background: @bg_dark;
     }
     #home-page-scroll scrollbar {
       opacity: 0;
@@ -1132,12 +1133,12 @@ function generateCSS(c: ThemeColors): string {
     }
     #home-page {
       padding: 12px;
-      background: ${c.bg_dark};
+      background: @bg_dark;
     }
 
     /* Section Header */
     #section-header {
-      color: ${c.cyan};
+      color: @cyan;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -1149,8 +1150,8 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 12px;
     }
     #sys-toggle {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 9999px;
       padding: 12px;
       margin: 0 4px;
@@ -1158,8 +1159,8 @@ function generateCSS(c: ThemeColors): string {
       min-height: 52px;
     }
     #sys-toggle:hover {
-      background: ${c.bg_light};
-      border-color: ${c.gray};
+      background: @bg_light;
+      border-color: @gray;
     }
     #sys-toggle.active {
       background: #302200;
@@ -1170,10 +1171,10 @@ function generateCSS(c: ThemeColors): string {
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #sys-toggle:hover #sys-toggle-label {
-      color: ${c.fg};
+      color: @fg;
     }
     #sys-toggle.active #sys-toggle-label {
       color: #f5c842;
@@ -1181,14 +1182,14 @@ function generateCSS(c: ThemeColors): string {
 
     /* Clock Panel */
     #clock-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 14px;
       margin-bottom: 10px;
     }
     #clock-time {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       font-size: 38px;
       font-weight: 700;
       letter-spacing: 4px;
@@ -1202,18 +1203,18 @@ function generateCSS(c: ThemeColors): string {
     }
     #clock-secondary {
       background: alpha(#0a1015, 0.5);
-      border-top: 1px solid ${c.bg_lighter};
+      border-top: 1px solid @bg_lighter;
       padding: 8px 0 0 0;
       margin-top: 6px;
     }
     #clock-alt-label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
     }
     #clock-alt-time {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 14px;
       font-weight: 600;
       letter-spacing: 2px;
@@ -1221,8 +1222,8 @@ function generateCSS(c: ThemeColors): string {
 
     /* Control Panels (Brightness/Volume) */
     #control-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
@@ -1232,7 +1233,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #control-icon {
       font-size: 14px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-right: 4px;
     }
     #control-icon-btn {
@@ -1242,18 +1243,18 @@ function generateCSS(c: ThemeColors): string {
       margin-right: 4px;
     }
     #control-icon-btn:hover #control-icon {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #control-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #control-value {
       font-size: 11px;
       font-weight: 700;
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       letter-spacing: 1px;
     }
     #control-bar-container {
@@ -1268,22 +1269,22 @@ function generateCSS(c: ThemeColors): string {
       margin: 1px 0;
     }
     #control-segment.unlit {
-      background: alpha(${c.bg_lighter}, 0.5);
+      background: alpha(@bg_lighter, 0.5);
     }
     #control-segment.lit {
-      background: ${c.accent};
+      background: @accent;
     }
     #control-segment:hover {
-      background: ${c.gray};
+      background: @gray;
     }
     #control-segment.lit:hover {
-      background: ${c.fg_bright};
+      background: @fg_bright;
     }
 
     /* Status Panel (Battery) */
     #status-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
     }
@@ -1320,8 +1321,8 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 12px;
     }
     #tool-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
       margin: 0 4px;
@@ -1329,26 +1330,26 @@ function generateCSS(c: ThemeColors): string {
       transition: all 150ms linear;
     }
     #tool-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
-      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
+      background: @bg_light;
+      border-color: @accent;
+      box-shadow: inset 0 0 12px alpha(@accent, 0.3);
     }
     #tool-btn-icon {
       font-size: 20px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-bottom: 4px;
     }
     #tool-btn:hover #tool-btn-icon {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #tool-btn-label {
       font-size: 8px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #tool-btn:hover #tool-btn-label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
 
     /* Wallpaper selector styles */
@@ -1358,124 +1359,124 @@ function generateCSS(c: ThemeColors): string {
     }
     #core-reload-btn {
       background: transparent;
-      border: 1px solid ${c.bg_lighter};
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 4px 8px;
       transition: all 150ms linear;
     }
     #core-reload-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
+      background: @bg_light;
+      border-color: @accent;
     }
     #core-reload-btn label {
       font-size: 14px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #core-reload-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #wallpaper-tab-bar {
-      background: ${c.bg_dark};
-      border-bottom: 1px solid ${c.bg_light};
+      background: @bg_dark;
+      border-bottom: 1px solid @bg_light;
       padding: 6px;
       margin-bottom: 4px;
     }
     #wallpaper-sub-tab-bar {
-      background: alpha(${c.bg_dark}, 0.6);
+      background: alpha(@bg_dark, 0.6);
       padding: 4px 6px;
       margin-bottom: 4px;
     }
     #wallpaper-sub-tab-btn {
-      background: alpha(${c.bg_light}, 0.4);
-      border: 1px solid ${c.bg_light};
+      background: alpha(@bg_light, 0.4);
+      border: 1px solid @bg_light;
       border-radius: 3px;
       padding: 4px 8px;
       margin: 0 2px;
       transition: all 150ms linear;
     }
     #wallpaper-sub-tab-btn:hover {
-      background: alpha(${c.bg_lighter}, 0.5);
-      border-color: ${c.gray};
+      background: alpha(@bg_lighter, 0.5);
+      border-color: @gray;
     }
     #wallpaper-sub-tab-btn.active {
       background: alpha(#1a3040, 0.6);
-      border: 1px solid ${c.accent};
+      border: 1px solid @accent;
     }
     #wallpaper-sub-tab-btn #tab-icon {
       font-size: 12px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-bottom: 1px;
     }
     #wallpaper-sub-tab-btn:hover #tab-icon {
-      color: ${c.fg};
+      color: @fg;
     }
     #wallpaper-sub-tab-btn.active #tab-icon {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #wallpaper-sub-tab-btn #tab-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #wallpaper-sub-tab-btn:hover #tab-label {
-      color: ${c.fg};
+      color: @fg;
     }
     #wallpaper-sub-tab-btn.active #tab-label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #wallpaper-tab-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 8px 12px;
       margin: 0 3px;
       transition: all 150ms linear;
     }
     #wallpaper-tab-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.gray};
+      background: @bg_light;
+      border-color: @gray;
     }
     #wallpaper-tab-btn.active {
-      background: ${c.bg_light};
-      border: 1px solid ${c.accent};
-      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
+      background: @bg_light;
+      border: 1px solid @accent;
+      box-shadow: inset 0 0 12px alpha(@accent, 0.3);
     }
     #wallpaper-tab-btn #tab-icon {
       font-size: 16px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-bottom: 2px;
     }
     #wallpaper-tab-btn:hover #tab-icon {
-      color: ${c.fg};
+      color: @fg;
     }
     #wallpaper-tab-btn.active #tab-icon {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #wallpaper-tab-btn #tab-label {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #wallpaper-tab-btn:hover #tab-label {
-      color: ${c.fg};
+      color: @fg;
     }
     #wallpaper-tab-btn.active #tab-label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #wallpaper-thumb {
-      background: alpha(${c.bg_light}, 0.4);
-      border: 1px solid ${c.bg_lighter};
+      background: alpha(@bg_light, 0.4);
+      border: 1px solid @bg_lighter;
       border-radius: 6px;
       padding: 4px;
       margin: 4px 0;
       transition: all 150ms linear;
     }
     #wallpaper-thumb:hover {
-      background: alpha(${c.bg_lighter}, 0.6);
-      border-color: ${c.accent};
-      box-shadow: 0 0 8px alpha(${c.accent}, 0.2);
+      background: alpha(@bg_lighter, 0.6);
+      border-color: @accent;
+      box-shadow: 0 0 8px alpha(@accent, 0.2);
     }
     #video-badge {
       background: alpha(#000000, 0.7);
@@ -1485,12 +1486,12 @@ function generateCSS(c: ThemeColors): string {
     }
     #video-badge label {
       font-size: 12px;
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #video-name {
       font-size: 9px;
       font-weight: 600;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-top: 4px;
       letter-spacing: 0.5px;
     }
@@ -1499,35 +1500,35 @@ function generateCSS(c: ThemeColors): string {
     }
     #wallpaper-empty #status-icon {
       font-size: 32px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-bottom: 12px;
     }
     #wallpaper-empty #status-label {
       font-size: 10px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #wallpaper-empty #status-sublabel {
       font-size: 8px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-top: 4px;
     }
     #movie-folder {
       margin: 2px 0;
     }
     #movie-folder-header {
-      background: alpha(${c.bg_light}, 0.5);
-      border: 1px solid ${c.bg_lighter};
+      background: alpha(@bg_light, 0.5);
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
       transition: all 150ms linear;
     }
     #movie-folder-header:hover {
-      background: ${c.bg_light};
-      border-color: ${c.gray};
+      background: @bg_light;
+      border-color: @gray;
     }
     #folder-arrow {
       font-size: 10px;
-      color: ${c.accent};
+      color: @accent;
       margin-right: 8px;
     }
     #folder-name {
@@ -1538,7 +1539,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #folder-count {
       font-size: 9px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-right: 4px;
     }
     #movie-folder-content {
@@ -1555,8 +1556,8 @@ function generateCSS(c: ThemeColors): string {
       padding: 40px;
     }
     #destination-center {
-      background: radial-gradient(circle at 30% 30%, ${c.accent}, #1a4050);
-      border: 2px solid ${c.fg_bright};
+      background: radial-gradient(circle at 30% 30%, @accent, #1a4050);
+      border: 2px solid @fg_bright;
       border-radius: 50%;
       box-shadow: 0 0 30px rgba(96, 192, 208, 0.5),
                   0 0 60px rgba(96, 192, 208, 0.2),
@@ -1570,17 +1571,17 @@ function generateCSS(c: ThemeColors): string {
                   inset 0 0 20px rgba(255, 255, 255, 0.2);
     }
     #destination-center.selected {
-      border-color: ${c.fg_bright};
+      border-color: @fg_bright;
       box-shadow: 0 0 50px rgba(160, 240, 255, 0.8),
                   0 0 100px rgba(96, 192, 208, 0.4);
     }
     #destination-center #destination-icon {
       font-size: 32px;
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #destination-node {
       background: radial-gradient(circle at 30% 30%, #4a8090, #1a3040);
-      border: 2px solid ${c.cyan};
+      border: 2px solid @cyan;
       border-radius: 50%;
       box-shadow: 0 0 15px rgba(80, 144, 160, 0.4),
                   0 0 30px rgba(80, 144, 160, 0.1),
@@ -1588,13 +1589,13 @@ function generateCSS(c: ThemeColors): string {
       transition: all 200ms ease;
     }
     #destination-node:hover {
-      border-color: ${c.fg_bright};
+      border-color: @fg_bright;
       box-shadow: 0 0 25px rgba(96, 192, 208, 0.6),
                   0 0 50px rgba(96, 192, 208, 0.2),
                   inset 0 0 15px rgba(255, 255, 255, 0.1);
     }
     #destination-node.selected {
-      background: radial-gradient(circle at 30% 30%, ${c.accent}, #2a5060);
+      background: radial-gradient(circle at 30% 30%, @accent, #2a5060);
       border-color: #a0f0ff;
       box-shadow: 0 0 30px rgba(160, 240, 255, 0.7),
                   0 0 60px rgba(96, 192, 208, 0.3);
@@ -1604,7 +1605,7 @@ function generateCSS(c: ThemeColors): string {
       color: #a0d0e0;
     }
     #destination-node:hover #destination-icon {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
 
     /* Legacy styles kept for compatibility */
@@ -1629,7 +1630,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #quick-toggle.active {
       background: #110808;
-      border: 1px solid ${c.red};
+      border: 1px solid @red;
     }
     #quick-toggle.active:hover {
       background: #1a0a0a;
@@ -1642,7 +1643,7 @@ function generateCSS(c: ThemeColors): string {
       color: #662222;
     }
     #quick-toggle.active #toggle-icon {
-      color: ${c.red};
+      color: @red;
     }
     #toggle-label-btn {
       background: transparent;
@@ -1652,7 +1653,7 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 0;
     }
     #toggle-label-btn:hover {
-      background: alpha(${c.red}, 0.1);
+      background: alpha(@red, 0.1);
     }
     #toggle-label {
       font-size: 8px;
@@ -1683,7 +1684,7 @@ function generateCSS(c: ThemeColors): string {
     #led-segment.lit.green,
     #led-segment.lit.yellow,
     #led-segment.lit.red {
-      background: ${c.red};
+      background: @red;
     }
     #led-segment:hover {
       background: #2a1010;
@@ -1700,7 +1701,7 @@ function generateCSS(c: ThemeColors): string {
       background: transparent;
       border-radius: 0;
       border: 1px solid #331111;
-      border-left: 2px solid ${c.red};
+      border-left: 2px solid @red;
       padding: 10px 12px;
       margin-top: 10px;
     }
@@ -1709,7 +1710,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #brightness-icon {
       font-size: 14px;
-      color: ${c.red};
+      color: @red;
       margin-right: 8px;
     }
     #brightness-title {
@@ -1721,7 +1722,7 @@ function generateCSS(c: ThemeColors): string {
     #brightness-percent {
       font-size: 11px;
       font-weight: 700;
-      color: ${c.red};
+      color: @red;
       letter-spacing: 1px;
     }
 
@@ -1730,7 +1731,7 @@ function generateCSS(c: ThemeColors): string {
       background: transparent;
       border-radius: 0;
       border: 1px solid #331111;
-      border-left: 2px solid ${c.red};
+      border-left: 2px solid @red;
       padding: 10px 12px;
       margin-top: 8px;
     }
@@ -1749,7 +1750,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #volume-icon {
       font-size: 14px;
-      color: ${c.red};
+      color: @red;
     }
     #volume-title {
       font-size: 9px;
@@ -1760,7 +1761,7 @@ function generateCSS(c: ThemeColors): string {
     #volume-percent {
       font-size: 11px;
       font-weight: 700;
-      color: ${c.red};
+      color: @red;
       letter-spacing: 1px;
     }
 
@@ -1769,7 +1770,7 @@ function generateCSS(c: ThemeColors): string {
       background: transparent;
       border-radius: 0;
       border: 1px solid #331111;
-      border-left: 2px solid ${c.red};
+      border-left: 2px solid @red;
       padding: 10px 12px;
       margin-top: 10px;
       margin-bottom: 6px;
@@ -1779,7 +1780,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #battery-icon {
       font-size: 14px;
-      color: ${c.red};
+      color: @red;
       margin-right: 8px;
     }
     #battery-title {
@@ -1791,12 +1792,12 @@ function generateCSS(c: ThemeColors): string {
     #battery-percent {
       font-size: 11px;
       font-weight: 700;
-      color: ${c.red};
+      color: @red;
       letter-spacing: 1px;
     }
     #battery-status-icon {
       font-size: 10px;
-      color: ${c.red};
+      color: @red;
     }
     #battery-level-bar {
       min-height: 8px;
@@ -1808,7 +1809,7 @@ function generateCSS(c: ThemeColors): string {
       min-height: 8px;
     }
     #battery-level-bar block.filled {
-      background: ${c.red};
+      background: @red;
       border-radius: 0;
       min-height: 8px;
     }
@@ -1820,18 +1821,18 @@ function generateCSS(c: ThemeColors): string {
     #power-page {
       padding: 12px;
       min-width: 260px;
-      background: ${c.bg_dark};
+      background: @bg_dark;
     }
     #power-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 12px;
     }
     #power-panel-header {
       margin-bottom: 10px;
       padding-bottom: 8px;
-      border-bottom: 1px solid ${c.bg_lighter};
+      border-bottom: 1px solid @bg_lighter;
     }
     #power-panel-title {
       font-size: 10px;
@@ -1866,7 +1867,7 @@ function generateCSS(c: ThemeColors): string {
 
     /* The bar frame */
     #power-bar-frame {
-      border: 2px solid ${c.accent};
+      border: 2px solid @accent;
       min-width: 150px;
       min-height: 200px;
       padding: 4px;
@@ -1881,10 +1882,10 @@ function generateCSS(c: ThemeColors): string {
       border-radius: 12px;
     }
     #power-segment.unlit {
-      background: alpha(${c.bg_lighter}, 0.5);
+      background: alpha(@bg_lighter, 0.5);
     }
     #power-segment.lit {
-      background: ${c.accent};
+      background: @accent;
     }
     #power-segment.discharge {
       background: #3a0a0a;
@@ -1937,7 +1938,7 @@ function generateCSS(c: ThemeColors): string {
     /* Footer data row */
     #power-panel-footer {
       padding-top: 8px;
-      border-top: 1px solid ${c.bg_lighter};
+      border-top: 1px solid @bg_lighter;
     }
     #power-footer-data {
       font-size: 9px;
@@ -1948,8 +1949,8 @@ function generateCSS(c: ThemeColors): string {
 
     /* GPU Power Panel */
     #gpu-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 12px;
       margin-top: 10px;
@@ -1957,21 +1958,21 @@ function generateCSS(c: ThemeColors): string {
     #gpu-panel-header {
       margin-bottom: 10px;
       padding-bottom: 8px;
-      border-bottom: 1px solid ${c.bg_lighter};
+      border-bottom: 1px solid @bg_lighter;
     }
     #gpu-mode-buttons {
       margin-top: 6px;
     }
     #gpu-mode-btn {
       background: #0a1015;
-      border: 1px solid ${c.bg_lighter};
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 6px;
       margin: 0 3px;
     }
     #gpu-mode-btn.active {
-      background: alpha(${c.accent}, 0.15);
-      border-color: ${c.accent};
+      background: alpha(@accent, 0.15);
+      border-color: @accent;
     }
     #gpu-mode-label {
       font-size: 11px;
@@ -1998,18 +1999,18 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 10px;
     }
     #app-search {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 14px;
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       font-size: 11px;
       font-weight: 500;
       letter-spacing: 1px;
     }
     #app-search:focus {
-      background: ${c.bg_light};
-      border-color: ${c.accent};
+      background: @bg_light;
+      border-color: @accent;
     }
     #app-page-scroll,
     #app-page-scroll frame,
@@ -2023,30 +2024,30 @@ function generateCSS(c: ThemeColors): string {
       margin-top: 10px;
     }
     #app-item {
-      background: ${c.bg};
+      background: @bg;
       border: none;
       border-radius: 4px;
       padding: 8px 10px;
       margin: 3px 0;
     }
     #app-item:hover {
-      background: alpha(${c.bg_lighter}, 0.8);
+      background: alpha(@bg_lighter, 0.8);
     }
     #app-item:active {
       background: alpha(#1a3040, 0.9);
-      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
+      box-shadow: inset 0 0 12px alpha(@accent, 0.3);
     }
     #app-icon {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 20px;
       min-width: 20px;
       min-height: 20px;
     }
     #app-item:hover #app-icon {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
     }
     #app-name {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       font-size: 10px;
       font-weight: 600;
     }
@@ -2054,7 +2055,7 @@ function generateCSS(c: ThemeColors): string {
     /* ============ POMODORO PAGE - Holographic Style ============ */
     #pomo-page {
       padding: 12px;
-      background: ${c.bg_dark};
+      background: @bg_dark;
     }
 
     /* Timer display panel */
@@ -2070,7 +2071,7 @@ function generateCSS(c: ThemeColors): string {
       letter-spacing: 4px;
     }
     #pomo-phase-label {
-      color: ${c.cyan};
+      color: @cyan;
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -2085,13 +2086,13 @@ function generateCSS(c: ThemeColors): string {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #pomo-mode-row #sys-toggle.active #pomo-mode-label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #pomo-mode-row #sys-toggle:hover #pomo-mode-label {
-      color: ${c.fg};
+      color: @fg;
     }
 
     /* Ratio presets row */
@@ -2099,33 +2100,33 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 8px;
     }
     #pomo-preset-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 6px 8px;
       margin: 0 3px;
       min-width: 44px;
     }
     #pomo-preset-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.gray};
+      background: @bg_light;
+      border-color: @gray;
     }
     #pomo-preset-btn.active {
-      background: ${c.bg_light};
-      border: 1px solid ${c.accent};
-      box-shadow: inset 0 0 12px alpha(${c.accent}, 0.3);
+      background: @bg_light;
+      border: 1px solid @accent;
+      box-shadow: inset 0 0 12px alpha(@accent, 0.3);
     }
     #pomo-preset-btn label {
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #pomo-preset-btn:hover label {
-      color: ${c.fg};
+      color: @fg;
     }
     #pomo-preset-btn.active label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
 
     /* Time adjusters */
@@ -2139,33 +2140,33 @@ function generateCSS(c: ThemeColors): string {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: ${c.cyan};
+      color: @cyan;
       min-width: 50px;
     }
     #pomo-adj-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 4px 10px;
       margin: 0 2px;
       min-width: 28px;
     }
     #pomo-adj-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.gray};
+      background: @bg_light;
+      border-color: @gray;
     }
     #pomo-adj-btn label {
       font-size: 12px;
       font-weight: 700;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #pomo-adj-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #pomo-adj-value {
       font-size: 14px;
       font-weight: 700;
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       letter-spacing: 1px;
       min-width: 40px;
     }
@@ -2190,8 +2191,8 @@ function generateCSS(c: ThemeColors): string {
       min-width: 10px;
       min-height: 10px;
       border-radius: 5px;
-      background: alpha(${c.bg_lighter}, 0.3);
-      border: 1px solid ${c.bg_lighter};
+      background: alpha(@bg_lighter, 0.3);
+      border: 1px solid @bg_lighter;
     }
     #pomo-block-dot-btn.selected #pomo-block-dot {
       background: #8b0000;
@@ -2199,8 +2200,8 @@ function generateCSS(c: ThemeColors): string {
       box-shadow: 0 0 6px alpha(#c03030, 0.5);
     }
     #pomo-block-dot-btn.completed #pomo-block-dot {
-      background: alpha(${c.bg_light}, 0.2);
-      border: 1px solid alpha(${c.bg_lighter}, 0.2);
+      background: alpha(@bg_light, 0.2);
+      border: 1px solid alpha(@bg_lighter, 0.2);
       box-shadow: none;
     }
 
@@ -2209,7 +2210,7 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 10px;
     }
     #pomo-start-btn {
-      background: ${c.bg};
+      background: @bg;
       border: 1px solid #2a4a35;
       border-radius: 4px;
       padding: 10px 14px;
@@ -2233,7 +2234,7 @@ function generateCSS(c: ThemeColors): string {
       color: #c0a050;
     }
     #pomo-stop-btn {
-      background: ${c.bg};
+      background: @bg;
       border: 1px solid #4a2a2a;
       border-radius: 4px;
       padding: 10px 14px;
@@ -2267,13 +2268,13 @@ function generateCSS(c: ThemeColors): string {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       margin: 0 8px;
       min-width: 80px;
     }
     #pomo-volume-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
@@ -2281,8 +2282,8 @@ function generateCSS(c: ThemeColors): string {
 
     /* Vim focus highlight */
     .focused {
-      box-shadow: 0 0 6px alpha(${c.accent}, 0.8), inset 0 0 4px alpha(${c.accent}, 0.3);
-      border-color: ${c.fg_bright};
+      box-shadow: 0 0 6px alpha(@accent, 0.8), inset 0 0 4px alpha(@accent, 0.3);
+      border-color: @fg_bright;
     }
 
     /* Audio/Voice tab switcher */
@@ -2291,7 +2292,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-tab-btn {
       background: #0a1018;
-      border: 1px solid ${c.bg_lighter};
+      border: 1px solid @bg_lighter;
       border-bottom: none;
       border-radius: 4px 4px 0 0;
       padding: 4px 8px;
@@ -2301,27 +2302,27 @@ function generateCSS(c: ThemeColors): string {
       background: #152028;
     }
     #eq-tab-btn.active {
-      background: ${c.bg};
-      border-color: ${c.bg_lighter};
-      border-bottom: 1px solid ${c.bg};
+      background: @bg;
+      border-color: @bg_lighter;
+      border-bottom: 1px solid @bg;
     }
     #eq-tab-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #eq-tab-btn:hover #eq-tab-label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #eq-tab-btn.active #eq-tab-label {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
     }
 
     /* ============ EQ PANELS (Audio & Display) ============ */
     #eq-panel {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 12px;
       margin-bottom: 8px;
@@ -2351,12 +2352,12 @@ function generateCSS(c: ThemeColors): string {
     }
     /* Unlit */
     #eq-seg.unlit {
-      background: alpha(${c.bg_lighter}, 0.3);
+      background: alpha(@bg_lighter, 0.3);
     }
     /* Default lit (cyan) — fallback */
     #eq-seg.lit {
-      background: ${c.accent};
-      box-shadow: inset 0 0 2px alpha(${c.fg_bright}, 0.3);
+      background: @accent;
+      box-shadow: inset 0 0 2px alpha(@fg_bright, 0.3);
     }
     /* Visualizer tiers — famicom red, fades up */
     #eq-seg.lit-hi {
@@ -2388,7 +2389,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-warm {
       background: #ffe0a0;
-      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#d0a060, 0.4);
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#d0a060, 0.4);
     }
     /* Gamma (purple) */
     #eq-seg.lit.eq-gamma {
@@ -2397,7 +2398,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-gamma {
       background: #d0b0ff;
-      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#a080d0, 0.4);
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#a080d0, 0.4);
     }
     /* Red */
     #eq-seg.lit.eq-red {
@@ -2406,7 +2407,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-red {
       background: #ff9090;
-      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#d06060, 0.4);
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#d06060, 0.4);
     }
     /* Green */
     #eq-seg.lit.eq-green {
@@ -2415,7 +2416,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-green {
       background: #a0ffa0;
-      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#60d070, 0.4);
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#60d070, 0.4);
     }
     /* Blue */
     #eq-seg.lit.eq-blue {
@@ -2424,7 +2425,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-blue {
       background: #a0c0ff;
-      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#6080d0, 0.4);
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#6080d0, 0.4);
     }
     /* White cap */
     #eq-seg.lit.eq-cap {
@@ -2433,13 +2434,13 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-seg.peak.eq-cap {
       background: #c0c8c8;
-      box-shadow: inset 0 0 3px alpha(${c.fg_bright}, 0.4), 0 0 4px alpha(#909898, 0.4);
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#909898, 0.4);
     }
     #eq-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-top: 4px;
     }
     /* Horizontal volume/brightness bar */
@@ -2464,43 +2465,43 @@ function generateCSS(c: ThemeColors): string {
       margin: 0;
     }
     #eq-hseg.unlit {
-      background: alpha(${c.bg_lighter}, 0.3);
+      background: alpha(@bg_lighter, 0.3);
     }
     #eq-hseg.lit {
-      background: ${c.accent};
-      box-shadow: inset 0 0 2px alpha(${c.fg_bright}, 0.3);
+      background: @accent;
+      box-shadow: inset 0 0 2px alpha(@fg_bright, 0.3);
     }
     /* Preset buttons */
     #eq-presets {
       margin-top: 8px;
     }
     #eq-preset-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 3px;
       padding: 4px 6px;
       margin: 0 2px;
     }
     #eq-preset-btn:hover {
-      background: ${c.bg_light};
-      border-color: ${c.gray};
+      background: @bg_light;
+      border-color: @gray;
     }
     #eq-preset-btn.active {
-      background: ${c.bg_light};
-      border: 1px solid ${c.accent};
-      box-shadow: inset 0 0 8px alpha(${c.accent}, 0.3);
+      background: @bg_light;
+      border: 1px solid @accent;
+      box-shadow: inset 0 0 8px alpha(@accent, 0.3);
     }
     #eq-preset-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #eq-preset-btn:hover #eq-preset-label {
-      color: ${c.fg};
+      color: @fg;
     }
     #eq-preset-btn.active #eq-preset-label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
 
     /* Muted state — dims header, red icon */
@@ -2525,21 +2526,21 @@ function generateCSS(c: ThemeColors): string {
 
     /* Noise cancellation toggle */
     #voice-nc-toggle {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 3px;
       padding: 2px 8px;
       margin-right: 8px;
     }
     #voice-nc-toggle:hover {
-      border-color: ${c.gray};
+      border-color: @gray;
     }
     #voice-nc-toggle.active {
       background: alpha(#40c060, 0.15);
       border-color: #40c060;
     }
     #voice-nc-toggle #control-label {
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #voice-nc-toggle.active #control-label {
       color: #40c060;
@@ -2550,39 +2551,39 @@ function generateCSS(c: ThemeColors): string {
 
     /* Output device selector button */
     #eq-output-selector {
-      background: alpha(${c.bg_light}, 0.4);
-      border: 1px solid ${c.bg_lighter};
+      background: alpha(@bg_light, 0.4);
+      border: 1px solid @bg_lighter;
       border-radius: 3px;
       padding: 6px 10px;
       margin-bottom: 4px;
     }
     #eq-output-selector:hover {
-      background: alpha(${c.bg_lighter}, 0.6);
-      border-color: ${c.gray};
+      background: alpha(@bg_lighter, 0.6);
+      border-color: @gray;
     }
     #eq-output-icon {
       font-size: 12px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-right: 8px;
     }
     #eq-output-name {
       font-size: 10px;
       font-weight: 600;
       letter-spacing: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #eq-output-selector:hover #eq-output-name {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #eq-output-arrow {
       font-size: 10px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
       margin-left: 6px;
     }
 
     /* Output device overlay dropdown */
     #eq-output-scroll {
-      background: ${c.bg};
+      background: @bg;
       border: 1px solid #2a4a5a;
       border-radius: 4px;
       min-width: 216px;
@@ -2594,7 +2595,7 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-output-btn {
       background: #10202e;
-      border: 1px solid ${c.bg_lighter};
+      border: 1px solid @bg_lighter;
       border-radius: 3px;
       padding: 8px 12px;
       margin: 1px 0;
@@ -2603,11 +2604,11 @@ function generateCSS(c: ThemeColors): string {
     }
     #eq-output-btn:hover {
       background: #1a3040;
-      border-color: ${c.gray};
+      border-color: @gray;
     }
     #eq-output-btn.active {
       background: #1a3040;
-      border-color: ${c.accent};
+      border-color: @accent;
     }
     #eq-output-btn label {
       font-size: 9px;
@@ -2617,10 +2618,10 @@ function generateCSS(c: ThemeColors): string {
       transition: none;
     }
     #eq-output-btn:hover label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #eq-output-btn.active label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
     #eq-output-list,
     #eq-output-list * {
@@ -2629,39 +2630,39 @@ function generateCSS(c: ThemeColors): string {
 
     /* ============ BREAK POPUP OVERLAY ============ */
     #break-popup-overlay {
-      background: alpha(${c.bg_dark}, 0.85);
+      background: alpha(@bg_dark, 0.85);
     }
     #break-popup-panel {
-      background: alpha(${c.bg}, 0.95);
-      border: 2px solid ${c.accent};
+      background: alpha(@bg, 0.95);
+      border: 2px solid @accent;
       border-radius: 8px;
       padding: 40px 50px;
-      box-shadow: 0 0 40px alpha(${c.accent}, 0.3),
-                  0 0 80px alpha(${c.accent}, 0.1);
+      box-shadow: 0 0 40px alpha(@accent, 0.3),
+                  0 0 80px alpha(@accent, 0.1);
     }
     #break-popup-title {
-      color: ${c.fg_bright};
+      color: @fg_bright;
       font-size: 20px;
       font-weight: 700;
       letter-spacing: 4px;
       margin-bottom: 16px;
     }
     #break-popup-timer {
-      color: ${c.cyan_bright};
+      color: @cyan_bright;
       font-size: 56px;
       font-weight: 700;
       letter-spacing: 4px;
       margin-bottom: 12px;
     }
     #break-popup-block-label {
-      color: ${c.cyan};
+      color: @cyan;
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 2px;
       margin-bottom: 20px;
     }
     #break-popup-hint {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 2px;
@@ -2672,7 +2673,7 @@ function generateCSS(c: ThemeColors): string {
       padding: 4px 12px 10px 12px;
     }
     #theme-header {
-      color: ${c.cyan};
+      color: @cyan;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -2684,20 +2685,20 @@ function generateCSS(c: ThemeColors): string {
       border: none;
     }
     #theme-btn {
-      background: ${c.bg};
-      border: 1px solid ${c.bg_lighter};
+      background: @bg;
+      border: 1px solid @bg_lighter;
       border-radius: 6px;
       padding: 4px 10px;
       transition: all 150ms ease;
     }
     #theme-btn:hover {
-      border-color: ${c.gray};
-      background: ${c.bg_light};
+      border-color: @gray;
+      background: @bg_light;
     }
     #theme-btn.active {
-      border-color: ${c.accent};
-      background: ${c.bg_light};
-      box-shadow: 0 0 10px alpha(${c.accent}, 0.25);
+      border-color: @accent;
+      background: @bg_light;
+      box-shadow: 0 0 10px alpha(@accent, 0.25);
     }
     #theme-swatch {
       font-size: 11px;
@@ -2707,40 +2708,40 @@ function generateCSS(c: ThemeColors): string {
       font-weight: 600;
       letter-spacing: 1px;
       margin-left: 1px;
-      color: ${c.fg_dim};
+      color: @fg_dim;
     }
     #theme-btn.active #theme-name {
-      color: ${c.fg_bright};
+      color: @fg_bright;
     }
 
     /* ============ WORKSPACE OSD ============ */
     #ws-osd {
-      background: alpha(${c.bg}, 0.92);
-      border: 1px solid ${c.accent};
+      background: alpha(@bg, 0.92);
+      border: 1px solid @accent;
       border-top: none;
       border-radius: 0 0 8px 8px;
       padding: 8px 22px;
-      box-shadow: 0 0 24px alpha(${c.accent}, 0.25),
-                  0 0 48px alpha(${c.accent}, 0.08);
+      box-shadow: 0 0 24px alpha(@accent, 0.25),
+                  0 0 48px alpha(@accent, 0.08);
     }
     #ws-osd-label {
-      color: ${c.fg_bright};
+      color: @fg_bright;
       font-size: 14px;
       font-weight: 700;
       letter-spacing: 4px;
       margin: 0 12px;
     }
     #ws-osd-brackets {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 12px;
     }
 
     /* ============ TASK POPUP OVERLAY ============ */
     #task-popup-overlay {
-      background: alpha(${c.bg_dark}, 0.75);
+      background: alpha(@bg_dark, 0.75);
     }
     #task-popup-panel {
-      background: alpha(${c.bg}, 0.95);
+      background: alpha(@bg, 0.95);
       border: 2px solid #d4a847;
       border-radius: 8px;
       padding: 32px 44px;
@@ -2762,12 +2763,21 @@ function generateCSS(c: ThemeColors): string {
       margin-bottom: 16px;
     }
     #task-popup-hint {
-      color: ${c.fg_dim};
+      color: @fg_dim;
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 2px;
     }
   `
+
+function defineColors(c: ThemeColors): string {
+  return (Object.keys(c) as (keyof ThemeColors)[])
+    .map((k) => `@define-color ${k} ${c[k]};`)
+    .join("\n")
+}
+
+function generateCSS(c: ThemeColors): string {
+  return defineColors(c) + "\n" + STATIC_CSS
 }
 
 // Get current theme name from file, default to mech
