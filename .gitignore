@@ -5,11 +5,18 @@
 # Foot (per-machine overrides, see host.ini.example)
 .config/foot/host.ini
 
+# swappy (rewritten by the app; see config.example)
+.config/swappy/config
+
 # Neovim
 .config/nvim/node_modules/
 .config/nvim/.luarc.json
 .config/nvim/virtual-environments/
 .config/nvim/startup.log
+
+# AGS wallpapers: served from the wallpapers-v1 GitHub release, not git
+.config/ags/wallpapers/*
+!.config/ags/wallpapers/README.md
 
 # AGS cache and state
 .config/ags/.states.json
