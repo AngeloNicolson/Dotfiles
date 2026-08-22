@@ -1,11 +1,36 @@
 #!/bin/bash
 # Dotfiles Installation Script
-# Usage: ./install.sh [module ...]
-# No args = full interactive install
+# Usage: ./install.sh [--dry-run] [--yes] [module ...]
+#   no module    = full interactive install
+#   --dry-run    = print what would change, touch nothing
+#   --yes / -y   = non-interactive (optional components default to "no" unless
+#                  OPT_NVIDIA=y etc. are set in the environment)
+#   doctor       = check this machine against what the config expects
+# Modules: packages symlinks scripts templates dirs services ags theme nvim tmux
+#          shell wallpapers hostconfig firefox rnote ollama doctor lock
 
 set +e
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DRY_RUN="${DRY_RUN:-0}"
+ASSUME_YES="${ASSUME_YES:-0}"
+
+# Minimum versions the tracked config relies on (syntax/protocol features).
+#   hyprland  0.55  match:class windowrule syntax, ext-background-effect blur
+#   foot      1.27  built-in blur (ext-background-effect) + include support
+declare -A MIN_VERSIONS=( [hyprland]=0.55.0 [foot]=1.27.0 )
+
+# Run a mutating command, or just print it under --dry-run.
+run() {
+    if [[ "$DRY_RUN" == "1" ]]; then
+        echo -e "  \033[2m(dry-run) $*\033[0m"
+        return 0
+    fi
+    "$@"
+}
+
+# true if $1 >= $2 (dotted versions)
+version_ge() { [[ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]; }
 
 # ─── Colors & output ───────────────────────────────────────────────────────
 
@@ -221,12 +246,12 @@ ensure_symlink() {
 
     # Anything else (wrong symlink, real file/dir) — back up and replace
     if [[ -L "$link" ]] || [[ -e "$link" ]]; then
-        mv "$link" "${link}.old"
+        run mv "$link" "${link}.old"
         warn "Backed up: $(basename "$link") -> $(basename "$link").old"
     fi
 
-    mkdir -p "$(dirname "$link")"
-    ln -s "$target" "$link"
+    run mkdir -p "$(dirname "$link")"
+    run ln -s "$target" "$link"
     success "Linked: $(basename "$link")"
 }
 
@@ -258,7 +283,7 @@ mod_packages() {
     if [[ "$DISTRO" == "arch" ]]; then
         # Refresh keyring to avoid signature trust issues
         info "Refreshing keyring..."
-        sudo pacman -Sy --noconfirm archlinux-keyring || warn "Keyring refresh failed"
+        run sudo pacman -Sy --noconfirm archlinux-keyring || warn "Keyring refresh failed"
         success "Keyring up to date"
 
         # Find and remove installed packages that conflict with what we're about to install
@@ -313,7 +338,7 @@ mod_packages() {
             for pkg in $to_remove; do
                 echo -e "    ${DIM}$pkg${NC}"
             done
-            sudo pacman -Rdd --noconfirm $to_remove || warn "Some packages could not be removed"
+            run sudo pacman -Rdd --noconfirm $to_remove || warn "Some packages could not be removed"
             success "Cleaned up conflicts"
         fi
     fi
@@ -322,6 +347,10 @@ mod_packages() {
 
     info "Distro: $DISTRO"
     info "Groups: $groups ($count packages)"
+    if [[ "$DRY_RUN" == "1" ]]; then
+        info "(dry-run) would install: $pkgs"
+        return 0
+    fi
     pkg_install "$pkgs"
 
     # Final check — report any packages that are still missing
@@ -388,17 +417,17 @@ mod_scripts() {
     header "Permissions"
 
     if [[ -d "$DOTFILES_DIR/.config/hypr/scripts" ]]; then
-        find "$DOTFILES_DIR/.config/hypr/scripts" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \;
+        run find "$DOTFILES_DIR/.config/hypr/scripts" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \;
         success "Hyprland scripts"
     fi
 
     if [[ -d "$DOTFILES_DIR/.local/bin" ]]; then
-        find "$DOTFILES_DIR/.local/bin" -type f -exec chmod +x {} \;
+        run find "$DOTFILES_DIR/.local/bin" -type f -exec chmod +x {} \;
         success ".local/bin scripts"
     fi
 
     if [[ -d "$DOTFILES_DIR/.config/themes" ]]; then
-        find "$DOTFILES_DIR/.config/themes" -type f -name "*.sh" -exec chmod +x {} \;
+        run find "$DOTFILES_DIR/.config/themes" -type f -name "*.sh" -exec chmod +x {} \;
         success "Theme scripts"
     fi
 }
@@ -414,44 +443,60 @@ mod_templates() {
         if [[ -f "$conf" ]]; then
             skip "$name"
         else
-            cp "$example" "$conf"
+            run cp "$example" "$conf"
             success "Created: $name"
         fi
     done
 
-    # Fish system-local
-    local fish_local="$DOTFILES_DIR/.config/fish/system-local.fish"
-    local fish_example="$DOTFILES_DIR/.config/fish/system-local.fish.example"
-    if [[ -f "$fish_example" ]]; then
-        if [[ -f "$fish_local" ]]; then
-            skip "system-local.fish"
+    # Single-file templates: fish system-local, foot host overrides.
+    # foot refuses to start without host.ini (it is `include`d), so this is
+    # not optional.
+    local pair
+    for pair in \
+        "$DOTFILES_DIR/.config/fish/system-local.fish" \
+        "$DOTFILES_DIR/.config/foot/host.ini"; do
+        local example="$pair.example"
+        [[ -f "$example" ]] || continue
+        if [[ -f "$pair" ]]; then
+            skip "$(basename "$pair")"
         else
-            cp "$fish_example" "$fish_local"
-            success "Created: system-local.fish"
+            run cp "$example" "$pair"
+            success "Created: $(basename "$pair")"
         fi
-    fi
+    done
 }
 
 mod_dirs() {
     header "Directories"
 
-    mkdir -p "$HOME/.config/pipewire/filter-chain.conf.d"
+    run mkdir -p "$HOME/.config/pipewire/filter-chain.conf.d"
     success "PipeWire filter-chain"
 
-    mkdir -p "$HOME/.config/hypr/shaders"
+    run mkdir -p "$HOME/.config/hypr/shaders"
     success "Hyprland shaders"
+
+    # XDG state dir used by AGS (ui-state.json, display-eq.json) — machine-local
+    run mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/ags"
+    success "AGS state dir"
 }
 
 mod_services() {
     header "Services"
 
-    local services=(audio-autoswitch)
-    for svc in "${services[@]}"; do
+    if ! systemctl --user show-environment &>/dev/null; then
+        warn "No user systemd session (container/TTY?) — skipping"
+        return 0
+    fi
+
+    # Only units shipped in this repo (.config/systemd/user/*.service)
+    local svc unit
+    for unit in "$DOTFILES_DIR"/.config/systemd/user/*.service; do
+        [[ -f "$unit" ]] || continue
+        svc="$(basename "$unit" .service)"
         if systemctl --user is-enabled "$svc" &>/dev/null; then
             skip "$svc"
         else
-            systemctl --user enable "$svc"
-            success "Enabled: $svc"
+            run systemctl --user enable "$svc" && success "Enabled: $svc"
         fi
     done
 }
@@ -460,8 +505,16 @@ mod_ags() {
     header "AGS"
 
     if [[ -f "$DOTFILES_DIR/.config/ags/package.json" ]]; then
-        (cd "$DOTFILES_DIR/.config/ags" && npm install --silent 2>&1)
-        success "Dependencies installed"
+        if ! command -v npm &>/dev/null; then
+            warn "npm not found — install nodejs/npm, then re-run: ./install.sh ags"
+            return 0
+        fi
+        if [[ "$DRY_RUN" == "1" ]]; then
+            info "(dry-run) would run npm install in .config/ags"
+        else
+            (cd "$DOTFILES_DIR/.config/ags" && npm install --silent 2>&1)
+            success "Dependencies installed"
+        fi
 
         # Apply gjs dbus compatibility patch if gjs >= 1.88
         local gjs_ver
@@ -473,7 +526,7 @@ mod_ags() {
         fi
     fi
 
-    rm -f /run/user/$(id -u)/ags.js
+    run rm -f "/run/user/$(id -u)/ags.js"
     success "Compiled bundle cleared"
 }
 
@@ -482,7 +535,7 @@ mod_theme() {
 
     local theme_script="$DOTFILES_DIR/.config/themes/apply-theme.sh"
     if [[ -x "$theme_script" ]]; then
-        bash "$theme_script" mech
+        run bash "$theme_script" mech
         success "Applied: mech"
     else
         warn "Theme script not found or not executable"
@@ -514,14 +567,235 @@ mod_ollama() {
         return 0
     fi
 
-    sudo systemctl enable ollama
-    sudo systemctl start ollama
+    run sudo systemctl enable ollama
+    run sudo systemctl start ollama
     success "Service enabled"
 
     sleep 2
     info "Pulling qwen3-coder:30b (this may take a while)..."
-    ollama pull qwen3-coder:30b
+    run ollama pull qwen3-coder:30b
     success "Model installed"
+}
+
+mod_nvim() {
+    header "Neovim plugins"
+
+    if ! command -v nvim &>/dev/null; then
+        warn "nvim not installed — run packages module first"
+        return 0
+    fi
+    # `Lazy! restore` installs exactly the versions in lazy-lock.json (tracked),
+    # so a new machine gets the same plugin set as the last working one.
+    if [[ "$DRY_RUN" == "1" ]]; then
+        info "(dry-run) would run: nvim --headless '+Lazy! restore' +qa"
+        return 0
+    fi
+    info "Restoring plugins from lazy-lock.json (first run can take a minute)..."
+    if nvim --headless "+Lazy! restore" +qa 2>/dev/null; then
+        success "Plugins restored"
+    else
+        warn "Lazy restore reported errors — open nvim and run :Lazy to inspect"
+    fi
+}
+
+mod_tmux() {
+    header "Tmux plugins"
+
+    local tpm="$HOME/.tmux/plugins/tpm"
+    if [[ -d "$tpm" ]]; then
+        skip "tpm present"
+    else
+        run git clone -q https://github.com/tmux-plugins/tpm "$tpm" && success "tpm cloned"
+    fi
+    if [[ -x "$tpm/bin/install_plugins" ]]; then
+        run "$tpm/bin/install_plugins" >/dev/null && success "Plugins installed"
+    fi
+}
+
+mod_shell() {
+    header "Login shell"
+
+    local fish_bin
+    fish_bin="$(command -v fish 2>/dev/null)"
+    if [[ -z "$fish_bin" ]]; then
+        warn "fish not installed — run packages module first"
+        return 0
+    fi
+    local current
+    current="$(getent passwd "$USER" | cut -d: -f7)"
+    if [[ "$current" == "$fish_bin" ]]; then
+        skip "fish is already the login shell"
+        return 0
+    fi
+    if [[ "$DRY_RUN" == "1" ]]; then
+        info "(dry-run) would run: chsh -s $fish_bin"
+        return 0
+    fi
+    if [[ ! -t 0 ]]; then
+        warn "No TTY — run manually: chsh -s $fish_bin"
+        return 0
+    fi
+    if chsh -s "$fish_bin"; then
+        success "Login shell set to fish (takes effect on next login)"
+    else
+        warn "chsh failed — run manually: chsh -s $fish_bin"
+    fi
+}
+
+mod_wallpapers() {
+    header "Wallpapers"
+
+    # Wallpapers ship in the repo (.config/ags/wallpapers). awww keeps its
+    # "current" state in ~/.config/awww; make sure the dir exists so hyprlock's
+    # background path and the AGS selector never point at nothing, and leave a
+    # generated default if the wallpaper dir is somehow empty.
+    local walls="$DOTFILES_DIR/.config/ags/wallpapers"
+    run mkdir -p "$HOME/.config/awww" "$walls"
+    success "awww state dir"
+
+    if ! find -L "$walls" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | grep -q .; then
+        if command -v ffmpeg &>/dev/null; then
+            run ffmpeg -loglevel error -y -f lavfi -i "gradients=s=2560x1600:c0=0x1a120b:c1=0x3a2a1a:nb_colors=2:x0=0:y0=0:x1=2560:y1=1600" -frames:v 1 "$walls/default.png" \
+                && success "Generated default wallpaper (dir was empty)"
+        else
+            warn "No wallpapers and no ffmpeg to generate one — add images to $walls"
+        fi
+    else
+        skip "wallpapers present"
+    fi
+}
+
+mod_hostconfig() {
+    header "Host config (monitors / scale)"
+
+    local gen="$DOTFILES_DIR/.config/hypr/scripts/gen-host-config.sh"
+    if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] || ! command -v hyprctl &>/dev/null; then
+        info "Not inside a Hyprland session — monitors.conf stays at the template"
+        info "After first login run: ~/.config/hypr/scripts/gen-host-config.sh && hyprctl reload"
+        return 0
+    fi
+    if [[ "$DRY_RUN" == "1" ]]; then
+        bash "$gen" --dry-run
+        return 0
+    fi
+    bash "$gen" && success "monitors.conf / LAPTOP_SCALE generated from connected displays"
+}
+
+mod_rnote() {
+    header "rnote settings"
+
+    if ! command -v dconf &>/dev/null; then
+        warn "dconf not found — skipping"
+        return 0
+    fi
+    local src="$DOTFILES_DIR/.config/rnote-dconf-settings.ini"
+    [[ -f "$src" ]] || { warn "rnote-dconf-settings.ini missing"; return 0; }
+    if [[ "$DRY_RUN" == "1" ]]; then
+        info "(dry-run) would dconf load /com/github/flxzt/rnote/ (with @HOME@ -> $HOME)"
+        return 0
+    fi
+    if sed "s|@HOME@|$HOME|g" "$src" | dconf load /com/github/flxzt/rnote/; then
+        success "rnote dconf settings loaded"
+    else
+        warn "dconf load failed (is a session bus running?)"
+    fi
+}
+
+# ─── Doctor ───────────────────────────────────────────────────────────────
+# Read-only. Exit 1 if anything the config depends on is missing/outdated.
+
+DOCTOR_FAILS=0
+d_ok()   { success "$1"; }
+d_bad()  { error "$1"; ((DOCTOR_FAILS++)); }
+d_warn() { warn "$1"; }
+
+mod_doctor() {
+    header "Doctor"
+    DOCTOR_FAILS=0
+
+    info "Binaries"
+    local bin
+    for bin in Hyprland hyprctl foot fish ags gjs nvim jq brightnessctl grim slurp wl-copy awww ffmpeg fc-list gsettings dunst pamixer socat; do
+        if command -v "$bin" &>/dev/null; then d_ok "$bin"; else d_bad "$bin missing"; fi
+    done
+    for bin in hyprlock hypridle npm git tmux; do
+        command -v "$bin" &>/dev/null && d_ok "$bin" || d_warn "$bin missing (optional but used)"
+    done
+
+    info "Minimum versions"
+    local have
+    if command -v Hyprland &>/dev/null; then
+        have="$(Hyprland --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)"
+        if [[ -n "$have" ]] && version_ge "$have" "${MIN_VERSIONS[hyprland]}"; then d_ok "hyprland $have (>= ${MIN_VERSIONS[hyprland]})"
+        else d_bad "hyprland ${have:-?} < ${MIN_VERSIONS[hyprland]} (windowrule match: syntax, blur protocol)"; fi
+    fi
+    if command -v foot &>/dev/null; then
+        have="$(foot --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)"
+        if [[ -n "$have" ]] && version_ge "$have" "${MIN_VERSIONS[foot]}"; then d_ok "foot $have (>= ${MIN_VERSIONS[foot]})"
+        else d_bad "foot ${have:-?} < ${MIN_VERSIONS[foot]} (blur + include)"; fi
+        foot --version 2>/dev/null | grep -q '+blur' && d_ok "foot built with +blur" || d_warn "foot built without blur — terminal blur won't render"
+    fi
+
+    info "Fonts (fc-list)"
+    local font
+    for font in "JetBrainsMono Nerd Font" "CaskaydiaCove Nerd Font Mono" "Noto Sans" "Noto Sans CJK JP"; do
+        if fc-list 2>/dev/null | grep -qi "$font"; then d_ok "$font"; else d_bad "font missing: $font"; fi
+    done
+
+    info "Themes / cursors / icons"
+    local d found
+    for d in "themes/adw-gtk3-dark:GTK theme adw-gtk3-dark" "icons/Tela-circle-black:icon theme Tela-circle-black" "icons/Bibata-Modern-Ice:cursor Bibata-Modern-Ice"; do
+        found=0
+        for root in /usr/share "$HOME/.local/share" "$HOME/.themes" "$HOME/.icons"; do
+            [[ -d "$root/${d%%:*}" || -d "$root/$(basename "${d%%:*}")" ]] && found=1
+        done
+        if [[ $found -eq 1 ]]; then d_ok "${d#*:}"; else d_bad "${d#*:} not installed"; fi
+    done
+
+    info "Machine-specific files"
+    local f
+    for f in "$DOTFILES_DIR"/.config/hypr/custom/*.conf.example; do
+        [[ -f "${f%.example}" ]] && d_ok "$(basename "${f%.example}")" || d_bad "$(basename "${f%.example}") missing — run: ./install.sh templates"
+    done
+    [[ -f "$DOTFILES_DIR/.config/foot/host.ini" ]] && d_ok "foot host.ini" || d_bad "foot/host.ini missing (foot will not start) — run: ./install.sh templates"
+    [[ -f "$DOTFILES_DIR/.config/fish/system-local.fish" ]] && d_ok "fish system-local.fish" || d_warn "fish/system-local.fish missing — run: ./install.sh templates"
+    if grep -qE '^[[:space:]]*monitor[[:space:]]*=' "$DOTFILES_DIR/.config/hypr/custom/monitors.conf" "$DOTFILES_DIR/.config/hypr/custom/general.conf" 2>/dev/null; then
+        d_ok "monitor layout defined (custom/monitors.conf or general.conf)"
+    else
+        d_warn "no monitor lines yet — universal fallback in use; run gen-host-config.sh inside Hyprland"
+    fi
+
+    info "Config parses"
+    if command -v Hyprland &>/dev/null; then
+        if Hyprland --verify-config 2>&1 | grep -q 'config ok'; then d_ok "Hyprland --verify-config"; else d_bad "Hyprland --verify-config reports errors (run it to see them)"; fi
+    fi
+    if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl &>/dev/null; then
+        local cfgerr; cfgerr="$(hyprctl configerrors 2>/dev/null)"
+        [[ -z "$cfgerr" || "$cfgerr" == "no errors" ]] && d_ok "hyprctl configerrors: none" || d_bad "hyprctl configerrors: $cfgerr"
+    fi
+    if command -v foot &>/dev/null; then
+        if foot --check-config &>/dev/null; then d_ok "foot --check-config"; else d_bad "foot --check-config failed: $(foot --check-config 2>&1 | head -n1)"; fi
+    fi
+
+    info "Symlinks"
+    for d in hypr ags foot fish nvim themes; do
+        if [[ -L "$HOME/.config/$d" && "$(readlink "$HOME/.config/$d")" == "$DOTFILES_DIR/.config/$d" ]]; then d_ok "~/.config/$d"; else d_bad "~/.config/$d not linked — run: ./install.sh symlinks"; fi
+    done
+
+    info "AGS"
+    [[ -d "$DOTFILES_DIR/.config/ags/node_modules" ]] && d_ok "node_modules present" || d_bad "ags/node_modules missing — run: ./install.sh ags"
+    [[ -f "$DOTFILES_DIR/.config/nvim/lazy-lock.json" ]] && d_ok "nvim lazy-lock.json tracked" || d_warn "nvim lazy-lock.json missing"
+    find -L "$DOTFILES_DIR/.config/ags/wallpapers" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.png' -o -iname '*.jpeg' -o -iname '*.webp' \) 2>/dev/null | grep -q . \
+        && d_ok "wallpapers present" || d_warn "no wallpapers — run: ./install.sh wallpapers"
+
+    echo ""
+    if [[ $DOCTOR_FAILS -eq 0 ]]; then
+        success "Doctor: all checks passed"
+        return 0
+    else
+        error "Doctor: $DOCTOR_FAILS problem(s) found"
+        return 1
+    fi
 }
 
 mod_lock() {
@@ -575,6 +849,10 @@ ask_yn() {
 }
 
 interactive_prompts() {
+    if [[ "$ASSUME_YES" == "1" ]]; then
+        info "Non-interactive: optional components from environment (OPT_NVIDIA/OPT_OLLAMA/OPT_TABLET/OPT_FIREFOX/OPT_EXTRAS)"
+        return 0
+    fi
     echo -e "  ${BOLD}Optional components:${NC}"
     echo ""
     OPT_NVIDIA="$(ask_yn  "NVIDIA drivers (VA-API, CUDA)?" "n")"
@@ -600,10 +878,18 @@ run_module() {
         firefox)   mod_firefox ;;
         tablet)    header "Tablet"; skip "Handled by symlinked configs" ;;
         ollama)    mod_ollama ;;
+        nvim)      mod_nvim ;;
+        tmux)      mod_tmux ;;
+        shell)     mod_shell ;;
+        wallpapers) mod_wallpapers ;;
+        hostconfig) mod_hostconfig ;;
+        rnote)     mod_rnote ;;
+        doctor)    mod_doctor ;;
         lock)      mod_lock ;;
         *)         error "Unknown module: $mod"; return 1 ;;
     esac
     local status=$?
+    if [[ "$mod" == "doctor" ]]; then DOCTOR_STATUS=$status; return $status; fi
     if [[ $status -ne 0 ]]; then
         error "Module '$mod' failed (exit $status)"
         warn "Continuing with remaining modules..."
@@ -620,14 +906,29 @@ print_summary() {
     echo -e "  ${DIM}1.${NC} Start Hyprland:"
     echo -e "     From TTY: ${CYAN}start-hyprland${NC}"
     echo -e "     From display manager: select ${CYAN}Hyprland${NC} from session list"
-    echo -e "  ${DIM}2.${NC} Edit machine-specific configs:"
-    echo -e "     ${DIM}~/.config/hypr/custom/*.conf${NC}"
-    echo -e "     ${DIM}~/.config/fish/system-local.fish${NC}"
-    [[ "$OPT_FIREFOX" == "y" ]] && echo -e "  ${DIM}3.${NC} Restart Firefox to apply custom CSS"
+    echo -e "  ${DIM}2.${NC} Inside Hyprland, generate the monitor/scale config for this machine:"
+    echo -e "     ${CYAN}~/.config/hypr/scripts/gen-host-config.sh && hyprctl reload${NC}"
+    echo -e "  ${DIM}3.${NC} Tweak machine-specific files if needed:"
+    echo -e "     ${DIM}~/.config/hypr/custom/*.conf  ·  ~/.config/foot/host.ini  ·  ~/.config/fish/system-local.fish${NC}"
+    echo -e "  ${DIM}4.${NC} Check everything: ${CYAN}./install.sh doctor${NC}"
+    [[ "$OPT_FIREFOX" == "y" ]] && echo -e "  ${DIM}5.${NC} Restart Firefox to apply custom CSS"
     echo ""
 }
 
 # ─── Main ──────────────────────────────────────────────────────────────────
+
+ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run)     DRY_RUN=1 ;;
+        --yes|-y)      ASSUME_YES=1 ;;
+        -h|--help)     sed -n '2,10p' "$0"; exit 0 ;;
+        --*)           echo "Unknown flag: $arg"; exit 2 ;;
+        *)             ARGS+=("$arg") ;;
+    esac
+done
+set -- "${ARGS[@]}"
+[[ "$DRY_RUN" == "1" ]] && echo -e "  ${YELLOW}${BOLD}DRY RUN${NC} — nothing will be changed"
 
 detect_distro
 
@@ -643,14 +944,15 @@ if [[ $# -eq 0 ]]; then
     echo ""
     interactive_prompts
 
-    CORE_MODULES=(packages symlinks scripts templates dirs services ags theme)
+    CORE_MODULES=(packages symlinks scripts templates dirs wallpapers services ags theme nvim tmux shell hostconfig)
     OPTIONAL_MODULES=()
 
     [[ "$OPT_FIREFOX" == "y" ]] && OPTIONAL_MODULES+=(firefox)
     [[ "$OPT_TABLET" == "y" ]] && OPTIONAL_MODULES+=(tablet)
+    [[ "$OPT_EXTRAS" == "y" ]] && OPTIONAL_MODULES+=(rnote)
     [[ "$OPT_OLLAMA" == "y" ]] && OPTIONAL_MODULES+=(ollama)
 
-    ALL_MODULES=("${CORE_MODULES[@]}" "${OPTIONAL_MODULES[@]}")
+    ALL_MODULES=("${CORE_MODULES[@]}" "${OPTIONAL_MODULES[@]}" doctor)
     TOTAL_MODULES=${#ALL_MODULES[@]}
 
     for mod in "${ALL_MODULES[@]}"; do
@@ -665,3 +967,7 @@ else
     done
     echo ""
 fi
+
+# `./install.sh doctor` (alone or with others) exits non-zero when checks fail,
+# so it can gate CI or a shell prompt.
+exit "${DOCTOR_STATUS:-0}"
