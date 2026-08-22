@@ -43,9 +43,11 @@ jobs:
           '
 
       - name: Hyprland --verify-config (as tester)
+        # Hyprland aborts before parsing unless XDG_RUNTIME_DIR exists.
         run: |
           sudo -u tester -H bash -c '
             set -o pipefail
+            export XDG_RUNTIME_DIR=/tmp/xdg-tester; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
             Hyprland --verify-config 2>&1 | tee /tmp/verify.log | tail -n 5
             grep -q "config ok" /tmp/verify.log
           '

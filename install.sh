@@ -767,7 +767,10 @@ mod_doctor() {
 
     info "Config parses"
     if command -v Hyprland &>/dev/null; then
-        if Hyprland --verify-config 2>&1 | grep -q 'config ok'; then d_ok "Hyprland --verify-config"; else d_bad "Hyprland --verify-config reports errors (run it to see them)"; fi
+        # Hyprland aborts before parsing without XDG_RUNTIME_DIR (TTY/CI) — give it one.
+        local xdg="${XDG_RUNTIME_DIR:-}"
+        if [[ -z "$xdg" || ! -d "$xdg" ]]; then xdg="$(mktemp -d)"; fi
+        if XDG_RUNTIME_DIR="$xdg" Hyprland --verify-config 2>&1 | grep -q 'config ok'; then d_ok "Hyprland --verify-config"; else d_bad "Hyprland --verify-config reports errors (run it to see them)"; fi
     fi
     if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl &>/dev/null; then
         local cfgerr; cfgerr="$(hyprctl configerrors 2>/dev/null)"
