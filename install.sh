@@ -493,8 +493,9 @@ mod_scripts() {
 mod_templates() {
     header "Templates"
 
+    # Hyprland ≥ 0.55 reads hyprland.lua; per-machine files are custom/*.lua.
     local custom_dir="$DOTFILES_DIR/.config/hypr/custom"
-    for example in "$custom_dir"/*.conf.example; do
+    for example in "$custom_dir"/*.lua.example; do
         [[ -f "$example" ]] || continue
         local conf="${example%.example}"
         local name="$(basename "$conf")"
@@ -762,7 +763,7 @@ mod_hostconfig() {
 
     local gen="$DOTFILES_DIR/.config/hypr/scripts/gen-host-config.sh"
     if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] || ! command -v hyprctl &>/dev/null; then
-        info "Not inside a Hyprland session — monitors.conf stays at the template"
+        info "Not inside a Hyprland session — monitors.lua stays at the template"
         info "After first login run: ~/.config/hypr/scripts/gen-host-config.sh && hyprctl reload"
         return 0
     fi
@@ -770,7 +771,7 @@ mod_hostconfig() {
         bash "$gen" --dry-run
         return 0
     fi
-    bash "$gen" && success "monitors.conf / LAPTOP_SCALE generated from connected displays"
+    bash "$gen" && success "monitors.lua / LAPTOP_SCALE generated from connected displays"
 }
 
 mod_rnote() {
@@ -865,19 +866,20 @@ mod_doctor() {
 
     info "Machine-specific files"
     local f
-    for f in "$DOTFILES_DIR"/.config/hypr/custom/*.conf.example; do
+    for f in "$DOTFILES_DIR"/.config/hypr/custom/*.lua.example; do
         [[ -f "${f%.example}" ]] && d_ok "$(basename "${f%.example}")" || d_bad "$(basename "${f%.example}") missing — run: ./install.sh templates"
     done
     [[ -f "$DOTFILES_DIR/.config/foot/host.ini" ]] && d_ok "foot host.ini" || d_bad "foot/host.ini missing (foot will not start) — run: ./install.sh templates"
     [[ -f "$DOTFILES_DIR/.config/fish/system-local.fish" ]] && d_ok "fish system-local.fish" || d_warn "fish/system-local.fish missing — run: ./install.sh templates"
     [[ -f "$DOTFILES_DIR/.config/swappy/config" ]] && d_ok "swappy config" || d_warn "swappy/config missing — run: ./install.sh templates"
-    if grep -qE '^[[:space:]]*monitor[[:space:]]*=' "$DOTFILES_DIR/.config/hypr/custom/monitors.conf" "$DOTFILES_DIR/.config/hypr/custom/general.conf" 2>/dev/null; then
-        d_ok "monitor layout defined (custom/monitors.conf or general.conf)"
+    if grep -qE '^[[:space:]]*hl\.monitor\(' "$DOTFILES_DIR/.config/hypr/custom/monitors.lua" "$DOTFILES_DIR/.config/hypr/custom/general.lua" 2>/dev/null; then
+        d_ok "monitor layout defined (custom/monitors.lua or general.lua)"
     else
         d_warn "no monitor lines yet — universal fallback in use; run gen-host-config.sh inside Hyprland"
     fi
 
     info "Config parses"
+    [[ -f "$DOTFILES_DIR/.config/hypr/hyprland.lua" ]] && d_ok "hyprland.lua present (Lua config; .conf is dropped in Hyprland 0.57)" || d_warn "hyprland.lua missing — Hyprland will fall back to hyprland.conf (removed in 0.57)"
     if command -v Hyprland &>/dev/null; then
         # Hyprland aborts before parsing without XDG_RUNTIME_DIR (TTY/CI) — give it one.
         local xdg="${XDG_RUNTIME_DIR:-}"
@@ -1033,7 +1035,7 @@ print_summary() {
     echo -e "  ${DIM}2.${NC} Inside Hyprland, generate the monitor/scale config for this machine:"
     echo -e "     ${CYAN}~/.config/hypr/scripts/gen-host-config.sh && hyprctl reload${NC}"
     echo -e "  ${DIM}3.${NC} Tweak machine-specific files if needed:"
-    echo -e "     ${DIM}~/.config/hypr/custom/*.conf  ·  ~/.config/foot/host.ini  ·  ~/.config/fish/system-local.fish${NC}"
+    echo -e "     ${DIM}~/.config/hypr/custom/*.lua  ·  ~/.config/foot/host.ini  ·  ~/.config/fish/system-local.fish${NC}"
     echo -e "  ${DIM}4.${NC} Check everything: ${CYAN}./install.sh doctor${NC}"
     chosen firefox && echo -e "  ${DIM}5.${NC} Restart Firefox to apply custom CSS"
     echo ""

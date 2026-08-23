@@ -1,0 +1,5 @@
+-- You can put your preferred keybinds here
+-- https://wiki.hypr.land/Configuring/Basics/Binds/
+
+-- Terminal
+-- hl.bind("SUPER + Return", hl.dsp.exec_cmd("foot"))

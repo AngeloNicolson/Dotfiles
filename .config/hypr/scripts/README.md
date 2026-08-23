@@ -26,7 +26,7 @@ The script uses `hyprctl keyword monitor "eDP-1, disable"` instead of just turni
 
 ### Usage
 
-Automatically triggered by Hyprland lid switch events via bindings in `hyprland.conf`:
+Automatically triggered by Hyprland lid switch events via bindings in `hyprland.lua`:
 
 ```
 bindl = , switch:on:Lid Switch, exec, ~/.config/hypr/scripts/lid-switch.sh close
@@ -35,7 +35,7 @@ bindl = , switch:off:Lid Switch, exec, ~/.config/hypr/scripts/lid-switch.sh open
 
 ### Monitor Configuration
 
-Requires the following monitor setup in `hyprland.conf`:
+Requires the following monitor setup in `hyprland.lua` / `custom/general.lua`:
 
 ```
 monitor = eDP-1,2560x1600@240,0x0,1.25          # Laptop screen at top-left

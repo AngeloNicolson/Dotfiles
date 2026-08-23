@@ -91,12 +91,15 @@ gsettings set org.gnome.desktop.interface color-scheme "$COLOR_SCHEME" 2>/dev/nu
 
 # --- HYPRLAND ---
 echo "  Updating Hyprland..."
-hyprctl keyword general:gaps_in "$GAPS_IN" 2>/dev/null
-hyprctl keyword general:gaps_out "$GAPS_OUT" 2>/dev/null
-hyprctl keyword general:border_size "$BORDER_SIZE" 2>/dev/null
-hyprctl keyword decoration:rounding "$BORDER_RADIUS" 2>/dev/null
-hyprctl keyword general:col.active_border "rgb($(strip_hash $BG_DARK))" 2>/dev/null
-hyprctl keyword general:col.inactive_border "rgb($(strip_hash $BG_DARK))" 2>/dev/null
+# hypr_set works with both the hyprlang (.conf) and Lua (hyprland.lua) config
+# managers — `hyprctl keyword` does not exist under Lua.
+source "$HOME/.config/hypr/scripts/hypr-compat.sh"
+hypr_set general:gaps_in "$GAPS_IN" 2>/dev/null
+hypr_set general:gaps_out "$GAPS_OUT" 2>/dev/null
+hypr_set general:border_size "$BORDER_SIZE" 2>/dev/null
+hypr_set decoration:rounding "$BORDER_RADIUS" 2>/dev/null
+hypr_set general:col.active_border "rgb($(strip_hash $BG_DARK))" 2>/dev/null
+hypr_set general:col.inactive_border "rgb($(strip_hash $BG_DARK))" 2>/dev/null
 hyprctl setcursor "$CURSOR_THEME" 20 2>/dev/null
 
 # --- DUNST ---

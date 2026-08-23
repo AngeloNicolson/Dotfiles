@@ -22,9 +22,9 @@ sudo systemctl enable --now bluetooth.service
 mkdir -p ~/.config/pipewire/filter-chain.conf.d
 ```
 
-### Hyprland exec-once (add to ~/.config/hypr/custom/execs.conf)
-```
-exec-once = wl-gammarelay-rs
+### Hyprland autostart (add to ~/.config/hypr/custom/execs.lua, inside the hyprland.start handler)
+```lua
+hl.exec_cmd("wl-gammarelay-rs")
 ```
 
 ### Optional: AI Video Upscaling
@@ -100,7 +100,7 @@ app.start({
 ags run ~/.config/ags/app.tsx
 ```
 
-## Keybinds (in ~/.config/hypr/keybindings.conf)
+## Keybinds (in ~/.config/hypr/keybindings.lua)
 - `Super+Q` - Toggle bar visibility
 - `Super+Tab` - Cycle sidebar pages
 

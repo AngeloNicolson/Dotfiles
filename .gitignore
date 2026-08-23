@@ -27,6 +27,7 @@
 
 # Machine-specific Hyprland configs (use .example templates)
 .config/hypr/custom/*.conf
+.config/hypr/custom/*.lua
 
 # Python cache
 __pycache__/

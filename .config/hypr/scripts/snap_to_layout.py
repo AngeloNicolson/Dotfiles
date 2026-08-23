@@ -37,6 +37,12 @@ import subprocess
 from pathlib import Path
 import re
 
+# hypr_compat lives next to this script; it routes every hyprctl *write*
+# (dispatch) through the right syntax for the running config manager
+# (legacy hyprlang vs Lua).  Read-only `hyprctl -j ...` queries stay as-is.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hypr_compat as hc
+
 
 def run_hyprctl(command):
     """Run a hyprctl command"""
@@ -254,12 +260,11 @@ def snap_to_layout():
         if window_index in positions:
             pos = positions[window_index]
             # Move to current workspace silently, then resize and reposition
-            batch_cmd = (
-                f'hyprctl dispatch movetoworkspacesilent {workspace_id},address:{address} && '
-                f'hyprctl dispatch resizewindowpixel exact {pos["width"]} {pos["height"]},address:{address} && '
-                f'hyprctl dispatch movewindowpixel exact {pos["x"]} {pos["y"]},address:{address}'
-            )
-            subprocess.run(batch_cmd, shell=True, capture_output=True, check=False)
+            hc.dispatch_many([
+                hc.cmd_move_to_workspace_silent(workspace_id, address),
+                hc.cmd_resize_window_pixel_exact(pos["width"], pos["height"], address),
+                hc.cmd_move_window_pixel_exact(pos["x"], pos["y"], address),
+            ])
             repositioned += 1
 
     print(f"Repositioned {repositioned} windows to layout '{active_layout}'")

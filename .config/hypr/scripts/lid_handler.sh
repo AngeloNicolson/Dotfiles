@@ -7,6 +7,7 @@
 #   - Enable laptop screen at 0x0, push external to the right
 # Optional host overrides (custom/env.conf): LAPTOP_SCALE, LAPTOP_MODE
 source "$(dirname "$0")/monitor-helpers.sh"
+source "$(dirname "$0")/hypr-compat.sh"   # hypr_monitor: .conf + Lua sessions
 
 LAPTOP="$(mon_laptop)"
 [ -z "$LAPTOP" ] && exit 0   # desktop, no lid
@@ -18,8 +19,8 @@ EXTERNAL="$(mon_first_external)"
 case "$1" in
     close)
         if [ -n "$EXTERNAL" ]; then
-            hyprctl keyword monitor "$LAPTOP,disable"
-            hyprctl keyword monitor "$EXTERNAL,preferred,0x0,1"
+            hypr_monitor "$LAPTOP,disable"
+            hypr_monitor "$EXTERNAL,preferred,0x0,1"
         else
             ~/.config/hypr/scripts/lock.sh &
             sleep 0.5
@@ -27,10 +28,10 @@ case "$1" in
         fi
         ;;
     open)
-        hyprctl keyword monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
+        hypr_monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
         if [ -n "$EXTERNAL" ]; then
             x="$(mon_logical_width "$LAPTOP")"
-            hyprctl keyword monitor "$EXTERNAL,preferred,${x}x0,1"
+            hypr_monitor "$EXTERNAL,preferred,${x}x0,1"
         fi
         ;;
 esac

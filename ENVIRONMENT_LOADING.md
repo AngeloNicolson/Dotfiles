@@ -48,7 +48,7 @@ Environment configs are stored in `~/.config/hypr/layouts/environment_configs/` 
 
 ### Startup (Automatic)
 - Default environment set in `~/.config/hypr/layouts/default_environment.txt`
-- Loaded via `exec-once` in `hyprland.conf`
+- Loaded from the `hyprland.start` handler in `hyprland.lua`
 - Runs `~/.config/hypr/scripts/load_default_environment.sh`
 
 ### Live Switching (Manual)

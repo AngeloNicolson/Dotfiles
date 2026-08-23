@@ -4,6 +4,7 @@ import GdkPixbuf from "gi://GdkPixbuf"
 import { execAsync } from "ags/process"
 import { createState } from "ags"
 import { px } from "../scale"
+import { hyprSetOption } from "../compositor"
 import ThemeSelector from "./ThemeSelector"
 
 const WALLPAPER_DIR = GLib.get_home_dir() + "/.config/ags/wallpapers"
@@ -388,10 +389,10 @@ export default function WallpaperSelector() {
     }
 
     // Set Hyprland background to black (fallback when swww dies)
-    await execAsync(["hyprctl", "keyword", "misc:background_color", "0x000000"]).catch(() => {})
-    await execAsync(["hyprctl", "keyword", "misc:disable_hyprland_logo", "true"]).catch(() => {})
-    await execAsync(["hyprctl", "keyword", "misc:disable_splash_rendering", "true"]).catch(() => {})
-    await execAsync(["hyprctl", "keyword", "misc:force_default_wallpaper", "-1"]).catch(() => {})
+    await hyprSetOption("misc:background_color", "0x000000").catch(() => {})
+    await hyprSetOption("misc:disable_hyprland_logo", true).catch(() => {})
+    await hyprSetOption("misc:disable_splash_rendering", true).catch(() => {})
+    await hyprSetOption("misc:force_default_wallpaper", -1).catch(() => {})
 
     if (swwwRunning) {
       // Fade swww to black

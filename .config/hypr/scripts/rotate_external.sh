@@ -3,6 +3,7 @@
 # (transform 3). Monitor name, mode and position are auto-detected, so this works
 # on any machine. Bound to the Copilot/Assistant key.
 source "$(dirname "$0")/monitor-helpers.sh"
+source "$(dirname "$0")/hypr-compat.sh"   # hypr_monitor: .conf + Lua sessions
 
 MON="$(mon_first_external)"
 [ -z "$MON" ] && exit 0   # no external monitor connected
@@ -18,4 +19,4 @@ else
     t=0   # portrait  -> landscape
 fi
 
-hyprctl keyword monitor "$MON,preferred,${x}x${y},1,transform,$t"
+hypr_monitor "$MON,preferred,${x}x${y},1,transform,$t"

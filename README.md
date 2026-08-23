@@ -111,9 +111,9 @@ The installer is idempotent — safe to re-run at any time.
    ```bash
    ~/.config/hypr/scripts/gen-host-config.sh && hyprctl reload
    ```
-   This writes the gitignored `hypr/custom/monitors.conf` (resolution, DPI-derived
+   This writes the gitignored `hypr/custom/monitors.lua` (resolution, DPI-derived
    scale snapped to an integer logical size, left-to-right layout) and sets
-   `LAPTOP_SCALE` in `custom/env.conf`. Use `--dry-run` to preview, `--force` to
+   `LAPTOP_SCALE` in `custom/env.lua`. Use `--dry-run` to preview, `--force` to
    regenerate, `--scale 1.5` to pin the laptop panel.
 3. `./install.sh doctor` — fix anything it lists.
 
@@ -121,12 +121,27 @@ The installer is idempotent — safe to re-run at any time.
 
 | File | Purpose |
 |------|---------|
-| `hypr/custom/monitors.conf` | Generated monitor layout + scale (see above) |
-| `hypr/custom/env.conf` | GPU backend env, `BACKLIGHT_DEVICE`, `LAPTOP_SCALE` |
-| `hypr/custom/general.conf`, `rules.conf`, `keybinds.conf`, `execs.conf` | Local overrides, sourced last |
+| `hypr/custom/monitors.lua` | Generated monitor layout + scale (see above) |
+| `hypr/custom/env.lua` | GPU backend env, `BACKLIGHT_DEVICE`, `LAPTOP_SCALE` |
+| `hypr/custom/general.lua`, `rules.lua`, `keybinds.lua`, `execs.lua` | Local overrides, required last |
 | `foot/host.ini` | Terminal font size / alpha for this screen (included last by `foot.ini`) |
 | `fish/system-local.fish` | Paths and env vars |
 | `swappy/config` | Screenshot save dir (swappy rewrites this file itself) |
+
+### Hyprland config format (Lua)
+
+Hyprland ≥ 0.55 reads `hypr/hyprland.lua` (the hyprlang `.conf` format is removed
+in 0.57). The Lua tree mirrors the old split — `hyprland.lua`, `animations.lua`,
+`keybindings.lua`, `rules.lua`, `theme.lua`, `lib.lua` (helpers), `custom/*.lua`
+— and is validated by `Hyprland --verify-config` in CI and `install.sh doctor`.
+The `.conf` files are kept only as a fallback: delete/rename `hyprland.lua` and
+Hyprland uses `hyprland.conf` again.
+
+Runtime scripts talk to Hyprland through `hypr/scripts/hypr-compat.sh`
+(`hypr_set`, `hypr_monitor`, `hypr_dispatch`) / `hypr_compat.py` and AGS's
+`compositor.ts` (`hyprSetOption`, `hyprDispatch`) — under Lua `hyprctl keyword`
+no longer exists and `hyprctl dispatch` takes `hl.dsp.*` expressions, so these
+helpers pick the right dialect for the running session.
 
 ### How sizing stays consistent across screens
 
@@ -141,7 +156,7 @@ and scales from there:
 - **foot** — `dpi-aware=no`, sizes in logical points so text tracks the compositor
   scale; bump per machine in `foot/host.ini`.
 - **GTK** — no hardcoded `gtk-xft-dpi`; cursor theme/size come from one place
-  (`Bibata-Modern-Ice`, 20) in both `gtk-3.0/4.0/settings.ini` and `hypr/theme.conf`.
+  (`Bibata-Modern-Ice`, 20) in both `gtk-3.0/4.0/settings.ini` and `hypr/theme.lua`.
 
 ### CI
 
@@ -229,7 +244,7 @@ Requires a GPU with enough VRAM for the configured model. Model and VRAM require
 | `Super + F` | Firefox |
 | `Super + T` | Kitty |
 
-See `~/.config/hypr/keybindings.conf` for the full list.
+See `~/.config/hypr/keybindings.lua` for the full list.
 
 ## Firefox
 

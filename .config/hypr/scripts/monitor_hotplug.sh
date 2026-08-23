@@ -5,6 +5,7 @@
 # works on any machine (no hardcoded eDP-1/HDMI-A-1).
 
 source "$(dirname "$0")/monitor-helpers.sh"
+source "$(dirname "$0")/hypr-compat.sh"   # hypr_monitor: .conf + Lua sessions
 
 handle_monitors() {
     local laptop; laptop="$(mon_laptop)"
@@ -12,10 +13,10 @@ handle_monitors() {
 
     if [ -n "$(mon_first_external)" ]; then
         # External monitor present — disable laptop panel
-        hyprctl keyword monitor "$laptop,disable"
+        hypr_monitor "$laptop,disable"
     else
         # No external monitor — enable laptop panel at its preferred mode
-        hyprctl keyword monitor "$laptop,preferred,auto,auto"
+        hypr_monitor "$laptop,preferred,auto,auto"
     fi
 }
 

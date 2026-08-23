@@ -1,9 +1,10 @@
 #!/bin/bash
+source "$(dirname "$0")/hypr-compat.sh"   # hypr_dispatch: .conf + Lua sessions
 
 function close_special_workspace() {
   special_open=`hyprctl monitors -j | jq ".[0].specialWorkspace.name" | grep "special"`
   if [ ! -z $special_open ]; then
-    hyprctl dispatch togglespecialworkspace
+    hypr_dispatch "togglespecialworkspace" "hl.dsp.workspace.toggle_special()"
   fi
 }
 

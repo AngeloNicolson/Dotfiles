@@ -8,6 +8,7 @@
 import GLib from "gi://GLib"
 import AstalHyprland from "gi://AstalHyprland"
 import { Gdk } from "ags/gtk3"
+import { execAsync } from "ags/process"
 
 export interface MonitorInfo {
   name: string
@@ -114,4 +115,52 @@ export function onMonitorsChanged(cb: () => void): void {
 // fallback (no focus concept without compositor IPC).
 export function onFocusChanged(cb: () => void): void {
   hypr?.connect("notify::focused-workspace", () => cb())
+}
+
+// ── Runtime config / dispatch ────────────────────────────────────────────────
+// Hyprland ≥ 0.55 reads a Lua config (hyprland.lua). Under it `hyprctl keyword`
+// no longer exists and `hyprctl dispatch` takes Lua (hl.dsp.*) syntax; the
+// hyprlang (.conf) manager — still used until 0.57 — only understands the old
+// forms. Probe once, then speak whichever dialect the running session wants.
+
+let luaConfig: Promise<boolean> | null = null
+export function hyprConfigIsLua(): Promise<boolean> {
+  if (!hypr) return Promise.resolve(false)
+  if (!luaConfig)
+    luaConfig = execAsync(["hyprctl", "eval", "do end"])
+      .then(out => out.trim() === "ok")
+      .catch(() => false)
+  return luaConfig
+}
+
+function luaStr(s: string): string {
+  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`
+}
+
+function luaValue(v: string | number | boolean): string {
+  if (typeof v === "number" || typeof v === "boolean") return String(v)
+  if (/^-?\d+(\.\d+)?$/.test(v)) return v
+  if (v === "true" || v === "false") return v
+  return luaStr(v)
+}
+
+// hyprSetOption("general:col.active_border", "rgb(ff0000)") — keyword-style key,
+// ':' and '.' both nest (→ hl.config({ general = { col = { active_border = … } } })).
+export async function hyprSetOption(key: string, value: string | number | boolean): Promise<void> {
+  if (!hypr) return
+  if (await hyprConfigIsLua()) {
+    const parts = key.split(/[:.]/)
+    const last = parts.pop()!
+    const expr = parts.map(p => `${p} = { `).join("") + `${last} = ${luaValue(value)}` + " }".repeat(parts.length)
+    await execAsync(["hyprctl", "eval", `hl.config({ ${expr} })`])
+  } else {
+    await execAsync(["hyprctl", "keyword", key, String(value)])
+  }
+}
+
+// hyprDispatch("exit", "hl.dsp.exit()") — legacy args vs Lua dispatcher expression.
+export async function hyprDispatch(legacy: string, lua: string): Promise<void> {
+  if (!hypr) return
+  if (await hyprConfigIsLua()) await execAsync(["hyprctl", "dispatch", lua])
+  else await execAsync(["hyprctl", "dispatch", ...legacy.split(" ")])
 }

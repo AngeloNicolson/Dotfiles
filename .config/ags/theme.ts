@@ -3,6 +3,7 @@ import { execAsync } from "ags/process"
 import app from "ags/gtk3/app"
 import GLib from "gi://GLib"
 import { scaleCss } from "./scale"
+import { hyprSetOption } from "./compositor"
 
 const THEME_DIR = GLib.get_home_dir() + "/.config/themes"
 
@@ -2863,12 +2864,12 @@ export async function applyTheme(themeName: string) {
 
   // Apply Hyprland settings
   const hypr = theme.hyprland
-  await execAsync(`hyprctl keyword general:gaps_in ${hypr.gapsIn}`).catch(() => {})
-  await execAsync(`hyprctl keyword general:gaps_out ${hypr.gapsOut}`).catch(() => {})
-  await execAsync(`hyprctl keyword general:border_size ${hypr.borderSize}`).catch(() => {})
-  await execAsync(`hyprctl keyword decoration:rounding ${hypr.borderRadius}`).catch(() => {})
-  await execAsync(`hyprctl keyword general:col.active_border "rgb(${stripHash(c.bg_dark)})"`).catch(() => {})
-  await execAsync(`hyprctl keyword general:col.inactive_border "rgb(${stripHash(c.bg_dark)})"`).catch(() => {})
+  await hyprSetOption("general:gaps_in", hypr.gapsIn).catch(() => {})
+  await hyprSetOption("general:gaps_out", hypr.gapsOut).catch(() => {})
+  await hyprSetOption("general:border_size", hypr.borderSize).catch(() => {})
+  await hyprSetOption("decoration:rounding", hypr.borderRadius).catch(() => {})
+  await hyprSetOption("general:col.active_border", `rgb(${stripHash(c.bg_dark)})`).catch(() => {})
+  await hyprSetOption("general:col.inactive_border", `rgb(${stripHash(c.bg_dark)})`).catch(() => {})
   await execAsync(`hyprctl setcursor ${gtk.cursorTheme} 20`).catch(() => {})
   print("  Updated Hyprland")
 

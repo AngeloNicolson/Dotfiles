@@ -122,7 +122,8 @@ const DESTINATIONS: Destination[] = [
   {
     id: "power", label: "POWER", icon: "⏻", x: 0.04, y: 0.65, size: 0.7, ringStyle: "icon",
     subItems: [
-      { id: "logout", label: "LOGOUT", icon: "󰍃", command: "hyprctl dispatch exit" },
+      // hyprlang session: `dispatch exit`; Lua session (0.55+): `dispatch 'hl.dsp.exit()'` — whichever applies exits.
+      { id: "logout", label: "LOGOUT", icon: "󰍃", command: "sh -c \"hyprctl dispatch exit; hyprctl dispatch 'hl.dsp.exit()'\"" },
       { id: "reboot", label: "REBOOT", icon: "", command: "systemctl reboot" },
       { id: "shutdown", label: "SHUTDOWN", icon: "⏻", command: "systemctl poweroff" },
       { id: "suspend", label: "SUSPEND", icon: "󰤄", command: "systemctl suspend" },

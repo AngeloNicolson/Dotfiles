@@ -38,6 +38,12 @@ import sys
 import os
 import shlex
 
+# hypr_compat lives next to this script; it routes every hyprctl *write*
+# (dispatch/keyword) through the right syntax for the running config manager
+# (legacy hyprlang vs Lua).  Read-only `hyprctl -j ...` queries stay as-is.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hypr_compat as hc
+
 
 def run_hyprctl(command):
     """Run a hyprctl command"""
@@ -215,47 +221,38 @@ def get_windows_by_layout_tag(layout_name, workspace_id, environment_name=None):
 
 def move_cursor_to(x, y):
     """Move cursor to specific position"""
-    subprocess.run(['hyprctl', 'dispatch', 'movecursor', f'{int(x)} {int(y)}'],
-                  capture_output=True, check=False)
+    hc.move_cursor(x, y)
     time.sleep(0.05)
 
 
 def create_window_rule(window_title, x, y, width, height, app_class=None, workspace_id=None, is_terminal=False):
-    """Create dynamic window rules for pre-positioning before window spawns"""
+    """Create dynamic window rules for pre-positioning before window spawns
+
+    Legacy: one `hyprctl keyword windowrule '<effect>, match:...'` per effect
+    (float on / size W H / move X Y).  Lua: one `hl.window_rule({...})`.
+    """
     try:
-        rules = []
+        match = None
 
         if is_terminal:
             # For terminals: use title-based rules (they respect --title flag)
-            rules = [
-                f'float on, match:title ^{window_title}$',
-                f'size {int(width)} {int(height)}, match:title ^{window_title}$',
-                f'move {int(x)} {int(y)}, match:title ^{window_title}$'
-            ]
+            match = {'title': f'^{window_title}$'}
         else:
             # For GUI apps: use class-based rules (they don't respect --title)
             if app_class:
                 if workspace_id:
                     # With workspace: scope rules to specific workspace
-                    rules = [
-                        f'float on, match:class ^{app_class}$, match:workspace {workspace_id}',
-                        f'size {int(width)} {int(height)}, match:class ^{app_class}$, match:workspace {workspace_id}',
-                        f'move {int(x)} {int(y)}, match:class ^{app_class}$, match:workspace {workspace_id}'
-                    ]
+                    match = {'class': f'^{app_class}$', 'workspace': workspace_id}
                 else:
                     # Without workspace: use class-only rules
-                    rules = [
-                        f'float on, match:class ^{app_class}$',
-                        f'size {int(width)} {int(height)}, match:class ^{app_class}$',
-                        f'move {int(x)} {int(y)}, match:class ^{app_class}$'
-                    ]
+                    match = {'class': f'^{app_class}$'}
 
-        for rule in rules:
-            subprocess.run(
-                ['hyprctl', 'keyword', 'windowrule', rule],
-                capture_output=True,
-                check=False
-            )
+        if match:
+            hc.add_window_rule(match, {
+                'float': True,
+                'size': (int(width), int(height)),
+                'move': (int(x), int(y)),
+            })
     except Exception:
         pass
 
@@ -281,11 +278,7 @@ def tag_window(address, layout_name, workspace_id, position_index, environment_n
             # Standalone layout window: lay_{layout}_ws_{ws}_pos_{pos}
             tag = f'lay_{layout_name}_ws_{workspace_id}_pos_{position_index}'
 
-        subprocess.run(
-            ['hyprctl', 'dispatch', 'tagwindow', f'+{tag}', f'address:{address}'],
-            capture_output=True,
-            check=False
-        )
+        hc.tag_window(f'+{tag}', address)
         return tag
     except Exception:
         return None
@@ -320,11 +313,7 @@ def verify_tag(address, expected_tag, max_retries=3):
                         # Tag not found, retry after short delay
                         time.sleep(0.1)
                         # Re-apply tag
-                        subprocess.run(
-                            ['hyprctl', 'dispatch', 'tagwindow', f'+{expected_tag}', f'address:{address}'],
-                            capture_output=True,
-                            check=False
-                        )
+                        hc.tag_window(f'+{expected_tag}', address)
         except Exception:
             pass
     return False
@@ -381,26 +370,24 @@ def launch_app(app_command, terminal_command=None, working_dir=None, window_titl
         else:
             # For non-terminal apps, use hyprctl dispatch with workspace spec if workspace is specified
             if workspace_id or force_float:
-                # Build exec spec with workspace, float, size, and position
-                spec_parts = []
+                # Build exec rules (workspace, float, size, position) as a dict;
+                # hypr_compat renders them as the legacy `[workspace X silent;float;size W H;move X Y]`
+                # prefix or the Lua `hl.dsp.exec_cmd("cmd", { ... })` table
+                exec_rules = {}
                 if workspace_id:
-                    spec_parts.append(f'workspace {workspace_id} silent')
+                    exec_rules['workspace'] = f'{workspace_id} silent'
                 if force_float:
-                    spec_parts.append('float')
+                    exec_rules['float'] = True
                 if width is not None and height is not None:
-                    spec_parts.append(f'size {int(width)} {int(height)}')
+                    exec_rules['size'] = (int(width), int(height))
                 if x is not None and y is not None:
-                    spec_parts.append(f'move {int(x)} {int(y)}')
-                exec_spec = ';'.join(spec_parts)
-
-                # Use shlex.quote to properly escape the entire command for hyprctl
-                full_command = f"[{exec_spec}] {app_command}"
+                    exec_rules['move'] = (int(x), int(y))
 
                 # Don't redirect stdout/stderr for commands with dialogs - they need interaction
                 has_dialog = any(dialog in app_command.lower() for dialog in ['zenity', 'yad', 'rofi', 'wofi'])
 
-                subprocess.Popen(
-                    ['hyprctl', 'dispatch', 'exec', full_command],
+                hc.exec_cmd(
+                    app_command, exec_rules, popen=True,
                     stdout=None if has_dialog else subprocess.DEVNULL,
                     stderr=None if has_dialog else subprocess.DEVNULL
                 )
@@ -447,11 +434,10 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                                 'app': app,
                                 'position': current_index
                             })
-                batch_cmd = (
-                    f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address} && '
-                    f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{existing_address}'
-                )
-                subprocess.run(batch_cmd, shell=True, capture_output=True, check=False)
+                hc.dispatch_many([
+                    hc.cmd_resize_window_pixel_exact(int(width), int(height), existing_address),
+                    hc.cmd_move_window_pixel_exact(int(x), int(y), existing_address),
+                ])
 
             # If window doesn't exist, launch it with pre-positioning (unless reposition_only mode)
             if not existing_address and not reposition_only:
@@ -469,10 +455,7 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                 if is_terminal:
                     create_window_rule(window_title, x, y, width, height, app_executable, workspace_id, is_terminal)
                     if workspace_id:
-                        subprocess.run(
-                            ['hyprctl', 'keyword', 'windowrule', f'workspace {workspace_id}, match:title ^{window_title}$'],
-                            capture_output=True, check=False
-                        )
+                        hc.add_window_rule({'title': f'^{window_title}$'}, {'workspace': workspace_id})
                 # Note: GUI apps use exec spec [workspace X;float;size W H;move X Y] instead of
                 # window rules to avoid conflicts with multiple instances of the same class
 
@@ -511,11 +494,7 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                             if client['address'] == existing_address:
                                 if not client.get('floating', False):
                                     # Window is tiled, make it float
-                                    subprocess.run(
-                                        ['hyprctl', 'dispatch', 'togglefloating', f'address:{existing_address}'],
-                                        capture_output=True,
-                                        check=False
-                                    )
+                                    hc.toggle_floating(existing_address)
 
                                 # Brief delay for window to be ready for resize/move
                                 time.sleep(0.1)
@@ -523,12 +502,12 @@ def apply_node(node, x, y, width, height, monitor_info, gaps_in=4, windows_list=
                                 # Apply size and position using batch command (more reliable)
                                 batch_cmd = []
                                 if width is not None and height is not None:
-                                    batch_cmd.append(f'hyprctl dispatch resizewindowpixel exact {int(width)} {int(height)},address:{existing_address}')
+                                    batch_cmd.append(hc.cmd_resize_window_pixel_exact(int(width), int(height), existing_address))
                                 if x is not None and y is not None:
-                                    batch_cmd.append(f'hyprctl dispatch movewindowpixel exact {int(x)} {int(y)},address:{existing_address}')
+                                    batch_cmd.append(hc.cmd_move_window_pixel_exact(int(x), int(y), existing_address))
 
                                 if batch_cmd:
-                                    subprocess.run(' && '.join(batch_cmd), shell=True, capture_output=True, check=False)
+                                    hc.dispatch_many(batch_cmd)
                                 break
 
                     # Tag the window for snap functionality
@@ -600,7 +579,7 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
 
         # Switch to workspace if specified (ensures it's on correct monitor and ready for spawning)
         if workspace:
-            subprocess.run(['hyprctl', 'dispatch', 'workspace', str(workspace)], check=False)
+            hc.focus_workspace(workspace, capture_output=False)
             time.sleep(0.1)  # Let workspace switch complete
             workspace_id = workspace
         else:
@@ -693,11 +672,7 @@ def apply_layout(layout_file, workspace=None, reposition_only=False, environment
                 still_failed = []
                 for item in failed_tags:
                     # Re-apply tag
-                    subprocess.run(
-                        ['hyprctl', 'dispatch', 'tagwindow', f'+{item["tag"]}', f'address:{item["address"]}'],
-                        capture_output=True,
-                        check=False
-                    )
+                    hc.tag_window(f'+{item["tag"]}', item['address'])
 
                     # Verify again
                     if verify_tag(item['address'], item['tag'], max_retries=1):

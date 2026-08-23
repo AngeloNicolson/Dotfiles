@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Load default environment configuration on startup
-# This script is called by hyprland.conf exec-once
+# This script is called from hyprland.lua (hyprland.start) / hyprland.conf exec-once
 
 MARKER_FILE="$HOME/.config/hypr/layouts/default_environment.txt"
+source "$(dirname "$0")/hypr-compat.sh"   # hypr_*: .conf + Lua sessions
 
 # Check if default config is set
 if [ ! -f "$MARKER_FILE" ]; then
@@ -31,7 +32,11 @@ get_environment_name() {
 jq -r '.workspaces[]? | "\(.id) \(.monitor)"' "$CONFIG_FILE" 2>/dev/null | sort -n | while read -r ws_id monitor; do
     if [ -n "$ws_id" ] && [ -n "$monitor" ]; then
         # Set workspace rule to bind workspace to monitor
-        hyprctl keyword workspace "$ws_id,monitor:$monitor" 2>/dev/null
+        if hypr_is_lua; then
+            hyprctl eval "hl.workspace_rule({ workspace = $(hypr_lua_str "$ws_id"), monitor = $(hypr_lua_str "$monitor") })" >/dev/null 2>&1
+        else
+            hyprctl keyword workspace "$ws_id,monitor:$monitor" 2>/dev/null
+        fi
     fi
 done
 
@@ -71,4 +76,4 @@ jq -r '.workspaces[]? | select(.layout != null) | "\(.id) \(.layout)"' "$CONFIG_
 done
 
 # Return to workspace 1
-hyprctl dispatch workspace 1 2>/dev/null
+hypr_dispatch "workspace 1" "hl.dsp.focus({ workspace = 1 })" 2>/dev/null

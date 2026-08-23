@@ -1,0 +1,10 @@
+-- You can make apps auto-start here
+-- https://wiki.hypr.land/Configuring/Basics/Autostart/
+-- Everything inside the hyprland.start handler is the old `exec-once`.
+
+hl.on("hyprland.start", function()
+  -- Auto-start applications
+  -- hl.exec_cmd("foot")
+  -- hl.exec_cmd("firefox")
+  -- hl.exec_cmd("foot", { workspace = "1 silent" })   -- with exec rules
+end)

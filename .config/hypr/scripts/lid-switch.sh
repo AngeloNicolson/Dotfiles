@@ -4,6 +4,7 @@
 #   LAPTOP_SCALE  laptop panel scale on re-enable (default: auto = DPI-based)
 #   LAPTOP_MODE   laptop panel mode on re-enable  (default: preferred)
 source "$(dirname "$0")/monitor-helpers.sh"
+source "$(dirname "$0")/hypr-compat.sh"   # hypr_monitor / hypr_dispatch: .conf + Lua sessions
 
 LAPTOP="$(mon_laptop)"
 [ -z "$LAPTOP" ] && exit 0   # no internal panel (desktop) — nothing to do
@@ -15,16 +16,16 @@ STATE_FILE="${XDG_RUNTIME_DIR:-/tmp}/hypr-lid-moved-workspaces"
 
 if [ "$1" = "open" ]; then
     # Re-enable the laptop panel at 0x0; push the external to its right.
-    hyprctl keyword monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
-    hyprctl dispatch dpms on "$LAPTOP"
+    hypr_monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
+    hypr_dispatch "dpms on $LAPTOP" "hl.dsp.dpms({ action = \"on\", monitor = $(hypr_lua_str "$LAPTOP") })"
     if [ -n "$EXTERNAL" ]; then
         x="$(mon_logical_width "$LAPTOP")"
-        hyprctl keyword monitor "$EXTERNAL,preferred,${x}x0,1"
+        hypr_monitor "$EXTERNAL,preferred,${x}x0,1"
     fi
     # Move back exactly the workspaces we relocated when the lid closed.
     if [ -f "$STATE_FILE" ]; then
         while read -r ws; do
-            [ -n "$ws" ] && hyprctl dispatch moveworkspacetomonitor "$ws $LAPTOP"
+            [ -n "$ws" ] && hypr_dispatch "moveworkspacetomonitor $ws $LAPTOP" "hl.dsp.workspace.move({ workspace = $ws, monitor = $(hypr_lua_str "$LAPTOP") })"
         done < "$STATE_FILE"
         rm -f "$STATE_FILE"
     fi
@@ -36,12 +37,12 @@ else
         hyprctl workspaces -j | jq -r --arg m "$LAPTOP" \
             '.[] | select(.monitor == $m) | .id' | while read -r ws; do
             echo "$ws" >> "$STATE_FILE"
-            hyprctl dispatch moveworkspacetomonitor "$ws $EXTERNAL"
+            hypr_dispatch "moveworkspacetomonitor $ws $EXTERNAL" "hl.dsp.workspace.move({ workspace = $ws, monitor = $(hypr_lua_str "$EXTERNAL") })"
         done
-        hyprctl keyword monitor "$LAPTOP,disable"
-        hyprctl keyword monitor "$EXTERNAL,preferred,0x0,1"
+        hypr_monitor "$LAPTOP,disable"
+        hypr_monitor "$EXTERNAL,preferred,0x0,1"
     else
         # No external — just blank the panel.
-        hyprctl dispatch dpms off "$LAPTOP"
+        hypr_dispatch "dpms off $LAPTOP" "hl.dsp.dpms({ action = \"off\", monitor = $(hypr_lua_str "$LAPTOP") })"
     fi
 fi

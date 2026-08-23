@@ -29,7 +29,8 @@ jobs:
             .config/hypr/scripts/wallpaperdaemon.sh \
             .config/hypr/scripts/idle-brightness.sh \
             .config/hypr/scripts/init-backlight.sh \
-            .config/hypr/scripts/monitor-helpers.sh
+            .config/hypr/scripts/monitor-helpers.sh \
+            .config/hypr/scripts/hypr-compat.sh
 
       - name: Install as a fresh user (symlinks, templates, dirs, wallpapers)
         run: |
@@ -44,13 +45,20 @@ jobs:
 
       - name: Hyprland --verify-config (as tester)
         # Hyprland aborts before parsing unless XDG_RUNTIME_DIR exists.
+        # Must pick the Lua config (hyprland.lua) — hyprlang is dropped in 0.57.
         run: |
           sudo -u tester -H bash -c '
             set -o pipefail
             export XDG_RUNTIME_DIR=/tmp/xdg-tester; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"
             Hyprland --verify-config 2>&1 | tee /tmp/verify.log | tail -n 5
+            grep -q "Using lua config" /tmp/verify.log
             grep -q "config ok" /tmp/verify.log
           '
+
+      - name: Lua config must not hard-require the gitignored custom files
+        run: |
+          cd ~tester/dotfiles 2>/dev/null || cd "$GITHUB_WORKSPACE"
+          ! grep -nE '^\s*require\("custom/' .config/hypr/*.lua
 
       - name: foot --check-config (as tester)
         run: sudo -u tester -H foot --check-config
