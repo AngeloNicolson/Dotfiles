@@ -23,7 +23,17 @@ set -gx PATH $HOME/.local/bin $PATH
 # EAS / Yarn setup (uncomment if needed)
 # set -U fish_user_paths $HOME/.yarn/bin $fish_user_paths
 
-# QT Wayland support
-set -x QT_QPA_PLATFORM xcb
+# QT platform -- intentionally NOT set.
+#
+# Do not force xcb here. On a fractionally-scaled display (e.g. 1.25) it puts
+# every Qt app on XWayland, which has no fractional-scaling protocol, so the
+# compositor upscales a 1x buffer and everything looks blurry. Hyprland already
+# exports QT_QPA_PLATFORM=wayland (hyprland.lua), which is what you want.
+#
+# If a specific Qt app genuinely breaks on Wayland, scope the override to that
+# one app -- `env QT_QPA_PLATFORM=xcb theapp` -- rather than exporting it for
+# every Qt app in the shell.
+#
+# set -x QT_QPA_PLATFORM xcb
 
 # Add any other machine-specific environment variables or paths here

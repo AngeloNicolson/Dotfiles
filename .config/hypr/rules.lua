@@ -24,6 +24,10 @@ hl.workspace_rule({ workspace = "special:nvim",     gaps_in = 8,  gaps_out = 16 
 -- Route apps to special workspaces
 hl.window_rule({ match = { class = "firefox" }, workspace = "special:browser silent" })
 
+-- qutebrowser. Note the class is "org.qutebrowser.qutebrowser" (native Wayland),
+-- NOT the bare "qutebrowser" it reported while it was still running on XWayland.
+hl.window_rule({ match = { class = "^org\\.qutebrowser\\.qutebrowser$" }, workspace = "special:browser silent" })
+
 -- Browser file-chooser (xdg-desktop-portal-gtk) is a separate toplevel, not a
 -- child of Firefox, so it doesn't inherit the special:browser routing. Send it
 -- to the same overlay and float it so it sits on top of Firefox — visible and

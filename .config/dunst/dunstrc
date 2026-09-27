@@ -56,4 +56,6 @@
     background = "#120c07"
     foreground = "#d8c49a"
     frame_color = "#d04830"
-    timeout = 0
+    # Was 0, which in dunst means "never expire" -- critical notifications sat
+    # on screen until manually dismissed. 30s is long enough to notice.
+    timeout = 30

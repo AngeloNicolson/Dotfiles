@@ -1,0 +1,98 @@
+#!/bin/sh
+# Open qutebrowser on Hyprland's special:browser overlay.
+#
+# rules.lua routes class org.qutebrowser.qutebrowser to special:browser with
+# "silent", so launching never steals focus. This script starts qutebrowser
+# only when it is not already running, then reveals the overlay.
+#
+# Two things this has to get right:
+#
+#  1. QT_QPA_PLATFORM is forced to wayland (same as keybindings.lua does for
+#     the profile launches). Without it the script inherits whatever the caller
+#     had; an "xcb" in the environment silently puts qutebrowser on XWayland,
+#     where it renders blurry on this 1.25x-scaled display AND reports the
+#     class "qutebrowser" instead of "org.qutebrowser.qutebrowser", so the
+#     rules.lua routing does not match.
+#
+#  2. Under the Lua config, `hyprctl dispatch` evaluates its argument as Lua
+#     (it wraps it in hl.dispatch(...)). The old conf-style
+#     "togglespecialworkspace browser" is a syntax error there; it has to be
+#     the dispatcher expression hl.dsp.workspace.toggle_special("browser").
+#
+# The running-check matters too: qutebrowser is single-instance, so relaunching
+# hands the args to the existing process over IPC and opens another tab, which
+# would pile up a tab on every keypress.
+
+# Make sure ~/.local/bin is on PATH before launching. Hyprland's own PATH does
+# not include it (it inherits the bash login shell, which historically did not
+# add it), and qutebrowser passes its environment on to everything it spawns.
+# Without this, mpv cannot find yt-dlp -- `,m` dies with exit status 2 -- and
+# the qute-kondor userscript cannot find kondor-pwm.
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) PATH="$HOME/.local/bin:$PATH"; export PATH ;;
+esac
+
+# Optional profile argument: personal (default), work, dev. Each profile is a
+# separate --basedir, so it has its own cookies, history AND its own named
+# sessions under <basedir>/data/sessions.
+profile=${1:-personal}
+case "$profile" in
+    personal) basedir="" ;;
+    *)        basedir="$HOME/.local/share/qutebrowser-$profile" ;;
+esac
+
+# Is THIS profile already up? Checking for any qutebrowser is wrong: with the
+# work profile open it would refuse to start personal and just toggle the
+# overlay. Personal is the instance running *without* a --basedir.
+profile_running() {
+    if [ -z "$basedir" ]; then
+        pgrep -af '/usr/bin/qutebrowser' 2>/dev/null | grep -q -v -- '--basedir'
+    else
+        pgrep -af -- "--basedir $basedir" >/dev/null 2>&1
+    fi
+}
+
+if ! profile_running; then
+    # setsid so the browser outlives this script. Without it the child shares
+    # our process group and gets torn down when the script exits moments later,
+    # which killed the browser mid-startup.
+    if [ -z "$basedir" ]; then
+        setsid env QT_QPA_PLATFORM=wayland QT_WAYLAND_DISABLE_WINDOWDECORATION=1 \
+            qutebrowser >/dev/null 2>&1 < /dev/null &
+    else
+        setsid env QT_QPA_PLATFORM=wayland QT_WAYLAND_DISABLE_WINDOWDECORATION=1 \
+            qutebrowser --basedir "$basedir" >/dev/null 2>&1 < /dev/null &
+    fi
+
+    # Wait for THIS profile's process, and for a qutebrowser window to be on
+    # special:browser. Both halves matter:
+    #   - waiting on the window alone is wrong when another profile is already
+    #     on the overlay: the check passes instantly and we never wait at all;
+    #   - waiting on the process alone is wrong when the overlay is empty,
+    #     because toggling before the window lands reveals an empty special
+    #     workspace, which Hyprland immediately auto-closes.
+    # ~10s ceiling.
+    i=0
+    while [ "$i" -lt 50 ]; do
+        if profile_running && hyprctl clients -j 2>/dev/null \
+            | jq -e 'any(.[]; .class == "org.qutebrowser.qutebrowser"
+                            and .workspace.name == "special:browser")' \
+                 >/dev/null 2>&1
+        then
+            break
+        fi
+        i=$((i + 1))
+        sleep 0.2
+    done
+fi
+
+# Reveal the overlay only if it is not already up.
+#
+# A blind toggle is wrong here: opening a window on special:browser reveals that
+# workspace by itself, so toggling straight afterwards immediately hides it
+# again -- the launch appears to do nothing. This key is "open/reveal"; SUPER+B
+# remains the plain show/hide toggle.
+hyprctl monitors -j 2>/dev/null \
+    | jq -e 'any(.[]; .specialWorkspace.name == "special:browser")' >/dev/null 2>&1 \
+    || hyprctl dispatch 'hl.dsp.workspace.toggle_special("browser")'

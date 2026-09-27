@@ -86,6 +86,7 @@ bind(mainMod,             "Tab", dsp.exec_cmd("ags request cycle-sidebar"))
 bind(mainMod .. " + SHIFT", "Tab", dsp.exec_cmd("ags request cycle-sidebar-back"))
 bind(mainMod,             "G",   dsp.workspace.toggle_special("kondor"))
 bind(mainMod,             "T",   dsp.exec_cmd("ags request toggle-periodic-table"))
+bind(mainMod .. " + SHIFT", "P",   dsp.exec_cmd("ags request toggle-displays")) -- arrange screens / pin workspaces
 
 -- Screenshot
 bind(mainMod,             "I", dsp.exec_cmd("~/.config/hypr/scripts/screenshot.sh s"))  -- drag to snip / click window
@@ -103,6 +104,11 @@ bind(mainMod, "R", dsp.exec_cmd("~/.config/hypr/scripts/snap_to_layout.py"))
 
 bind("MOD5", "Return", dsp.exec_cmd("foot"))
 bind("MOD5", "F",      dsp.exec_cmd("firefox"))
+-- Right-Alt+B — qutebrowser on the browser overlay. rules.lua routes the window
+-- to special:browser; qb-overlay starts it only if it isn't already running
+-- (it's single-instance, so a bare relaunch would just add a tab) and then
+-- reveals the overlay. SUPER+B remains the plain show/hide toggle.
+bind("MOD5", "B",      dsp.exec_cmd("$HOME/.local/bin/qb-overlay"))
 bind("MOD5", "E",      dsp.exec_cmd("nemo"))
 bind("MOD5", "A",      dsp.exec_cmd("$HOME/.local/bin/armorpaint"))
 
@@ -116,9 +122,17 @@ hl.define_submap("browser", function()
       hl.dispatch(dsp.submap("reset"))
     end)
   end
-  launch("W", qb .. " --basedir ~/.local/share/qutebrowser-work --qt-flag disable-gpu")
-  launch("P", qb .. " --qt-flag disable-gpu")
-  launch("D", qb .. " --basedir ~/.local/share/qutebrowser-dev --qt-flag disable-gpu")
+  -- `--qt-flag disable-gpu` removed 2026-09-08: it was masking a QtWebEngine
+  -- crash in Mesa's libgallium at the cost of CPU-only rendering. The real fix
+  -- now lives in qutebrowser's config.py (QSG_RHI_BACKEND=vulkan plus
+  -- --use-gl=angle --use-angle=vulkan), so the GPU can be used again.
+  -- Routed through qb-overlay so each profile reveals the browser overlay and,
+  -- crucially, is checked for *per profile*: pressing these with another
+  -- profile already open still starts the one you asked for. Each profile keeps
+  -- its own cookies, history and named sessions (<basedir>/data/sessions).
+  launch("W", "$HOME/.local/bin/qb-overlay work")
+  launch("P", "$HOME/.local/bin/qb-overlay personal")
+  launch("D", "$HOME/.local/bin/qb-overlay dev")
   hl.bind("escape", dsp.submap("reset"))
 end)
 

@@ -1,0 +1,59 @@
+#!/bin/sh
+# Handler for mpv: URLs, so a web page can hand a video off to mpv.
+#
+# Registered as x-scheme-handler/mpv (see mpv-url.desktop). qutebrowser hands
+# unknown schemes to the desktop handler, which lands here as:
+#     mpv:https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DXXXX
+#
+# NOTE the single-slash "mpv:" form. With "mpv://" qutebrowser parses the
+# payload as a HOSTNAME and rejects it ("Invalid hostname (contains invalid
+# characters)"), so the opaque form -- like mailto: -- is required.
+#
+# YouTube gets a single, reused player: the first video starts mpv with an IPC
+# socket, and every later YouTube hand-off swaps the file into that same window
+# instead of piling up players. Anything else opens its own mpv as normal.
+
+SOCK="${XDG_RUNTIME_DIR:-/tmp}/mpv-youtube.sock"
+
+url=$1
+[ -z "$url" ] && exit 1
+
+case "$url" in
+    mpv://*) url=${url#mpv://} ;;
+    mpv:*)   url=${url#mpv:} ;;
+esac
+
+url=$(printf '%s' "$url" | python3 -c 'import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))')
+
+# This handler is reachable from any web page, so refuse anything that is not
+# http(s) -- no file:// paths, no shell-ish strings.
+case "$url" in
+    http://*|https://*) ;;
+    *) notify-send "mpv-url" "refused non-http URL" 2>/dev/null; exit 1 ;;
+esac
+
+case "$url" in
+    *youtube.com/*|*youtu.be/*|*youtube-nocookie.com/*) ;;
+    *) exec mpv "$url" ;;          # not YouTube: plain, independent instance
+esac
+
+# Try to hand the URL to a player that is already up. Exits 0 only if the
+# running mpv accepted it; a stale socket (mpv died) fails and falls through.
+if [ -S "$SOCK" ] && python3 - "$SOCK" "$url" <<'PY'
+import json, socket, sys
+sock, url = sys.argv[1], sys.argv[2]
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(2)
+    s.connect(sock)
+    s.sendall((json.dumps({"command": ["loadfile", url, "replace"]}) + "\n").encode())
+    s.close()
+except OSError:
+    sys.exit(1)
+PY
+then
+    exit 0
+fi
+
+rm -f "$SOCK"
+exec mpv --input-ipc-server="$SOCK" "$url"
