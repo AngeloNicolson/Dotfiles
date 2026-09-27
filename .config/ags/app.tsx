@@ -2,7 +2,7 @@ import app from "ags/gtk3/app"
 import { createState } from "ags"
 import {
   toggleBar, cyclePage, cyclePageBack, removeSidebarStack,
-  toggleDestination, toggleGalaxy, togglePeriodicTable, getSidebarStacks,
+  toggleDestination, toggleGalaxy, togglePeriodicTable, toggleDisplays, toggleBluetoothWindow, getSidebarStacks,
 } from "./state"
 import { initTheme, applyTheme, reapplyCss } from "./theme"
 import { recomputeScale } from "./scale"
@@ -13,6 +13,8 @@ import GalaxyWindow from "./components/GalaxyWindow"
 import PeriodicTableWindow from "./components/PeriodicTableWindow"
 import BreakPopupWindow from "./components/BreakPopupWindow"
 import WorkspaceOsdWindow from "./components/WorkspaceOsd"
+import DisplayLayoutWindow from "./components/DisplayLayout"
+import BluetoothWindow from "./components/BluetoothWindow"
 
 // `ags request <cmd> [args...]` handlers. Adding a command = adding an entry;
 // `ags request help` lists them all.
@@ -40,6 +42,14 @@ const commands: Record<string, (args: string[]) => string> = {
   "toggle-periodic-table": () => {
     togglePeriodicTable()
     return "periodic table toggled"
+  },
+  "toggle-displays": () => {
+    toggleDisplays()
+    return "displays toggled"
+  },
+  "toggle-bluetooth": () => {
+    toggleBluetoothWindow()
+    return "bluetooth toggled"
   },
   "debug-stacks": () =>
     `Registered stacks: ${JSON.stringify(Array.from(getSidebarStacks().keys()))}`,
@@ -152,5 +162,7 @@ app.start({
     PeriodicTableWindow(overlayMonitor)
     BreakPopupWindow(overlayMonitor)
     WorkspaceOsdWindow(overlayMonitor)
+    DisplayLayoutWindow(overlayMonitor)
+    BluetoothWindow(overlayMonitor)
   },
 })

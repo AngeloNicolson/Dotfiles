@@ -5,6 +5,7 @@ import { exec, execAsync, createSubprocess } from "ags/process"
 import { writeFile, readFile } from "ags/file"
 import GLib from "gi://GLib"
 import Gdk from "gi://Gdk"
+import Pango from "gi://Pango"
 import Gtk from "gi://Gtk"
 import Wp from "gi://AstalWp"
 import { px } from "../scale"
@@ -398,14 +399,20 @@ function sinkDesc(s: any): string {
   return raw.replace(/^.+\)\s*/, "") || raw
 }
 
-// Inline dropdown for output device selection
-let outputListBox: Gtk.Box | null = null
-let dropdownArrow: Gtk.Label | null = null
-let dropdownVisible = false
+// Inline dropdown for output device selection. One per sidebar (there's a
+// sidebar per monitor), so each keeps its own widgets — module-level singletons
+// meant only the last-built sidebar's dropdown ever opened.
+interface OutputDropdown {
+  list: Gtk.Box
+  revealer: Gtk.Revealer | null
+  arrow: Gtk.Label | null
+  open: boolean
+}
+const dropdowns = new Set<OutputDropdown>()
 
-function rebuildOutputList() {
-  if (!outputListBox) return
-  outputListBox.get_children().forEach((c: any) => c.destroy())
+function rebuildOutputList(dd?: OutputDropdown) {
+  if (!dd) { dropdowns.forEach((d) => rebuildOutputList(d)); return }
+  dd.list.get_children().forEach((c: any) => c.destroy())
   const speakers = getHwSpeakers()
   for (const sink of speakers) {
     const desc = sinkDesc(sink)
@@ -414,25 +421,23 @@ function rebuildOutputList() {
         class={sink.id === selectedSinkId ? "active" : ""}
         onClicked={() => {
           selectSink(sink.id)
-          toggleDropdown()
+          toggleDropdown(dd)
         }}
       >
-        <label label={desc} wrap={false} />
+        {/* Ellipsized: HDMI/ACE sink names run ~80 chars and would widen the sidebar */}
+        <label label={desc} wrap={false} ellipsize={Pango.EllipsizeMode.END} maxWidthChars={28} tooltipText={desc} />
       </button>
     ) as Gtk.Widget
-    outputListBox.add(btn)
+    dd.list.add(btn)
   }
-  outputListBox.show_all()
+  dd.list.show_all()
 }
 
-let dropdownRevealer: Gtk.Revealer | null = null
-
-function toggleDropdown() {
-  if (!outputListBox) return
-  dropdownVisible = !dropdownVisible
-  if (dropdownVisible) rebuildOutputList()
-  if (dropdownRevealer) dropdownRevealer.reveal_child = dropdownVisible
-  if (dropdownArrow) dropdownArrow.label = dropdownVisible ? "" : ""
+function toggleDropdown(dd: OutputDropdown) {
+  dd.open = !dd.open
+  if (dd.open) rebuildOutputList(dd)
+  if (dd.revealer) dd.revealer.reveal_child = dd.open
+  if (dd.arrow) dd.arrow.label = dd.open ? "" : ""
 }
 
 function syncFromSink(sink: any) {
@@ -524,6 +529,8 @@ export function toggleHwMute() {
 export { localMuted }
 
 export default function AudioEQ() {
+  const dd: OutputDropdown = { list: (<box name="eq-output-list" vertical />) as Gtk.Box, revealer: null, arrow: null, open: false }
+  dropdowns.add(dd)
   // Poll hardware sink volume, sync into local state for instant display
   createPoll(0, 2000, () => {
     if (!selectedSinkId) return 0
@@ -613,12 +620,13 @@ export default function AudioEQ() {
         <label name="control-value" label={localVol.as((v) => `${Math.round(v * 100)}%`)} />
         <label name="control-muted-label" label={localMuted.as(m => m ? "MUTED" : "")} />
       </box>
-      <button name="eq-output-selector" onClicked={() => toggleDropdown()}>
+      <button name="eq-output-selector" onClicked={() => toggleDropdown(dd)}>
         <box>
           <label name="eq-output-icon" label="" />
-          <label name="eq-output-name" label={activeSinkName.as((n) => n || "No output")} />
+          <label name="eq-output-name" label={activeSinkName.as((n) => n || "No output")}
+            ellipsize={Pango.EllipsizeMode.END} maxWidthChars={24} tooltipText={activeSinkName} />
           <box hexpand />
-          <label name="eq-output-arrow" label="" $={(self: any) => { dropdownArrow = self }} />
+          <label name="eq-output-arrow" label="" $={(self: any) => { dd.arrow = self; self.connect("destroy", () => dropdowns.delete(dd)) }} />
         </box>
       </button>
       {(() => {
@@ -638,8 +646,7 @@ export default function AudioEQ() {
         ) as Gtk.Widget
         overlay.add(columns)
 
-        const listBox = (<box name="eq-output-list" vertical />) as Gtk.Box
-        outputListBox = listBox
+        const listBox = dd.list
 
         const scroll = new Gtk.ScrolledWindow({
           visible: true,
@@ -663,7 +670,7 @@ export default function AudioEQ() {
           hexpand: true,
         })
         revealer.add(scroll)
-        dropdownRevealer = revealer
+        dd.revealer = revealer
         overlay.add_overlay(revealer)
 
         return overlay

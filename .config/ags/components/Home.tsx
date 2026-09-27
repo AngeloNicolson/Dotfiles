@@ -6,10 +6,11 @@ import Network from "gi://AstalNetwork"
 import Gtk from "gi://Gtk?version=3.0"
 import Bluetooth from "gi://AstalBluetooth"
 import Wp from "gi://AstalWp"
-import { sidebarPinned, setSidebarPinned } from "../state"
+import { sidebarPinned, setSidebarPinned, displaysVisible, toggleDisplays } from "../state"
 import caps from "../capabilities"
 import AudioEQ, { toggleHwMute, localMuted } from "./AudioEQ"
 import DisplayEQ, { applyProfile, activeProfile } from "./DisplayEQ"
+import BluetoothPanel from "./BluetoothPanel"
 import VoiceControl, { toggleMicMute, micMuted } from "./VoiceControl"
 
 // System toggle button - Star Citizen style
@@ -25,6 +26,8 @@ function SystemToggle({
   return (
     <button
       name="sys-toggle"
+      halign="center"
+      valign="center"
       class={active.as((a) => a ? "active" : "")}
       onClicked={onClick}
     >
@@ -178,10 +181,10 @@ export default function Home() {
         const flow = new Gtk.FlowBox({
           selection_mode: Gtk.SelectionMode.NONE,
           homogeneous: true,
-          row_spacing: 4,
-          column_spacing: 4,
-          max_children_per_line: 5,
-          min_children_per_line: 3,
+          row_spacing: 2,
+          column_spacing: 2,
+          max_children_per_line: 7,
+          min_children_per_line: 4,
         })
         const toggles = [
           <SystemToggle
@@ -193,6 +196,11 @@ export default function Home() {
           <BluetoothToggle />,
           ...(caps.dunst ? [<DNDToggle />] : []),
           <NightLightToggle />,
+          <SystemToggle
+            active={displaysVisible}
+            label="DISP"
+            onClick={toggleDisplays}
+          />,
           <SystemToggle
             active={localMuted}
             label="MUTE"
@@ -247,6 +255,7 @@ export default function Home() {
         )
       })()}
       <DisplayEQ />
+      <BluetoothPanel />
 
     </box>
   )

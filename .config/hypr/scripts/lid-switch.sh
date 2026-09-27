@@ -18,7 +18,11 @@ if [ "$1" = "open" ]; then
     # Re-enable the laptop panel at 0x0; push the external to its right.
     hypr_monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
     hypr_dispatch "dpms on $LAPTOP" "hl.dsp.dpms({ action = \"on\", monitor = $(hypr_lua_str "$LAPTOP") })"
-    if [ -n "$EXTERNAL" ]; then
+    DISPLAYS_LUA="$HOME/.config/hypr/custom/displays.lua"
+    if [ -f "$DISPLAYS_LUA" ] && hypr_is_lua; then
+        # A layout saved by the AGS display arranger wins over the default below.
+        hypr_eval "dofile($(hypr_lua_str "$DISPLAYS_LUA"))"
+    elif [ -n "$EXTERNAL" ]; then
         x="$(mon_logical_width "$LAPTOP")"
         hypr_monitor "$EXTERNAL,preferred,${x}x0,1"
     fi

@@ -1146,39 +1146,47 @@ const STATIC_CSS = `
       margin-bottom: 10px;
     }
 
-    /* System Toggles Row */
+    /* System Toggles Row — single compact row of round controls */
     #sys-toggles-row {
-      margin-bottom: 12px;
+      margin-bottom: 8px;
+    }
+    #sys-toggles-row flowboxchild {
+      padding: 0;
+      margin: 0;
     }
     #sys-toggle {
-      background: @bg;
+      background: linear-gradient(180deg, @bg_light, @bg);
       border: 1px solid @bg_lighter;
       border-radius: 9999px;
-      padding: 12px;
-      margin: 0 4px;
-      min-width: 52px;
-      min-height: 52px;
+      padding: 0;
+      margin: 0 1px;
+      min-width: 48px;
+      min-height: 48px;
     }
     #sys-toggle:hover {
       background: @bg_light;
       border-color: @gray;
     }
+    #sys-toggle:active {
+      background: @bg_dark;
+    }
     #sys-toggle.active {
-      background: #302200;
-      border: 1px solid #f5c842;
-      box-shadow: inset 0 0 12px alpha(#f5c842, 0.3);
+      background: alpha(@accent, 0.12);
+      border: 1px solid @accent;
+      box-shadow: inset 0 0 10px alpha(@accent, 0.3);
     }
     #sys-toggle-label {
-      font-size: 12px;
+      font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
+      margin-left: 1px;
       color: @fg_dim;
     }
     #sys-toggle:hover #sys-toggle-label {
       color: @fg;
     }
     #sys-toggle.active #sys-toggle-label {
-      color: #f5c842;
+      color: @accent;
     }
 
     /* Clock Panel */
@@ -2320,6 +2328,108 @@ const STATIC_CSS = `
       color: @cyan_bright;
     }
 
+    /* ============ BLUETOOTH PANEL ============ */
+    #bt-scan-btn {
+      background: transparent;
+      border: 1px solid @bg_lighter;
+      border-radius: 3px;
+      padding: 2px 8px;
+    }
+    #bt-scan-btn:hover {
+      border-color: @accent;
+    }
+    #bt-scan-btn.scanning {
+      border-color: @cyan_bright;
+      background: alpha(@cyan_bright, 0.08);
+    }
+    #bt-scan-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-left: 2px;
+      color: @fg_dim;
+    }
+    #bt-scan-btn.scanning #bt-scan-label {
+      color: @cyan_bright;
+    }
+    #bt-list {
+      margin-top: 4px;
+    }
+    #bt-device {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      padding: 4px 8px;
+    }
+    #bt-device:hover {
+      background: alpha(@accent, 0.08);
+      border-color: @bg_lighter;
+    }
+    #bt-device.connected {
+      border-color: alpha(@green, 0.5);
+      background: alpha(@green, 0.06);
+    }
+    #bt-device.connecting {
+      border-color: alpha(@yellow, 0.5);
+    }
+    #bt-device-name {
+      font-size: 10px;
+      color: @fg;
+    }
+    #bt-device.connected #bt-device-name {
+      color: @fg_bright;
+    }
+    #bt-device-status {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-left: 1px;
+      color: @fg_dim;
+    }
+    #bt-device.connected #bt-device-status {
+      color: @green_bright;
+    }
+    #bt-device.connecting #bt-device-status {
+      color: @yellow_bright;
+    }
+    #bt-row {
+      margin: 1px 0;
+    }
+    #bt-device-action {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      padding: 2px 6px;
+      margin-left: 2px;
+      color: @fg_dim;
+      font-size: 11px;
+    }
+    #bt-device-action:hover {
+      border-color: @bg_lighter;
+    }
+    #bt-device-action.repair:hover {
+      color: @cyan_bright;
+      background: alpha(@cyan_bright, 0.08);
+    }
+    #bt-device-action.forget:hover {
+      color: @red_bright;
+      background: alpha(@red_bright, 0.08);
+    }
+    #bt-notice {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: @cyan_bright;
+      padding: 4px 8px 0 8px;
+    }
+    #bt-empty {
+      font-size: 9px;
+      letter-spacing: 1px;
+      margin-left: 1px;
+      color: @fg_dim;
+      padding: 6px 0;
+    }
+
     /* ============ EQ PANELS (Audio & Display) ============ */
     #eq-panel {
       background: @bg;
@@ -2630,6 +2740,278 @@ const STATIC_CSS = `
     }
 
     /* ============ BREAK POPUP OVERLAY ============ */
+    /* ============ DISPLAY ARRANGER (DisplayLayout.tsx) ============ */
+    #displays-overlay {
+      background: alpha(@bg_dark, 0.85);
+    }
+    #displays-panel {
+      background: alpha(@bg, 0.97);
+      border: 1px solid @accent;
+      border-radius: 8px;
+      padding: 20px 24px;
+      box-shadow: 0 0 40px alpha(@accent, 0.25);
+    }
+    #displays-canvas-frame {
+      background: @bg_dark;
+      border: 1px solid @bg_lighter;
+      border-radius: 6px;
+    }
+    #displays-side {
+      min-width: 300px;
+      margin-left: 16px;
+    }
+    #displays-mon-tabs {
+      margin-bottom: 12px;
+    }
+    #displays-mon-tab {
+      background: @bg_light;
+      border: 1px solid @bg_lighter;
+      border-radius: 4px;
+      padding: 6px 8px;
+      margin: 0 2px;
+    }
+    #displays-mon-tab label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: @fg_dim;
+    }
+    #displays-mon-tab.active label {
+      color: @fg_bright;
+    }
+    #displays-mon-tab.off label {
+      color: @gray;
+    }
+    #displays-mon-tab.mon-0 { border-bottom: 2px solid alpha(@accent, 0.5); }
+    #displays-mon-tab.mon-0.active { background: alpha(@accent, 0.15); border: 1px solid @accent; border-bottom: 2px solid @accent; }
+    #displays-ws-chip.mon-0 { background: alpha(@accent, 0.18); border-color: @accent; }
+    #displays-ws-chip.mon-0 label { color: @accent; }
+    #displays-mon-tab.mon-1 { border-bottom: 2px solid alpha(@cyan, 0.5); }
+    #displays-mon-tab.mon-1.active { background: alpha(@cyan, 0.15); border: 1px solid @cyan; border-bottom: 2px solid @cyan; }
+    #displays-ws-chip.mon-1 { background: alpha(@cyan, 0.18); border-color: @cyan; }
+    #displays-ws-chip.mon-1 label { color: @cyan; }
+    #displays-mon-tab.mon-2 { border-bottom: 2px solid alpha(@magenta, 0.5); }
+    #displays-mon-tab.mon-2.active { background: alpha(@magenta, 0.15); border: 1px solid @magenta; border-bottom: 2px solid @magenta; }
+    #displays-ws-chip.mon-2 { background: alpha(@magenta, 0.18); border-color: @magenta; }
+    #displays-ws-chip.mon-2 label { color: @magenta; }
+    #displays-mon-tab.mon-3 { border-bottom: 2px solid alpha(@yellow, 0.5); }
+    #displays-mon-tab.mon-3.active { background: alpha(@yellow, 0.15); border: 1px solid @yellow; border-bottom: 2px solid @yellow; }
+    #displays-ws-chip.mon-3 { background: alpha(@yellow, 0.18); border-color: @yellow; }
+    #displays-ws-chip.mon-3 label { color: @yellow; }
+    #displays-mon-tab.mon-4 { border-bottom: 2px solid alpha(@green, 0.5); }
+    #displays-mon-tab.mon-4.active { background: alpha(@green, 0.15); border: 1px solid @green; border-bottom: 2px solid @green; }
+    #displays-ws-chip.mon-4 { background: alpha(@green, 0.18); border-color: @green; }
+    #displays-ws-chip.mon-4 label { color: @green; }
+    #displays-desc {
+      font-size: 10px;
+      color: @fg_dim;
+      margin-bottom: 10px;
+    }
+    #displays-setting-row {
+      margin-bottom: 8px;
+    }
+    #displays-setting-label {
+      min-width: 70px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: @cyan;
+    }
+    #displays-setting-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: @fg_bright;
+    }
+    #displays-step-btn, #displays-toggle, #displays-btn, #displays-ws-chip {
+      background: @bg_light;
+      border: 1px solid @bg_lighter;
+      border-radius: 4px;
+      padding: 4px 10px;
+    }
+    #displays-step-btn:hover, #displays-toggle:hover, #displays-btn:hover, #displays-ws-chip:hover {
+      border-color: @gray;
+    }
+    #displays-step-btn label, #displays-toggle label, #displays-btn label, #displays-ws-chip label {
+      font-size: 11px;
+      font-weight: 700;
+      color: @fg;
+    }
+    #displays-toggle.active {
+      background: alpha(@accent, 0.15);
+      border-color: @accent;
+    }
+    #displays-ws-header {
+      margin-top: 16px;
+      margin-bottom: 6px;
+    }
+    #displays-hint {
+      font-size: 9px;
+      color: @fg_dim;
+      margin-left: 8px;
+    }
+    #displays-ws-row {
+      margin-bottom: 14px;
+    }
+    #displays-ws-chip {
+      min-width: 44px;
+      min-height: 32px;
+      margin-right: 6px;
+    }
+    #displays-ws-chip label {
+      font-size: 14px;
+    }
+    #displays-ws-chip.absent {
+      border-style: dashed;
+      border-color: @gray;
+    }
+    #displays-status, #displays-confirm {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: @fg_dim;
+    }
+    #displays-confirm {
+      color: @yellow;
+    }
+    #displays-btn {
+      margin-left: 6px;
+      padding: 6px 16px;
+    }
+    #displays-btn.primary {
+      background: alpha(@accent, 0.18);
+      border-color: @accent;
+    }
+    #displays-btn.primary label {
+      color: @fg_bright;
+    }
+
+    /* ============ BLUETOOTH MANAGER (BluetoothWindow.tsx) ============ */
+    #displays-panel.btw-panel {
+      min-width: 760px;
+    }
+    #btw-adapter {
+      font-size: 10px;
+      color: @fg_dim;
+      margin-bottom: 10px;
+    }
+    #btw-adapter-row {
+      margin-bottom: 12px;
+    }
+    #btw-adapter-row #displays-toggle {
+      margin-right: 6px;
+      padding: 8px 10px;
+    }
+    #btw-list {
+      padding-right: 4px;
+    }
+    #btw-empty {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: @fg_dim;
+      padding: 30px 0;
+    }
+    #btw-device {
+      background: @bg_light;
+      border: 1px solid @bg_lighter;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+    }
+    #btw-device.connected {
+      border-color: @accent;
+      background: alpha(@accent, 0.08);
+    }
+    #btw-device.connecting {
+      border-color: @yellow;
+    }
+    #btw-icon {
+      font-size: 22px;
+      color: @cyan;
+      min-width: 36px;
+      margin-right: 8px;
+    }
+    #btw-device.connected #btw-icon {
+      color: @accent;
+    }
+    #btw-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: @fg_bright;
+    }
+    #btw-meta {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: @fg_dim;
+      margin-top: 2px;
+    }
+    #btw-actions {
+      margin-left: 8px;
+    }
+    #btw-action {
+      background: @bg;
+      border: 1px solid @bg_lighter;
+      border-radius: 4px;
+      padding: 4px 10px;
+      margin-left: 4px;
+    }
+    #btw-action:hover {
+      border-color: @gray;
+    }
+    #btw-action label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: @fg;
+    }
+    #btw-action.primary, #btw-action.on {
+      background: alpha(@accent, 0.15);
+      border-color: @accent;
+    }
+    #btw-action.primary label, #btw-action.on label {
+      color: @fg_bright;
+    }
+    #btw-action.repair:hover {
+      border-color: @yellow;
+    }
+    #btw-action.forget:hover {
+      border-color: @red;
+    }
+    #btw-action.forget.armed {
+      background: alpha(@red, 0.18);
+      border-color: @red;
+    }
+    #btw-action.forget.armed label {
+      color: @red;
+    }
+    #btw-action.forget:hover label {
+      color: @red;
+    }
+    #btw-profiles {
+      margin-top: 8px;
+      margin-left: 44px;
+    }
+    #btw-profile-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: @cyan;
+      margin-right: 6px;
+    }
+    #btw-hint {
+      font-size: 9px;
+      color: @fg_dim;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    #btw-notice {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: @yellow;
+    }
+
     #break-popup-overlay {
       background: alpha(@bg_dark, 0.85);
     }

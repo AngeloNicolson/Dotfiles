@@ -146,6 +146,9 @@ lib.optional_require("custom/execs")
 lib.optional_require("custom/general")
 lib.optional_require("custom/rules")
 lib.optional_require("custom/keybinds")
+-- Written by the AGS display arranger (SUPER+SHIFT+P); last so its monitor
+-- layout and workspace pins win over general.lua / rules.lua.
+lib.optional_require("custom/displays")
 
 -- Volume keys
 hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))

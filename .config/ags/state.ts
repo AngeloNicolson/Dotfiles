@@ -61,6 +61,9 @@ export const [galaxyVisible, setGalaxyVisible] = createState(false)
 // Periodic table visibility state
 export const [periodicTableVisible, setPeriodicTableVisible] = createState(false)
 
+// Display arranger overlay visibility state
+export const [displaysVisible, setDisplaysVisible] = createState(false)
+
 // Break popup visibility state (Pomodoro)
 export const [breakPopupVisible, setBreakPopupVisible] = createState(false)
 
@@ -71,8 +74,18 @@ export const [syncPeers, setSyncPeers] = createState<string[]>([])
 export const [pendingChangeRequests, setPendingChangeRequests] = createState(0)
 export const [syncDialogVisible, setSyncDialogVisible] = createState(false)
 
-// Sidebar pinned — when on, bar has exclusive zone and pushes windows away
-export const [sidebarPinned, setSidebarPinned] = createState(true)
+// Sidebar pinned — when on, bar has exclusive zone and pushes windows away.
+// The DOCK choice is remembered across restarts/reboots.
+const [sidebarPinned, setSidebarPinnedState] = createState<boolean>(
+  uiState.sidebarPinned ?? true
+)
+export { sidebarPinned }
+
+export function setSidebarPinned(pinned: boolean) {
+  setSidebarPinnedState(pinned)
+  uiState.sidebarPinned = pinned
+  saveUiState()
+}
 
 // Focused page — when set, bar always opens to this page. Defaults to HOME;
 // the user's FOCUS choice is remembered across reboots.
@@ -93,6 +106,17 @@ export function toggleFocusedPage(pageId: string) {
   } else {
     setFocusedPage(pageId)
   }
+}
+
+// Bluetooth manager overlay visibility state
+export const [bluetoothWindowVisible, setBluetoothWindowVisible] = createState(false)
+
+export function toggleBluetoothWindow() {
+  setBluetoothWindowVisible(!bluetoothWindowVisible.get())
+}
+
+export function toggleDisplays() {
+  setDisplaysVisible(!displaysVisible.get())
 }
 
 export function togglePeriodicTable() {
