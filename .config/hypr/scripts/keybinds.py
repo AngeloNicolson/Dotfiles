@@ -223,10 +223,14 @@ def hypr_binds():
                 keytxt = pretty_key(key)
             keys = f"{mod_s} + {keytxt}" if mod_s else keytxt
             desc = describe(action, loop_kind)
-            if comment and not desc.startswith(("Screenshot", "Run ")) and desc not in AGS_REQUESTS.values():
-                desc = f"{desc} — {comment}" if len(comment) < 50 else desc
-            elif comment and desc.startswith("Run "):
-                desc = comment[0].upper() + comment[1:]
+            known = (set(AGS_REQUESTS.values()) | set(APP_NAMES.values()) | {t for _, t in SCRIPT_NAMES})
+            if comment:
+                if "exec_cmd" in action:
+                    # A launch with no friendly name: the comment says it better.
+                    if desc not in known and not desc.startswith(("Screenshot", "qutebrowser", "Terminal")):
+                        desc = comment[0].upper() + comment[1:]
+                elif len(comment) < 50:
+                    desc = f"{desc} ({comment})"
             rows.append((section, keys, desc, None if loop_kind else runnable(action)))
     return rows
 
