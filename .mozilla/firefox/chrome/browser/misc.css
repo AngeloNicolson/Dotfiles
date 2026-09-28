@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MPL-2.0 */
-/* SPDX-FileCopyrightText: 2024 awwpotato */
+/* SPDX-FileCopyrightText: 2024 0xda157 */
 
 /* dev tools */
 splitter.devtools-horizontal-splitter {
@@ -80,14 +80,14 @@ splitter.devtools-horizontal-splitter {
   border: none !important;
   border-radius: var(--uc-radius) !important;
   background-color: var(--uc-bg-tran) !important;
-  @media not (-moz-bool-pref: "uc.tweak.no-blur") {
+  @media not -moz-pref( "uc.tweak.no-blur") {
     backdrop-filter: blur(var(--uc-blur-radius)) !important;
   }
 
   position: absolute !important;
-  left: auto !important;
+  left: var(--uc-small-floating-margin) !important;
   right: var(--uc-small-floating-margin) !important;
-  width: min(1000px, 100% - 2*var(--uc-small-floating-margin)) !important;
+  width: auto !important;
 
   .findbar-textbox {
     border-radius: var(--uc-radius) !important;
@@ -97,10 +97,10 @@ splitter.devtools-horizontal-splitter {
     width: fit-content !important;
   }
 
-  @media not (-moz-bool-pref: "uc.tweak.findbar.bottom") {
+  @media not -moz-pref( "uc.tweak.findbar.bottom") {
     top: var(--uc-small-floating-margin) !important;
   }
-  @media (-moz-bool-pref: "uc.tweak.findbar.bottom") {
+  @media -moz-pref( "uc.tweak.findbar.bottom") {
     bottom: var(--uc-small-floating-margin) !important;
   }
 }
@@ -119,7 +119,7 @@ splitter.devtools-horizontal-splitter {
     border-radius: var(--uc-radius) !important;
     background-color: var(--uc-bg-tran) !important;
     border: none !important;
-    @media not (-moz-bool-pref: "uc.tweak.no-blur") {
+    @media not -moz-pref( "uc.tweak.no-blur") {
       backdrop-filter: blur(var(--uc-blur-radius)) !important;
     }
   }

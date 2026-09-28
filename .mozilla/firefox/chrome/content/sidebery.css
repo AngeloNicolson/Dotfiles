@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MPL-2.0 */
-/* SPDX-FileCopyrightText: 2024 awwpotato */
+/* SPDX-FileCopyrightText: 2024 0xda157 */
 
 @-moz-document regexp("^moz-extension://.*?/sidebar/sidebar.html")
 {
@@ -14,7 +14,7 @@
     --nav-btn-width: 30px !important;
     --nav-btn-height: 28px !important;
 
-    @media (-moz-bool-pref: "browser.tabs.allow_transparent_browser") and (not (-moz-platform: windows)) {
+    @media -moz-pref( "browser.tabs.allow_transparent_browser") and (not (-moz-platform: windows)) {
       background-color: transparent !important;
       --frame-bg: transparent !important;
     }
@@ -72,7 +72,7 @@
     padding: var(--tabs-margin) !important;
   }
 
-  @media not (-moz-bool-pref: "uc.tweak.sidebery.top-navbar") {
+  @media not -moz-pref( "uc.tweak.sidebery.top-navbar") {
     .top-horizontal-box {
       order: 100 !important;
       margin-bottom: var(--tabs-margin) !important;
@@ -88,13 +88,13 @@
       display: none !important;
       background-color: transparent !important;
     }
-  } @media (-moz-bool-pref: "uc.tweak.sidebery.top-navbar") {
+  } @media -moz-pref( "uc.tweak.sidebery.top-navbar") {
     .top-horizontal-box {
       margin-top: var(--tabs-margin) !important;
     }
   }
 
-  @media (-moz-bool-pref: "uc.tweak.sidebery.big-pinned") {
+  @media -moz-pref( "uc.tweak.sidebery.big-pinned") {
     .PinnedTabsBar {
       display: grid !important;
       grid-gap: calc(3 * var(--tabs-margin)) !important;

@@ -1,18 +1,18 @@
 /* SPDX-License-Identifier: MPL-2.0 */
-/* SPDX-FileCopyrightText: 2024 awwpotato */
+/* SPDX-FileCopyrightText: 2024 0xda157 */
 
 /* navbar collapse */
 :root[titlepreface*="​"] .titlebar-buttonbox-container {
   display: none !important;
 }
 
-@media (-moz-bool-pref: "uc.tweak.no-window-controls") {
+@media -moz-pref( "uc.tweak.no-window-controls") {
   .titlebar-buttonbox-container {
     display: none !important;
   }
 }
 
-@media not (-moz-bool-pref: "uc.tweak.no-window-controls") {
+@media not -moz-pref( "uc.tweak.no-window-controls") {
   /* navbar hidden */
   :root:not([inDOMFullscreen], [titlepreface*="​"]) {
     & .titlebar-buttonbox-container {

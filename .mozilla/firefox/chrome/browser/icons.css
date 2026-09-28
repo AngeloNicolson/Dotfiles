@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MPL-2.0 */
-/* SPDX-FileCopyrightText: 2024 awwpotato */
+/* SPDX-FileCopyrightText: 2024 0xda157 */
 
 :root[lwtheme="true"] .unified-extensions-item .toolbarbutton-badge {
   background-color: var(--toolbarbutton-icon-fill) !important;
@@ -14,7 +14,7 @@
   font-weight: 500 !important;
 }
 
-@media not (-moz-bool-pref: "uc.tweak.no-custom-icons") {
+@media not -moz-pref( "uc.tweak.no-custom-icons") {
   /* userChrome toggle -> sidebar icon */
   :is(.webextension-browser-action, .eom-addon-button):is(
       [data-extensionid="userchrome-toggle-extended@n2ezr.ru"],

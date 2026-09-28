@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MPL-2.0 */
-/* SPDX-FileCopyrightText: 2024 awwpotato */
+/* SPDX-FileCopyrightText: 2024 0xda157 */
 
 /* navbar hidden */
 :root:not([titlepreface*="​"], [inDOMFullscreen="true"]) {
@@ -60,7 +60,7 @@ toolbarspring {
 /* navbar hidden */
 #main-window[titlepreface*="​"]:not([inDOMFullscreen="true"]) {
   &:not([sizemode="fullscreen"]) {
-    @media not (-moz-bool-pref: "uc.tweak.borderless") {
+    @media not -moz-pref( "uc.tweak.borderless") {
       --uc-content-margin-top: var(--uc-content-margin) !important;
     }
   }
@@ -101,7 +101,7 @@ toolbarspring {
     background-color: transparent !important;
   }
 
-  @media not (-moz-bool-pref: "uc.tweak.borderless") {
+  @media not -moz-pref( "uc.tweak.borderless") {
     &:not([customizing]):not([sizemode="fullscreen"]) #navigator-toolbox {
       &::before {
         content: "";
@@ -180,7 +180,7 @@ toolbarspring {
       overflow: unset !important;
     }
 
-    @media not (-moz-bool-pref: "uc.tweak.no-blur") {
+    @media not -moz-pref( "uc.tweak.no-blur") {
       #nav-bar::before,
       #PersonalToolbar::before {
         content: "";

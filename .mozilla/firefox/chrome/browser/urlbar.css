@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MPL-2.0 */
-/* SPDX-FileCopyrightText: 2024 awwpotato */
+/* SPDX-FileCopyrightText: 2024 0xda157 */
 
 #identity-box[pageproxystate="valid"]:is(
     .notSecureText,
@@ -23,23 +23,23 @@
 
 #urlbar {
   z-index: 9999 !important;
-  margin: auto !important;
 }
 
-#urlbar-background {
+.urlbar-background {
   border-radius: var(--uc-button-radius) !important;
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
 }
 
-#urlbar[breakout-extend] #urlbar-background {
+#urlbar[breakout-extend] .urlbar-background {
+  --field: Field;
   --urlbar-bg: var(--toolbar-field-focus-background-color);
   @media (-moz-platform: linux) {
-    --urlbar-bg: Field;
+    --urlbar-bg: var(--toolbar-field-focus-background-color, var(--field));
   }
   background-color: var(--urlbar-bg) !important;
-  @media not (-moz-bool-pref: "uc.tweak.no-blur") {
+  @media not -moz-pref( "uc.tweak.no-blur") {
     background-color: color-mix(
       in oklab,
       var(--urlbar-bg) 90%,
@@ -49,7 +49,7 @@
   }
 }
 
-@media not (-moz-bool-pref: "uc.tweak.urlbar.not-floating") {
+@media not -moz-pref( "uc.tweak.urlbar.not-floating") {
   #main-window:not([customizing]) {
     --uc-urlbar-width: clamp(
       min(
@@ -63,10 +63,14 @@
       800px
     );
 
+    #urlbar,
+    #urlbar-container {
+      margin: auto !important;
+    }
+
     #urlbar-container {
       flex: 1;
       max-width: 1000px;
-      margin: auto !important;
     }
 
     #urlbar[breakout-extend] {
