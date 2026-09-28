@@ -91,6 +91,8 @@ bind(mainMod,             "W",   dsp.exec_cmd("ags request toggle-wallpapers")) 
 bind(mainMod,             "comma", dsp.exec_cmd("ags request toggle-settings"))  -- settings window
 bind(mainMod,             "grave", dsp.exec_cmd("~/.config/hypr/scripts/wlogout.sh"))  -- power menu (wlogout, 43PR style)
 bind(mainMod,             "space", dsp.exec_cmd("~/.config/hypr/scripts/launcher.sh"))  -- app launcher (rofi, 43PR style)
+bind(mainMod,             "A",   dsp.exec_cmd("ags request toggle-destination"))  -- Destiny-style Destination menu
+bind(mainMod .. " + SHIFT", "A",   dsp.exec_cmd("ags request toggle-galaxy"))       -- Galaxy overlay
 
 -- Screenshot
 bind(mainMod,             "I", dsp.exec_cmd("~/.config/hypr/scripts/screenshot.sh s"))  -- drag to snip / click window
