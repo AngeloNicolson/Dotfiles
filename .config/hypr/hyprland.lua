@@ -46,7 +46,6 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("~/.config/hypr/scripts/resetxdgportal.sh")
   hl.exec_cmd("~/.config/hypr/scripts/batterynotify.sh")
   hl.exec_cmd("~/.config/hypr/scripts/wallpaperdaemon.sh")
-  hl.exec_cmd("~/.config/hypr/scripts/load_default_environment.sh")
   -- Auto-detects the backlight device instead of assuming intel_backlight
   hl.exec_cmd("~/.config/hypr/scripts/init-backlight.sh 20")
 

@@ -101,8 +101,6 @@ bind("",                  "print", dsp.exec_cmd("~/.config/hypr/scripts/screensh
 -- Color picker
 bind(mainMod, "P", dsp.exec_cmd("wl-color-picker"))
 
--- Snap windows to layout positions
-bind(mainMod, "R", dsp.exec_cmd("~/.config/hypr/scripts/snap_to_layout.py"))
 
 -- ── App Launching (RIGHT ALT / MOD5) ────────────────────────────────────────
 

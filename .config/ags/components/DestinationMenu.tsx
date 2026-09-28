@@ -35,7 +35,7 @@ const DESTINATIONS: Destination[] = [
   {
     id: "apps", label: "APPS", icon: "", x: 0.14, y: 0.14, size: 4.8, ringStyle: "planet",
     subItems: [
-      { id: "wofi", label: "LAUNCHER", icon: "", command: "wofi --show drun" },
+      { id: "wofi", label: "LAUNCHER", icon: "", command: "~/.config/hypr/scripts/launcher.sh" },
       { id: "discord", label: "DISCORD", icon: "󰙯", command: "vesktop" },
       { id: "obs", label: "OBS", icon: "󰑋", command: "obs" },
       { id: "gimp", label: "GIMP", icon: "", command: "gimp" },

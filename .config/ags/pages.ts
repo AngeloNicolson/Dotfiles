@@ -14,7 +14,6 @@ export const PAGES: PageDef[] = [
   { id: "home", icon: "", label: "HOME" },
   { id: "planner", icon: "", label: "PLAN" },
   { id: "pomodoro", icon: "", label: "POMO" },
-  { id: "apps", icon: "", label: "APPS" },
   { id: "core", icon: "", label: "CORE" },
   { id: "settings", icon: "", label: "SET" },
   { id: "power", icon: "", label: "PWR" },
@@ -27,7 +26,7 @@ export const LEGACY_PAGE_IDS: Record<string, string> = {
   page1: "home",
   page2: "planner",
   page3: "pomodoro",
-  page4: "apps",
+  page4: "home",  // was the APPS page (removed: SUPER+Space opens Rofi)
   page5: "core",
   page6: "power",
 }

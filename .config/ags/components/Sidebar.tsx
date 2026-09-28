@@ -3,7 +3,6 @@ import { setSidebarStack, getPageState, setPage, focusedPage, toggleFocusedPage 
 import { PAGES } from "../pages"
 import Home from "./Home"
 import Planner from "./Planner"
-import AppLauncher from "./AppLauncher"
 import PowerIndicator from "./PowerIndicator"
 import WallpaperSelector from "./WallpaperSelector"
 import Settings from "./Settings"
@@ -23,7 +22,6 @@ function buildPage(id: string): Gtk.Widget {
     }
     case "planner": return <Planner />
     case "pomodoro": return <Pomodoro />
-    case "apps": return <AppLauncher />
     case "core": return <WallpaperSelector />
     case "settings": {
       const scroll = new Gtk.ScrolledWindow({
