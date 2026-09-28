@@ -1,5 +1,0 @@
-{
-  "type": "window",
-  "app": "sh -c 'zathura \"$(zenity --file-selection --filename=/home/Angel/Documents/insert_disk2_to_continue/E-books/)\"'",
-  "working_dir": "~/"
-}
