@@ -4,6 +4,7 @@ import Bluetooth from "gi://AstalBluetooth"
 import { execAsync } from "ags/process"
 import { px } from "../scale"
 import { toggleBluetoothWindow } from "../state"
+import { placementFrom } from "../flyout"
 
 // Devices with no name (bare addresses) are ambient BLE noise during a scan;
 // only paired ones are worth listing without a name.
@@ -290,14 +291,15 @@ export default function BluetoothPanel() {
   adapter.connect("notify::discovering", syncScanBtn)
   syncScanBtn()
 
+  let panelRef: Gtk.Widget | null = null
   return (
-    <box name="eq-panel" vertical>
+    <box name="eq-panel" vertical $={(self) => { panelRef = self }}>
       <box name="control-header">
         <label name="control-icon" label="󰂯" />
         <label name="control-label" label="BLUETOOTH" />
         <box hexpand />
         {scanBtn}
-        <button name="bt-scan-btn" tooltipText="Open Bluetooth manager" onClicked={toggleBluetoothWindow}>
+        <button name="bt-scan-btn" tooltipText="Open Bluetooth manager" onClicked={() => toggleBluetoothWindow(panelRef ? placementFrom(panelRef) : undefined)}>
           <label name="bt-scan-label" label="󰁌" />
         </button>
       </box>

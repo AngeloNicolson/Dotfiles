@@ -1,11 +1,13 @@
 import Gtk from "gi://Gtk?version=3.0"
 import GLib from "gi://GLib"
+import Gio from "gi://Gio"
 import GdkPixbuf from "gi://GdkPixbuf"
 import { execAsync } from "ags/process"
 import { createState } from "ags"
 import { px } from "../scale"
 import { hyprSetOption } from "../compositor"
 import ThemeSelector from "./ThemeSelector"
+import { toggleWallpapers } from "../state"
 
 const WALLPAPER_DIR = GLib.get_home_dir() + "/.config/ags/wallpapers"
 const SWWW_DIR = GLib.get_home_dir() + "/.config/awww"
@@ -25,7 +27,7 @@ function ensureThumbCache() {
   }
 }
 
-function getStaticWallpapers(): string[] {
+export function getStaticWallpapers(): string[] {
   const wallpapers: string[] = []
   const dirs = [WALLPAPER_DIR, SWWW_DIR]
 
@@ -172,6 +174,57 @@ async function generateVideoThumbnail(videoPath: string): Promise<string> {
   return thumbPath
 }
 
+// Grid thumbnails come from a small on-disk cache made by ffmpeg in the
+// background (max 3 at a time). Decoding every full-size wallpaper at startup
+// took AGS from ~8s to ~31s to start with ~120 wallpapers, twice with two
+// sidebars.
+const GRID_THUMB_DIR = GLib.get_user_cache_dir() + "/ags/wall-thumbs"
+GLib.mkdir_with_parents(GRID_THUMB_DIR, 0o755)
+const thumbWaiters = new Map<string, ((pb: GdkPixbuf.Pixbuf | null) => void)[]>()
+const thumbQueue: [string, string][] = []
+let thumbInflight = 0
+
+function gridThumbPath(path: string, w: number, h: number): string {
+  let mtime = ""
+  try {
+    mtime = String(Gio.File.new_for_path(path)
+      .query_info("time::modified", Gio.FileQueryInfoFlags.NONE, null)
+      .get_attribute_uint64("time::modified"))
+  } catch {}
+  const sum = GLib.compute_checksum_for_string(GLib.ChecksumType.MD5, `${path}${mtime}${w}x${h}`, -1)
+  return `${GRID_THUMB_DIR}/${sum}.jpg`
+}
+
+function pumpThumbs(w: number, h: number) {
+  while (thumbInflight < 3 && thumbQueue.length) {
+    const [src, out] = thumbQueue.shift()!
+    thumbInflight++
+    execAsync(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", src, "-frames:v", "1",
+      "-vf", `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`, "-q:v", "4", out])
+      .catch((e) => print(`wallpaper thumb failed for ${src}: ${e}`))
+      .finally(() => {
+        thumbInflight--
+        let pb: GdkPixbuf.Pixbuf | null = null
+        try { pb = GdkPixbuf.Pixbuf.new_from_file(out) } catch {}
+        for (const cb of thumbWaiters.get(out) ?? []) cb(pb)
+        thumbWaiters.delete(out)
+        pumpThumbs(w, h)
+      })
+  }
+}
+
+function loadGridThumb(src: string, w: number, h: number, cb: (pb: GdkPixbuf.Pixbuf | null) => void) {
+  const out = gridThumbPath(src, w, h)
+  if (GLib.file_test(out, GLib.FileTest.EXISTS)) {
+    try { cb(GdkPixbuf.Pixbuf.new_from_file(out)); return } catch {}
+  }
+  const waiting = thumbWaiters.get(out)
+  if (waiting) { waiting.push(cb); return }  // same file requested by the other sidebar
+  thumbWaiters.set(out, [cb])
+  thumbQueue.push([src, out])
+  pumpThumbs(w, h)
+}
+
 function StaticThumbnail({
   path,
   onSelect
@@ -179,19 +232,12 @@ function StaticThumbnail({
   path: string
   onSelect: () => void
 }) {
-  let pixbuf: GdkPixbuf.Pixbuf | null = null
-  try {
-    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, px(280), px(175), true)
-  } catch {
-    // Failed to load image
-  }
-
   const image = new Gtk.Image()
-  if (pixbuf) {
-    image.set_from_pixbuf(pixbuf)
-  } else {
-    image.set_from_icon_name("image-missing", Gtk.IconSize.DIALOG)
-  }
+  image.set_size_request(px(280), px(175))
+  loadGridThumb(path, px(280), px(175), (pb) => {
+    if (pb) image.set_from_pixbuf(pb)
+    else image.set_from_icon_name("image-missing", Gtk.IconSize.DIALOG)
+  })
 
   return (
     <button name="wallpaper-thumb" onClicked={onSelect}>
@@ -320,46 +366,47 @@ function MovieFolder({ folderName }: { folderName: string }) {
   ) as Gtk.Widget
 }
 
+// Shared with the wallpaper carousel (WallpaperCarousel.tsx).
+export async function applyStaticWallpaper(path: string) {
+  // Force kill any running mpvpaper (avoid killing pomodoro mpv)
+  await execAsync(["pkill", "-9", "mpvpaper"]).catch(() => {})
+  await execAsync(["pkill", "-9", "-f", "mpv.*no-audio.*loop.*panscan"]).catch(() => {})
+  // Wait for processes to die
+  await new Promise(resolve => setTimeout(resolve, 200))
+
+  // Ensure awww-daemon is running
+  try {
+    await execAsync(["pgrep", "awww-daemon"])
+  } catch {
+    // awww-daemon not running, start it
+    await execAsync(["awww-daemon"]).catch(() => {})
+    // Give it a moment to initialize
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+
+  execAsync([
+    "awww", "img", path,
+    "--transition-type", "wipe",
+    "--transition-angle", "30",
+    "--transition-duration", "1.5",
+    "--transition-fps", "60"
+  ]).then(() => {
+    execAsync(["rm", "-f", `${SWWW_DIR}/current.set`]).catch(() => {})
+    execAsync(["rm", "-f", `${SWWW_DIR}/current-live.set`]).catch(() => {})
+    execAsync(["ln", "-sf", path, `${SWWW_DIR}/current.set`]).catch(() => {})
+    execAsync([
+      "dunstify", "Wallpaper changed",
+      "-a", "Wallpaper", "-i", path, "-r", "91190", "-t", "2000"
+    ]).catch(() => {})
+  }).catch(() => {})
+}
+
 export default function WallpaperSelector() {
   const [activeTab, setActiveTab] = createState<"wallpapers" | "movies">("wallpapers")
   const [activeSubTab, setActiveSubTab] = createState<"static" | "live">("static")
   const staticWallpapers = getStaticWallpapers()
   const liveWallpapers = getLiveWallpapers()
   const movieFolders = getMovieFolders()
-
-  const applyStaticWallpaper = async (path: string) => {
-    // Force kill any running mpvpaper (avoid killing pomodoro mpv)
-    await execAsync(["pkill", "-9", "mpvpaper"]).catch(() => {})
-    await execAsync(["pkill", "-9", "-f", "mpv.*no-audio.*loop.*panscan"]).catch(() => {})
-    // Wait for processes to die
-    await new Promise(resolve => setTimeout(resolve, 200))
-
-    // Ensure awww-daemon is running
-    try {
-      await execAsync(["pgrep", "awww-daemon"])
-    } catch {
-      // awww-daemon not running, start it
-      await execAsync(["awww-daemon"]).catch(() => {})
-      // Give it a moment to initialize
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-
-    execAsync([
-      "awww", "img", path,
-      "--transition-type", "wipe",
-      "--transition-angle", "30",
-      "--transition-duration", "1.5",
-      "--transition-fps", "60"
-    ]).then(() => {
-      execAsync(["rm", "-f", `${SWWW_DIR}/current.set`]).catch(() => {})
-      execAsync(["rm", "-f", `${SWWW_DIR}/current-live.set`]).catch(() => {})
-      execAsync(["ln", "-sf", path, `${SWWW_DIR}/current.set`]).catch(() => {})
-      execAsync([
-        "dunstify", "Wallpaper changed",
-        "-a", "Wallpaper", "-i", path, "-r", "91190", "-t", "2000"
-      ]).catch(() => {})
-    }).catch(() => {})
-  }
 
   const applyLiveWallpaper = async (path: string) => {
     // Force kill any existing mpvpaper (avoid killing pomodoro mpv)
@@ -582,6 +629,9 @@ export default function WallpaperSelector() {
     <box vertical name="home-page">
       <box name="core-header">
         <label name="section-header" label="//CORE" hexpand halign={Gtk.Align.START} />
+        <button name="core-reload-btn" tooltipText="Wallpaper carousel (SUPER+W)" onClicked={() => toggleWallpapers()}>
+          <label label="󰁌" />
+        </button>
         <button name="core-reload-btn" onClicked={() => {
           execAsync(["bash", "-c", "ags quit; sleep 1; rm -f /run/user/1000/ags.js; ags run &"]).catch(() => {})
         }}>

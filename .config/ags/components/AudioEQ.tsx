@@ -1,6 +1,6 @@
 import { createState } from "ags"
 import { createPoll } from "ags/time"
-import { type Accessor } from "gnim"
+import { type Accessor, createRoot } from "gnim"
 import { exec, execAsync, createSubprocess } from "ags/process"
 import { writeFile, readFile } from "ags/file"
 import GLib from "gi://GLib"
@@ -389,11 +389,11 @@ function isEqSink(s: any): boolean {
   return s.description === "Equalizer Sink" || s.name === "effect_input.eq6" || s.name === "effect_output.eq6"
 }
 
-function getHwSpeakers(): any[] {
+export function getHwSpeakers(): any[] {
   return (wpAudio.get_speakers() as any[]).filter((s: any) => !isEqSink(s))
 }
 
-function sinkDesc(s: any): string {
+export function sinkDesc(s: any): string {
   const raw = s.description || s.name || `Sink ${s.id}`
   // Strip common device prefix — e.g. "800 Series ACE (Audio Context Engine) Headphones" → "Headphones"
   return raw.replace(/^.+\)\s*/, "") || raw
@@ -407,12 +407,19 @@ interface OutputDropdown {
   revealer: Gtk.Revealer | null
   arrow: Gtk.Label | null
   open: boolean
+  dispose?: () => void  // scope of the current rows (rebuilt from callbacks)
 }
 const dropdowns = new Set<OutputDropdown>()
 
 function rebuildOutputList(dd?: OutputDropdown) {
   if (!dd) { dropdowns.forEach((d) => rebuildOutputList(d)); return }
+  dd.dispose?.()
   dd.list.get_children().forEach((c: any) => c.destroy())
+  createRoot((dispose) => { dd.dispose = dispose; buildOutputRows(dd) })
+  dd.list.show_all()
+}
+
+function buildOutputRows(dd: OutputDropdown) {
   const speakers = getHwSpeakers()
   for (const sink of speakers) {
     const desc = sinkDesc(sink)
@@ -430,7 +437,6 @@ function rebuildOutputList(dd?: OutputDropdown) {
     ) as Gtk.Widget
     dd.list.add(btn)
   }
-  dd.list.show_all()
 }
 
 function toggleDropdown(dd: OutputDropdown) {
@@ -460,7 +466,7 @@ function syncFromSink(sink: any) {
     })
 }
 
-function selectSink(sinkId: number) {
+export function selectSink(sinkId: number) {
   const speakers = getHwSpeakers()
   const sink = speakers.find((s: any) => s.id === sinkId)
   if (!sink) return

@@ -16,6 +16,7 @@ export const PAGES: PageDef[] = [
   { id: "pomodoro", icon: "", label: "POMO" },
   { id: "apps", icon: "", label: "APPS" },
   { id: "core", icon: "", label: "CORE" },
+  { id: "settings", icon: "", label: "SET" },
   { id: "power", icon: "", label: "PWR" },
 ]
 

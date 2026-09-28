@@ -13,7 +13,8 @@ import GLib from "gi://GLib"
 import Gdk from "gi://Gdk?version=3.0"
 import Gtk from "gi://Gtk?version=3.0"
 import Bluetooth from "gi://AstalBluetooth"
-import { bluetoothWindowVisible, setBluetoothWindowVisible } from "../state"
+import { bluetoothWindowVisible, setBluetoothWindowVisible, bluetoothPlacement, barVisible } from "../state"
+import { makeClip, preparePanel, openPanel, closePanel, clickedOutside, registerCloser, closeFlyout } from "../flyout"
 import { px } from "../scale"
 import {
   listable, deviceSortKey, deviceClass, toggleDevice, forgetDevice, repairDevice,
@@ -69,7 +70,9 @@ function profileLabel(id: string): string {
   return codec ? `${base} (${codec.toUpperCase()})` : base
 }
 
-function BluetoothManager() {
+// `active`: when embedded (Settings → Bluetooth), whether that page is showing.
+export function BluetoothManager(active?: () => boolean) {
+  const shown = () => bluetoothWindowVisible.get() || (active?.() ?? false)
   const bluetooth = Bluetooth.get_default()
   const adapter = bluetooth?.adapter ?? null
 
@@ -249,8 +252,8 @@ function BluetoothManager() {
 
   let rootDispose: (() => void) | null = null
   function rebuild() {
+    rootDispose?.()  // before destroying: its cleanup touches the old widgets
     for (const box of [adapterRow, listBox]) box.get_children().forEach((c) => c.destroy())
-    rootDispose?.()
     createRoot((dispose) => {
       rootDispose = dispose
       buildAdapterRow()
@@ -262,7 +265,7 @@ function BluetoothManager() {
 
   let rebuildTimer = 0
   function scheduleRebuild() {
-    if (rebuildTimer || !bluetoothWindowVisible.get()) return
+    if (rebuildTimer || !shown()) return
     rebuildTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
       rebuildTimer = 0
       rebuild()
@@ -293,21 +296,21 @@ function BluetoothManager() {
       adapter.connect(sig, scheduleRebuild)
   }
 
-  bluetoothWindowVisible.subscribe(() => {
-    if (!bluetoothWindowVisible.get()) {
-      // Don't leave a scan running in the background
-      try { if (adapter?.discovering) adapter.stop_discovery() } catch {}
-      return
-    }
+  function show() {
     hookDevices()
     refreshCards()
     rebuild()
-  })
+  }
+  function hide() {
+    // Don't leave a scan running in the background
+    try { if (adapter?.discovering) adapter.stop_discovery() } catch {}
+  }
+  if (!active) bluetoothWindowVisible.subscribe(() => bluetoothWindowVisible.get() ? show() : hide())
 
   const title = adapter ? `${adapter.alias || adapter.name}  ·  ${adapter.address}` : ""
 
-  return (
-    <box name="displays-panel" class="btw-panel" vertical halign={Gtk.Align.CENTER} valign={Gtk.Align.CENTER} hexpand vexpand>
+  const widget = (
+    <box name="displays-panel" class={active ? "btw-panel embedded" : "btw-panel"} vertical>
       <box>
         <label name="section-header" label="//BLUETOOTH" xalign={0} />
         <label name="btw-adapter" label={title} xalign={1} hexpand />
@@ -323,22 +326,67 @@ function BluetoothManager() {
       />
       <box name="displays-actions">
         {notice}
-        <button name="displays-btn" onClicked={() => setBluetoothWindowVisible(false)}>
-          <label label="CLOSE" />
-        </button>
+        {active ? <box /> : (
+          <button name="displays-btn" onClicked={() => closeFlyout("bluetooth", () => setBluetoothWindowVisible(false))}>
+            <label label="CLOSE" />
+          </button>
+        )}
       </box>
     </box>
   ) as Gtk.Widget
+
+  return { widget, show, hide }
 }
 
 export default function BluetoothWindow(gdkMonitor: number | any) {
   const { TOP, LEFT, BOTTOM, RIGHT } = Astal.WindowAnchor
+  const focusedMonitor = () => typeof gdkMonitor === "number" ? gdkMonitor : gdkMonitor.get()
+  const panel = BluetoothManager().widget
+  const clip = makeClip(panel)
+  const close = () => closeFlyout("bluetooth", () => setBluetoothWindowVisible(false))
+
+  let closing = false
+  registerCloser("bluetooth", () => {
+    if (closing || !bluetoothWindowVisible.get()) return
+    closing = true
+    closePanel(clip, bluetoothPlacement.get(), () => { closing = false; setBluetoothWindowVisible(false) })
+  })
+
+  const frame = (
+    <eventbox
+      name="displays-overlay"
+      expand hexpand vexpand
+      onButtonPressEvent={(self, event) => {
+        // Flyout: a click beside it closes it.
+        if (bluetoothPlacement.get().x !== undefined && clickedOutside(clip, self, event)) {
+          close()
+          return true
+        }
+        return false
+      }}
+    >
+      <box>{clip}</box>
+    </eventbox>
+  ) as Gtk.Widget
+
+  bluetoothPlacement.subscribe(() => preparePanel(frame, clip, panel, bluetoothPlacement.get()))
+  // Grown out of the sidebar → goes away with it.
+  barVisible.subscribe(() => {
+    if (!barVisible.get() && bluetoothWindowVisible.get() && bluetoothPlacement.get().x !== undefined) close()
+  })
+  bluetoothWindowVisible.subscribe(() => {
+    if (!bluetoothWindowVisible.get()) return
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      openPanel(frame, clip, panel, bluetoothPlacement.get())
+      return GLib.SOURCE_REMOVE
+    })
+  })
 
   return (
     <window
       name="bluetooth"
       visible={bluetoothWindowVisible}
-      monitor={gdkMonitor}
+      monitor={bluetoothPlacement.as((p) => p.monitor ?? focusedMonitor())}
       anchor={TOP | LEFT | BOTTOM | RIGHT}
       exclusivity={Astal.Exclusivity.IGNORE}
       keymode={Astal.Keymode.EXCLUSIVE}
@@ -346,13 +394,11 @@ export default function BluetoothWindow(gdkMonitor: number | any) {
       layer={Astal.Layer.OVERLAY}
       onKeyPressEvent={(_, event) => {
         if (event.get_keyval()[1] !== Gdk.KEY_Escape) return false
-        setBluetoothWindowVisible(false)
+        close()
         return true
       }}
     >
-      <box name="displays-overlay" expand hexpand vexpand>
-        <BluetoothManager />
-      </box>
+      {frame}
     </window>
   )
 }

@@ -2,10 +2,10 @@ import app from "ags/gtk3/app"
 import { createState } from "ags"
 import {
   toggleBar, cyclePage, cyclePageBack, removeSidebarStack,
-  toggleDestination, toggleGalaxy, togglePeriodicTable, toggleDisplays, toggleBluetoothWindow, getSidebarStacks,
+  toggleDestination, toggleGalaxy, togglePeriodicTable, toggleDisplays, toggleBluetoothWindow, toggleWallpapers, toggleSettings, getSidebarStacks,
 } from "./state"
 import { initTheme, applyTheme, reapplyCss } from "./theme"
-import { recomputeScale } from "./scale"
+import { recomputeScale, uFor, withU, trackWindowScale, refreshWindowScales } from "./scale"
 import * as compositor from "./compositor"
 import Bar from "./components/Bar"
 import DestinationWindow from "./components/DestinationWindow"
@@ -15,6 +15,8 @@ import BreakPopupWindow from "./components/BreakPopupWindow"
 import WorkspaceOsdWindow from "./components/WorkspaceOsd"
 import DisplayLayoutWindow from "./components/DisplayLayout"
 import BluetoothWindow from "./components/BluetoothWindow"
+import WallpaperCarouselWindow from "./components/WallpaperCarousel"
+import SettingsWindow from "./components/SettingsWindow"
 
 // `ags request <cmd> [args...]` handlers. Adding a command = adding an entry;
 // `ags request help` lists them all.
@@ -51,6 +53,14 @@ const commands: Record<string, (args: string[]) => string> = {
     toggleBluetoothWindow()
     return "bluetooth toggled"
   },
+  "toggle-wallpapers": () => {
+    toggleWallpapers()
+    return "wallpapers toggled"
+  },
+  "toggle-settings": ([page]) => {
+    toggleSettings(page)
+    return page ? `settings: ${page}` : "settings toggled"
+  },
   "debug-stacks": () =>
     `Registered stacks: ${JSON.stringify(Array.from(getSidebarStacks().keys()))}`,
   "theme": ([themeName]) => {
@@ -84,8 +94,12 @@ app.start({
 
     // Recompute the display scale (U) from the focused monitor and re-apply the
     // rescaled stylesheet if it changed.
+    // Monitors changed: the base factor and/or the set of per-monitor sizes
+    // may have changed, so rebuild the stylesheet and re-tag windows.
     const updateScale = () => {
-      if (recomputeScale()) reapplyCss()
+      recomputeScale()
+      reapplyCss()
+      refreshWindowScales()
     }
 
     // Track bars by monitor name (stable identifier)
@@ -105,7 +119,11 @@ app.start({
       compositor.getMonitors().forEach((mon) => {
         const gdkIndex = compositor.gdkIndexFor(mon)
         console.log(`Creating bar for monitor: ${mon.name} (gdk index: ${gdkIndex})`)
-        bars.set(mon.name, Bar(gdkIndex, mon.name))
+        // Built with this monitor's factor (JS px values) and tagged so the
+        // stylesheet's per-size copy applies to it.
+        const bar = withU(uFor(mon), () => Bar(gdkIndex, mon.name))
+        trackWindowScale(bar)
+        bars.set(mon.name, bar)
       })
 
       console.log(`Active bars: ${Array.from(bars.keys()).join(", ")}`)
@@ -140,7 +158,6 @@ app.start({
 
     compositor.onFocusChanged(() => {
       updateBarVisibility()
-      updateScale()
       updateOverlayMonitor()
     })
 
@@ -157,12 +174,15 @@ app.start({
 
     // Overlay windows follow the focused monitor (reactive index) instead of
     // being pinned to monitor 0.
-    DestinationWindow(overlayMonitor)
-    GalaxyWindow(overlayMonitor)
-    PeriodicTableWindow(overlayMonitor)
-    BreakPopupWindow(overlayMonitor)
-    WorkspaceOsdWindow(overlayMonitor)
-    DisplayLayoutWindow(overlayMonitor)
-    BluetoothWindow(overlayMonitor)
+    // Every overlay follows a monitor; keep its size class in sync with it.
+    trackWindowScale(DestinationWindow(overlayMonitor))
+    trackWindowScale(GalaxyWindow(overlayMonitor))
+    trackWindowScale(PeriodicTableWindow(overlayMonitor))
+    trackWindowScale(BreakPopupWindow(overlayMonitor))
+    trackWindowScale(WorkspaceOsdWindow(overlayMonitor))
+    trackWindowScale(DisplayLayoutWindow(overlayMonitor))
+    trackWindowScale(BluetoothWindow(overlayMonitor))
+    trackWindowScale(WallpaperCarouselWindow(overlayMonitor))
+    trackWindowScale(SettingsWindow(overlayMonitor))
   },
 })

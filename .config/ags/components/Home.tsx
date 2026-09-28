@@ -10,7 +10,6 @@ import { sidebarPinned, setSidebarPinned, displaysVisible, toggleDisplays } from
 import caps from "../capabilities"
 import AudioEQ, { toggleHwMute, localMuted } from "./AudioEQ"
 import DisplayEQ, { applyProfile, activeProfile } from "./DisplayEQ"
-import BluetoothPanel from "./BluetoothPanel"
 import VoiceControl, { toggleMicMute, micMuted } from "./VoiceControl"
 
 // System toggle button - Star Citizen style
@@ -199,7 +198,7 @@ export default function Home() {
           <SystemToggle
             active={displaysVisible}
             label="DISP"
-            onClick={toggleDisplays}
+            onClick={() => toggleDisplays()}
           />,
           <SystemToggle
             active={localMuted}
@@ -255,7 +254,6 @@ export default function Home() {
         )
       })()}
       <DisplayEQ />
-      <BluetoothPanel />
 
     </box>
   )

@@ -8,7 +8,7 @@ import { applyTheme, loadTheme, type Theme } from "../theme"
 const THEME_DIR = GLib.get_home_dir() + "/.config/themes"
 const APPLY_SCRIPT = THEME_DIR + "/apply-theme.sh"
 
-function listThemes(): Theme[] {
+export function listThemes(): Theme[] {
   const themes: Theme[] = []
   try {
     const dir = GLib.Dir.open(THEME_DIR, 0)
@@ -23,11 +23,11 @@ function listThemes(): Theme[] {
   return themes.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-const [currentTheme, setCurrentTheme] = createState(
+export const [currentTheme, setCurrentTheme] = createState(
   (readFile(`${THEME_DIR}/.current`) || "").trim(),
 )
 
-function switchTheme(name: string) {
+export function switchTheme(name: string) {
   setCurrentTheme(name)
   // applyTheme covers shell CSS/foot/GTK/Hyprland in-process; the script adds
   // dunst + nvim + TUI repaints. Run it after so foot.ini writes don't race.

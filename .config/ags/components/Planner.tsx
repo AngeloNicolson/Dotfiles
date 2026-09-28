@@ -9,7 +9,7 @@ import GLib from "gi://GLib"
 import { createState } from "ags"
 import { syncConnected, syncPeerCount, pendingChangeRequests, syncDialogVisible, setSyncDialogVisible } from "../state"
 import { lastSyncedFile, lastSyncTime, generateInvite, acceptInvite, getPeers } from "./SyncIndicator"
-import { px } from "../scale"
+import { U } from "../scale"
 
 const PLANS_DIR = GLib.get_home_dir() + "/.config/plans"
 const BOARDS_DIR = PLANS_DIR + "/boards"
@@ -237,11 +237,10 @@ function migrateKanbanIfNeeded() {
 
 const START_H = 4
 const END_H = 22
-// Row heights scale with the display (px()), so the calendar keeps the same
-// fraction of the panel on any screen. START_H/END_H are clock hours, not px.
-const DEFAULT_ROW_H = px(72)
-const MIN_ROW_H = px(24)
-const MAX_ROW_H = px(120)
+// Row heights scale with the display, so the calendar keeps the same fraction
+// of the panel on any screen. START_H/END_H are clock hours, not px. The px
+// values are computed per Planner instance (below) because each sidebar is
+// built for its own monitor's size factor.
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
@@ -510,6 +509,15 @@ function createPlansDir() {
 }
 
 export default function Planner() {
+  // This sidebar's size factor, captured at build time (app.tsx builds each
+  // bar inside withU(monitor factor)). Everything below — including layout
+  // recomputed later from timers/signals — sizes with it, matching the
+  // per-monitor stylesheet copy this window gets.
+  const planU = U
+  const px = (n: number) => Math.round(n * planU)
+  const DEFAULT_ROW_H = px(72)
+  const MIN_ROW_H = px(24)
+  const MAX_ROW_H = px(120)
   const [plansExist, setPlansExist] = createState(dirExists(PLANS_DIR))
   const [currentDate, setCurrentDate] = createState(new Date())
   const [events, setEvents] = createState<PlanEvent[]>([])

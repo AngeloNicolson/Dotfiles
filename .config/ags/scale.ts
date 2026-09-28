@@ -11,12 +11,15 @@
 // and keeps the same *fraction* of the screen. Multiply any baseline px by `U`
 // (via px()/pxStr()) to get the value for the current display.
 //
-// Caveat: app.apply_css() is global (one stylesheet for every monitor), so on a
-// multi-monitor setup `U` is taken from the focused monitor and recomputed when
-// focus moves. There is no per-window stylesheet, so mixed-DPI monitors share one
-// scale — the focused one wins.
+// Per-monitor sizing: app.apply_css() is global (one stylesheet for every
+// window), so the stylesheet is built as a base copy scaled by `U` (the
+// *smallest* connected monitor's factor) plus, for every other monitor size, a
+// copy of the px-bearing rules scaled for it and scoped to a window class
+// (`.ui-u169` etc.). Each AGS window carries the class of the monitor it's on
+// (trackWindowScale), so a sidebar on a 4K TV is sized for the TV while the
+// laptop's stays laptop-sized. JS px() values use `U` unless built inside withU().
 
-import { getFocusedMonitor, type MonitorInfo } from "./compositor"
+import { getMonitors, getFocusedMonitor, gdkIndexFor, type MonitorInfo } from "./compositor"
 
 // Logical short-side of the reference display (eDP-1 2560x1600 @ 1.25 = 2048x1280).
 export const BASELINE_MIN = 1280
@@ -32,9 +35,11 @@ function logicalMinDim(mon: MonitorInfo): number {
 
 function computeU(): number {
   try {
-    const mon = getFocusedMonitor()
-    if (!mon) return 1
-    const u = logicalMinDim(mon) / BASELINE_MIN
+    const mons = getMonitors()
+    const dims = (mons.length ? mons : [getFocusedMonitor()].filter(Boolean) as MonitorInfo[])
+      .map(logicalMinDim).filter((d) => isFinite(d) && d > 0)
+    if (dims.length === 0) return 1
+    const u = Math.min(...dims) / BASELINE_MIN
     if (!isFinite(u) || u <= 0) return 1
     return Math.max(MIN_U, Math.min(MAX_U, u))
   } catch (e) {
@@ -58,8 +63,8 @@ export function onScaleChange(cb: Listener): () => void {
   }
 }
 
-// Recompute U from the focused monitor. Returns true if it changed (and fires
-// listeners). Call this on monitor add/remove and focus change.
+// Recompute U from the connected monitors. Returns true if it changed (and
+// fires listeners). Call this on monitor add/remove (focus changes are harmless).
 export function recomputeScale(): boolean {
   const next = computeU()
   if (Math.abs(next - U) < 0.001) return false
@@ -83,6 +88,81 @@ export function px(n: number): number {
 export function pxStr(n: number): string {
   return `${px(n)}px`
 }
+
+// ── Per-monitor factors ─────────────────────────────────────────────────────
+
+export function uFor(mon: MonitorInfo): number {
+  const u = logicalMinDim(mon) / BASELINE_MIN
+  if (!isFinite(u) || u <= 0) return 1
+  return Math.max(MIN_U, Math.min(MAX_U, u))
+}
+
+// Window class for a factor, e.g. 1.6875 → "ui-u169".
+export function scaleClass(u: number): string {
+  return `ui-u${Math.round(u * 100)}`
+}
+
+// Distinct factors of the connected monitors, excluding the base `U`.
+export function extraFactors(): number[] {
+  const out = new Set<number>()
+  for (const m of getMonitors()) {
+    const u = Math.round(uFor(m) * 100) / 100
+    if (Math.abs(u - U) > 0.005) out.add(u)
+  }
+  return [...out]
+}
+
+// Run fn with px() temporarily using factor u (for widgets built for one monitor).
+export function withU<T>(u: number, fn: () => T): T {
+  const saved = U
+  U = u
+  try { return fn() } finally { U = saved }
+}
+
+function scalePxBy(css: string, u: number): string {
+  if (u === 1) return css
+  return css.replace(/(\d*\.?\d+)px/g, (_, num) => `${Math.round(parseFloat(num) * u)}px`)
+}
+
+// Copy of the px-bearing rules scaled by u and scoped to its window class.
+// The stylesheet is flat `selectors { decls }` rules (no nesting/@-blocks), so a
+// regex walk is enough. Colour-only rules are identical at any size — skipped.
+export function scopedCss(css: string, u: number): string {
+  const cls = scaleClass(u)
+  const out: string[] = []
+  const body = css.replace(/\/\*[\s\S]*?\*\//g, "")
+  for (const m of body.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim(), decls = m[2]
+    if (!sel || sel.startsWith("@") || !/\dpx/.test(decls)) continue
+    const scoped = sel.split(",").map((x) => {
+      x = x.trim()
+      return /^window\b/.test(x) ? x.replace(/^window/, `window.${cls}`) : `.${cls} ${x}`
+    }).join(", ")
+    out.push(`${scoped} {${scalePxBy(decls, u)}}`)
+  }
+  return out.join("\n")
+}
+
+// Keep a window's scale class in sync with the monitor it's on.
+export function trackWindowScale(win: any) {
+  let current = ""
+  const update = () => {
+    const idx = typeof win.monitor === "number" ? win.monitor : 0
+    const mon = getMonitors().find((m) => gdkIndexFor(m) === idx)
+    const next = mon && Math.abs(uFor(mon) - U) > 0.005 ? scaleClass(Math.round(uFor(mon) * 100) / 100) : ""
+    if (next === current) return
+    const ctx = win.get_style_context()
+    if (current) ctx.remove_class(current)
+    if (next) ctx.add_class(next)
+    current = next
+  }
+  update()
+  try { win.connect("notify::monitor", update) } catch {}
+  scaleTracked.add(update)
+}
+const scaleTracked = new Set<() => void>()
+// Re-evaluate every tracked window (after monitors/U change).
+export function refreshWindowScales() { scaleTracked.forEach((f) => f()) }
 
 // Scale every `<number>px` length in a CSS string by U. This is how the whole
 // generated stylesheet becomes responsive without touching hundreds of literals:

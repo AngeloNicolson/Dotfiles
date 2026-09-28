@@ -14,8 +14,9 @@ import cairo from "cairo"
 import GLib from "gi://GLib"
 import Gdk from "gi://Gdk?version=3.0"
 import Gtk from "gi://Gtk?version=3.0"
-import { displaysVisible, setDisplaysVisible } from "../state"
-import { hyprConfigIsLua } from "../compositor"
+import { displaysVisible, setDisplaysVisible, displaysPlacement, toggleDisplays, barVisible } from "../state"
+import { placementFrom, makeClip, preparePanel, openPanel, closePanel, clickedOutside, registerCloser, closeFlyout } from "../flyout"
+import { hyprConfigIsLua, onMonitorsChanged } from "../compositor"
 import { px } from "../scale"
 import { createRoot } from "gnim"
 
@@ -236,7 +237,8 @@ async function probeWorkspaces(): Promise<Record<string, string>> {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-function DisplayLayout() {
+// `embed`: hosted inside another window (Settings → Display) — no CLOSE button.
+export function DisplayLayout(embed = false) {
   let mons: Mon[] = []
   let pins: Record<string, string> = {}
   let selected = ""
@@ -421,11 +423,13 @@ function DisplayLayout() {
   // one its own root so JSX has a context and the previous one is disposed.
   let panelDispose: (() => void) | null = null
   function rebuildPanel() {
+    // Dispose the old scope before destroying its widgets, or its cleanup
+    // tries to disconnect handlers from already-disposed buttons.
+    panelDispose?.()
     for (const box of [monTabs, settings, chips, actions]) {
       // `status` is long-lived and re-added each rebuild; detach it, don't destroy it.
       box.get_children().forEach((c) => c === status ? box.remove(c) : c.destroy())
     }
-    panelDispose?.()
     createRoot((dispose) => { panelDispose = dispose; buildPanel() })
   }
 
@@ -512,7 +516,7 @@ function DisplayLayout() {
     } else {
       actions.add(status)
       actions.add(<button name="displays-btn" onClicked={() => reload()}><label label="RESET" /></button> as Gtk.Widget)
-      actions.add(<button name="displays-btn" onClicked={() => setDisplaysVisible(false)}><label label="CLOSE" /></button> as Gtk.Widget)
+      if (!embed) actions.add(<button name="displays-btn" onClicked={() => closeFlyout("displays", () => setDisplaysVisible(false))}><label label="CLOSE" /></button> as Gtk.Widget)
       actions.add(<button name="displays-btn" class="primary" onClicked={() => apply()}><label label="APPLY" /></button> as Gtk.Widget)
     }
 
@@ -651,28 +655,48 @@ function DisplayLayout() {
   const escape = (keyval: number) => {
     if (keyval !== Gdk.KEY_Escape) return false
     if (countdown > 0) revert()
-    else setDisplaysVisible(false)
+    else closeFlyout("displays", () => setDisplaysVisible(false))
     return true
   }
 
-  return { escape, widget: (
-    <box name="displays-panel" vertical halign={Gtk.Align.CENTER} valign={Gtk.Align.CENTER} hexpand vexpand>
-      <label name="section-header" label="//DISPLAYS" xalign={0} />
-      <box>
-        <box name="displays-canvas-frame">{canvas}</box>
-        <box name="displays-side" vertical>
-          {monTabs}
-          {settings}
-        </box>
+  const idle = () => countdown === 0
+
+  // Parts, so a host (Settings → Display) can lay them out in its own tabs.
+  const layoutPart = (
+    <box>
+      <box name="displays-canvas-frame">{canvas}</box>
+      <box name="displays-side" vertical>
+        {monTabs}
+        {settings}
       </box>
+    </box>
+  ) as Gtk.Widget
+  const workspacesPart = (
+    <box vertical>
       <box name="displays-ws-header">
         <label name="displays-setting-label" label="WORKSPACES" xalign={0} />
         <label name="displays-hint" label="select a screen, then click workspaces to pin them to it · lowest pinned = its default" xalign={0} hexpand />
       </box>
       {chips}
-      {actions}
     </box>
-  ) as Gtk.Widget }
+  ) as Gtk.Widget
+
+  return {
+    escape, idle,
+    reload: () => { if (countdown === 0) reload() },
+    parts: { layout: layoutPart, workspaces: workspacesPart, actions },
+    // Standalone overlay: everything stacked in one panel.
+    get widget() {
+      return (
+        <box name="displays-panel" vertical>
+          <label name="section-header" label="//DISPLAYS" xalign={0} />
+          {layoutPart}
+          {workspacesPart}
+          {actions}
+        </box>
+      ) as Gtk.Widget
+    },
+  }
 }
 
 // gdkMonitor may be a literal index or a reactive accessor so the overlay can
@@ -680,12 +704,54 @@ function DisplayLayout() {
 export default function DisplayLayoutWindow(gdkMonitor: number | any) {
   const { TOP, LEFT, BOTTOM, RIGHT } = Astal.WindowAnchor
   const ui = DisplayLayout()
+  const panel = ui.widget  // build once (getter)
+  const clip = makeClip(panel)
+  const focusedMonitor = () => typeof gdkMonitor === "number" ? gdkMonitor : gdkMonitor.get()
+
+  let closing = false
+  registerCloser("displays", () => {
+    if (closing || !displaysVisible.get()) return
+    closing = true
+    closePanel(clip, displaysPlacement.get(), () => { closing = false; setDisplaysVisible(false) })
+  })
+
+  const frame = (
+    <eventbox
+      name="displays-overlay"
+      expand hexpand vexpand
+      onButtonPressEvent={(self, event) => {
+        // Flyout: a click beside it closes (never mid keep/revert countdown).
+        if (displaysPlacement.get().x !== undefined && ui.idle() && clickedOutside(clip, self, event)) {
+          closeFlyout("displays", () => setDisplaysVisible(false))
+          return true
+        }
+        return false
+      }}
+    >
+      <box>{clip}</box>
+    </eventbox>
+  ) as Gtk.Widget
+
+  displaysPlacement.subscribe(() => preparePanel(frame, clip, panel, displaysPlacement.get()))
+  // Grown out of the sidebar → goes away with it (not mid keep/revert, or the
+  // KEEP button would vanish and the layout silently revert).
+  barVisible.subscribe(() => {
+    if (!barVisible.get() && displaysVisible.get() && displaysPlacement.get().x !== undefined && ui.idle())
+      closeFlyout("displays", () => setDisplaysVisible(false))
+  })
+  displaysVisible.subscribe(() => {
+    if (!displaysVisible.get()) return
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      openPanel(frame, clip, panel, displaysPlacement.get())
+      return GLib.SOURCE_REMOVE
+    })
+  })
 
   return (
     <window
       name="displays"
       visible={displaysVisible}
-      monitor={gdkMonitor}
+      monitor={displaysPlacement.as((p) => p.monitor ?? focusedMonitor())}
       anchor={TOP | LEFT | BOTTOM | RIGHT}
       exclusivity={Astal.Exclusivity.IGNORE}
       keymode={Astal.Keymode.EXCLUSIVE}
@@ -693,9 +759,110 @@ export default function DisplayLayoutWindow(gdkMonitor: number | any) {
       layer={Astal.Layer.OVERLAY}
       onKeyPressEvent={(_, event) => ui.escape(event.get_keyval()[1])}
     >
-      <box name="displays-overlay" expand hexpand vexpand>
-        {ui.widget}
-      </box>
+      {frame}
     </window>
+  )
+}
+
+// ── Compact sidebar widget (Settings page) ───────────────────────────────────
+// Mini map of the current layout + one row per screen; the pop-out button opens
+// the full arranger above. Refreshes on hotplug and whenever the arranger closes.
+export function DisplaysPanel() {
+  let mons: Mon[] = []
+  let pins: Record<string, string> = {}
+
+  const map = new Gtk.DrawingArea()
+  map.set_size_request(-1, px(84))
+  map.set_hexpand(true)  // else the box hands it its natural width: 0
+  map.show()
+  const rows = (<box name="dsp-rows" vertical />) as Gtk.Box
+
+  function color(name: string, alpha = 1): [number, number, number, number] {
+    const [ok, c] = map.get_style_context().lookup_color(name)
+    return ok ? [c.red, c.green, c.blue, alpha] : [0.6, 0.7, 0.8, alpha]
+  }
+
+  map.connect("draw", (_w: any, cr: any) => {
+    const en = mons.filter((m) => m.enabled)
+    if (en.length === 0) return false
+    const rs = en.map(rectOf)
+    const minX = Math.min(...rs.map((r) => r.x)), minY = Math.min(...rs.map((r) => r.y))
+    const bw = Math.max(...rs.map((r) => r.x + r.w)) - minX
+    const bh = Math.max(...rs.map((r) => r.y + r.h)) - minY
+    const W = map.get_allocated_width(), H = map.get_allocated_height()
+    const ratio = Math.min((W - 8) / bw, (H - 8) / bh)
+    const ox = (W - bw * ratio) / 2 - minX * ratio, oy = (H - bh * ratio) / 2 - minY * ratio
+    en.forEach((m, i) => {
+      const r = rs[i]
+      const tone = MON_COLORS[mons.indexOf(m) % MON_COLORS.length]
+      const x = ox + r.x * ratio + 1.5, y = oy + r.y * ratio + 1.5, w = r.w * ratio - 3, h = r.h * ratio - 3
+      cr.rectangle(x, y, w, h)
+      cr.setSourceRGBA(...color(tone, 0.14))
+      cr.fillPreserve()
+      cr.setSourceRGBA(...color(tone, 0.8))
+      cr.setLineWidth(1.5)
+      cr.stroke()
+      cr.selectFontFace(FONT, cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
+      cr.setFontSize(px(9))
+      cr.setSourceRGBA(...color("fg_bright", 0.9))
+      const e = cr.textExtents(m.name)
+      cr.moveTo(x + (w - e.width) / 2 - e.xBearing, y + (h - e.height) / 2 - e.yBearing)
+      cr.showText(m.name)
+    })
+    return false
+  })
+
+  let rootDispose: (() => void) | null = null
+  function rebuildRows() {
+    rootDispose?.()
+    rows.get_children().forEach((c) => c.destroy())
+    createRoot((dispose) => {
+      rootDispose = dispose
+      for (const m of mons) {
+        const [pw, ph] = modeSize(m.mode)
+        const hz = Math.round(Number(m.mode.split("@")[1] ?? 60))
+        const ws = Object.entries(pins).filter(([, mon]) => mon === m.name).map(([id]) => id)
+          .sort((a, b) => Number(a) - Number(b))
+        rows.add(
+          <box name="dsp-row" class={`mon-${mons.indexOf(m) % MON_COLORS.length}`}>
+            <label name="dsp-name" label={m.name} xalign={0} />
+            <label name="dsp-mode" hexpand xalign={0}
+              label={m.enabled ? `${pw}×${ph} ${hz}Hz ×${Number(m.scale.toFixed(2))}` : "OFF"} />
+            <label name="dsp-ws" label={ws.length ? `WS ${ws.join(" ")}` : ""} />
+          </box> as Gtk.Widget)
+      }
+    })
+    rows.show_all()
+  }
+
+  async function refresh() {
+    try {
+      mons = await probeMonitors()
+      pins = await probeWorkspaces()
+    } catch {
+      mons = []
+    }
+    rebuildRows()
+    map.queue_draw()
+  }
+
+  onMonitorsChanged(() => refresh())
+  displaysVisible.subscribe(() => { if (!displaysVisible.get()) refresh() })
+  refresh()
+
+  let panelRef: Gtk.Widget | null = null
+  return (
+    <box name="eq-panel" vertical $={(self) => { panelRef = self }}>
+      <box name="control-header">
+        <label name="control-icon" label="󰍹" />
+        <label name="control-label" label="DISPLAYS" />
+        <box hexpand />
+        <button name="bt-scan-btn" tooltipText="Arrange screens & workspaces" onClicked={() => { if (!displaysVisible.get()) toggleDisplays(panelRef ? placementFrom(panelRef) : undefined) }}>
+          <label name="bt-scan-label" label="󰁌" />
+        </button>
+      </box>
+      <box name="dsp-map">{map}</box>
+      {rows}
+    </box>
   )
 }

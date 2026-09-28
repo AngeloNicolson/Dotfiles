@@ -6,6 +6,7 @@ import Planner from "./Planner"
 import AppLauncher from "./AppLauncher"
 import PowerIndicator from "./PowerIndicator"
 import WallpaperSelector from "./WallpaperSelector"
+import Settings from "./Settings"
 import Pomodoro, { secondsRemaining, phase } from "./Pomodoro"
 
 // Page id -> component. Page order/labels live in pages.ts.
@@ -24,6 +25,15 @@ function buildPage(id: string): Gtk.Widget {
     case "pomodoro": return <Pomodoro />
     case "apps": return <AppLauncher />
     case "core": return <WallpaperSelector />
+    case "settings": {
+      const scroll = new Gtk.ScrolledWindow({
+        hscrollbar_policy: Gtk.PolicyType.NEVER,
+        vscrollbar_policy: Gtk.PolicyType.EXTERNAL,
+      })
+      scroll.add(<Settings />)
+      scroll.set_name("home-page-scroll")
+      return scroll
+    }
     case "power": return <PowerIndicator />
     default: return <box />
   }

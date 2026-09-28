@@ -4,6 +4,7 @@ import GLib from "gi://GLib"
 import Gtk from "gi://Gtk?version=3.0"
 import { getFocusedMonitorName } from "./compositor"
 import { pageIds, LEGACY_PAGE_IDS } from "./pages"
+import { CENTERED, closeFlyout, type Placement } from "./flyout"
 
 // Persisted UI state — survives AGS restart / reboot. Lives in the XDG state
 // dir (machine-local), NOT the config dir, which is a symlink into the dotfiles
@@ -61,6 +62,20 @@ export const [galaxyVisible, setGalaxyVisible] = createState(false)
 // Periodic table visibility state
 export const [periodicTableVisible, setPeriodicTableVisible] = createState(false)
 
+// Settings window (SettingsWindow.tsx) and its current page
+export const [settingsVisible, setSettingsVisible] = createState(false)
+export const [settingsPage, setSettingsPage] = createState("system")
+export function toggleSettings(page?: string) {
+  if (page) setSettingsPage(page)
+  setSettingsVisible(page ? true : !settingsVisible.get())
+}
+
+// Wallpaper carousel overlay (WallpaperCarousel.tsx)
+export const [wallpapersVisible, setWallpapersVisible] = createState(false)
+export function toggleWallpapers() {
+  setWallpapersVisible(!wallpapersVisible.get())
+}
+
 // Display arranger overlay visibility state
 export const [displaysVisible, setDisplaysVisible] = createState(false)
 
@@ -111,12 +126,22 @@ export function toggleFocusedPage(pageId: string) {
 // Bluetooth manager overlay visibility state
 export const [bluetoothWindowVisible, setBluetoothWindowVisible] = createState(false)
 
-export function toggleBluetoothWindow() {
-  setBluetoothWindowVisible(!bluetoothWindowVisible.get())
+// Where each flyout opens: centred (keybind/IPC) or attached to the sidebar
+// widget whose pop-out button was pressed. Always a fresh object so the
+// window's monitor binding re-evaluates on every open.
+export const [bluetoothPlacement, setBluetoothPlacement] = createState<Placement>(CENTERED)
+export const [displaysPlacement, setDisplaysPlacement] = createState<Placement>(CENTERED)
+
+export function toggleBluetoothWindow(placement: Placement = CENTERED) {
+  if (bluetoothWindowVisible.get()) return closeFlyout("bluetooth", () => setBluetoothWindowVisible(false))
+  setBluetoothPlacement({ ...placement })
+  setBluetoothWindowVisible(true)
 }
 
-export function toggleDisplays() {
-  setDisplaysVisible(!displaysVisible.get())
+export function toggleDisplays(placement: Placement = CENTERED) {
+  if (displaysVisible.get()) return closeFlyout("displays", () => setDisplaysVisible(false))
+  setDisplaysPlacement({ ...placement })
+  setDisplaysVisible(true)
 }
 
 export function togglePeriodicTable() {

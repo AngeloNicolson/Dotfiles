@@ -1,3 +1,5 @@
+import GLib from "gi://GLib"
+import Gtk from "gi://Gtk?version=3.0"
 import { createState } from "ags"
 import { createPoll } from "ags/time"
 import { execAsync, createSubprocess } from "ags/process"
@@ -175,6 +177,14 @@ export default function PowerIndicator() {
 
   return (
     <box name="power-page" vertical>
+      {/* Power menu (wlogout, 43PR style) — also SUPER+grave */}
+      <box>
+        <label name="section-header" label="//POWER" hexpand halign={Gtk.Align.START} />
+        <button name="core-reload-btn" tooltipText="Power menu (SUPER+`)"
+          onClicked={() => execAsync([GLib.get_home_dir() + "/.config/hypr/scripts/wlogout.sh"]).catch((e) => print(`wlogout: ${e}`))}>
+          <label label={"\u{f0425}"} />
+        </button>
+      </box>
       {caps.battery && (
         <box name="power-panel" vertical>
           {/* Header — title, watts, time, badge */}
