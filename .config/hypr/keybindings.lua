@@ -87,6 +87,10 @@ bind(mainMod .. " + SHIFT", "Tab", dsp.exec_cmd("ags request cycle-sidebar-back"
 bind(mainMod,             "G",   dsp.workspace.toggle_special("kondor"))
 bind(mainMod,             "T",   dsp.exec_cmd("ags request toggle-periodic-table"))
 bind(mainMod .. " + SHIFT", "P",   dsp.exec_cmd("ags request toggle-displays")) -- arrange screens / pin workspaces
+bind(mainMod,             "W",   dsp.exec_cmd("ags request toggle-wallpapers"))  -- wallpaper carousel + themes
+bind(mainMod,             "comma", dsp.exec_cmd("ags request toggle-settings"))  -- settings window
+bind(mainMod,             "grave", dsp.exec_cmd("~/.config/hypr/scripts/wlogout.sh"))  -- power menu (wlogout, 43PR style)
+bind(mainMod,             "space", dsp.exec_cmd("~/.config/hypr/scripts/launcher.sh"))  -- app launcher (rofi, 43PR style)
 
 -- Screenshot
 bind(mainMod,             "I", dsp.exec_cmd("~/.config/hypr/scripts/screenshot.sh s"))  -- drag to snip / click window

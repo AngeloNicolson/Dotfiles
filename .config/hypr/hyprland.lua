@@ -146,6 +146,9 @@ lib.optional_require("custom/execs")
 lib.optional_require("custom/general")
 lib.optional_require("custom/rules")
 lib.optional_require("custom/keybinds")
+-- Written by the AGS theme switcher: the current theme's gaps/borders/rounding,
+-- blur, shadow and window opacity, so a theme survives a login.
+lib.optional_require("custom/theme")
 -- Written by the AGS display arranger (SUPER+SHIFT+P); last so its monitor
 -- layout and workspace pins win over general.lua / rules.lua.
 lib.optional_require("custom/displays")

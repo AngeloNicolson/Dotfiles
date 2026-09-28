@@ -1,0 +1,47 @@
+{
+  "name": "43pr",
+  "displayName": "43PR",
+  "_source": "Monochrome look from github.com/43PR/dotfiles (MIT): kitty #000/#fff, quickshell Theme.qml greys, look.lua gaps/rounding/blur/shadow, rules.lua 90% opacity.",
+  "colors": {
+    "bg": "#000000",
+    "bg_dark": "#000000",
+    "bg_light": "#0d0d0d",
+    "bg_lighter": "#2a2a2a",
+    "fg": "#ffffff",
+    "fg_dim": "#a2a2a2",
+    "fg_bright": "#ffffff",
+    "accent": "#ffffff",
+    "red": "#ff003c",
+    "red_bright": "#ff4d6d",
+    "green": "#00ff9c",
+    "green_bright": "#66ffc4",
+    "yellow": "#c2c2c2",
+    "yellow_bright": "#ffffff",
+    "blue": "#a2a2a2",
+    "blue_bright": "#d0d0d0",
+    "magenta": "#8a8a8a",
+    "magenta_bright": "#c2c2c2",
+    "cyan": "#c2c2c2",
+    "cyan_bright": "#ffffff",
+    "gray": "#4a4a4a"
+  },
+  "gtk": {
+    "theme": "Adwaita",
+    "iconTheme": "Papirus-Dark",
+    "cursorTheme": "Adwaita",
+    "colorScheme": "prefer-dark"
+  },
+  "hyprland": {
+    "borderRadius": 8,
+    "gapsIn": 4,
+    "gapsOut": 8,
+    "borderSize": 0
+  },
+  "look": {
+    "opacity": 0.9,
+    "terminalAlpha": 0.9,
+    "dimInactive": 0,
+    "blur": { "size": 5, "passes": 1, "vibrancy": 0.2 },
+    "shadow": { "range": 8, "renderPower": 3 }
+  }
+}

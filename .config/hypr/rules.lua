@@ -46,3 +46,7 @@ hl.layer_rule({ match = { namespace = "logout" }, blur = true })
 for _, ns in ipairs({ "bar", "notifications", "audio_controls", "system_controls", "calendar", "workspace_osd" }) do
   hl.layer_rule({ match = { namespace = ns }, no_anim = true })
 end
+
+-- App launcher (rofi): blur behind its translucent box and pop it in smoothly
+-- (43PR's layer rule + a popin animation).
+hl.layer_rule({ match = { namespace = "rofi" }, blur = true, ignore_alpha = 0.15, animation = "popin 90%" })

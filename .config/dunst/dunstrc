@@ -17,7 +17,7 @@
     text_icon_padding = 16
 
     frame_width = 2
-    frame_color = "#d4a030"
+    frame_color = "#ffffff"
     separator_color = frame
     sort = yes
 
@@ -41,21 +41,21 @@
     mouse_right_click = close_all
 
 [urgency_low]
-    background = "#120c07"
-    foreground = "#d8c49a"
-    frame_color = "#3c2a18"
+    background = "#000000"
+    foreground = "#ffffff"
+    frame_color = "#2a2a2a"
     timeout = 5
 
 [urgency_normal]
-    background = "#120c07"
-    foreground = "#d8c49a"
-    frame_color = "#d4a030"
+    background = "#000000"
+    foreground = "#ffffff"
+    frame_color = "#ffffff"
     timeout = 10
 
 [urgency_critical]
-    background = "#120c07"
-    foreground = "#d8c49a"
-    frame_color = "#d04830"
+    background = "#000000"
+    foreground = "#ffffff"
+    frame_color = "#ff4d6d"
     # Was 0, which in dunst means "never expire" -- critical notifications sat
     # on screen until manually dismissed. 30s is long enough to notice.
     timeout = 30
