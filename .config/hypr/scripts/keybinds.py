@@ -57,6 +57,8 @@ SCRIPT_NAMES = [
     ("lid_handler.sh close", "Lid closed: move workspaces / blank panel"),
     ("lid_handler.sh open", "Lid opened: restore laptop panel"),
     ("systemctl suspend", "Suspend"), ("armorpaint", "ArmorPaint"),
+    ("yt-x.sh", "yt-x (YouTube in the terminal)"), ("wlogout.sh", "Power menu (logout / reboot / shutdown)"),
+    ("launcher.sh", "App launcher (rofi)"), ("keybinds-menu.sh", "This keybind menu"),
 ]
 
 DIRS = {"l": "left", "r": "right", "u": "up", "d": "down"}

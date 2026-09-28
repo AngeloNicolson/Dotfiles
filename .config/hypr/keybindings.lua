@@ -142,6 +142,7 @@ hl.define_submap("browser", function()
 end)
 
 bind("MOD5", "Y",  dsp.exec_cmd("foot -e ttyper"))
+bind("MOD5", "V",  dsp.exec_cmd("~/.config/hypr/scripts/yt-x.sh"))  -- yt-x: YouTube in the terminal
 bind("MOD5", "N",  dsp.exec_cmd("blender"))
 bind("MOD5", "C",  dsp.window.cycle_next())
 bind("MOD5", "X",  dsp.window.close())
