@@ -93,6 +93,7 @@ bind(mainMod,             "grave", dsp.exec_cmd("~/.config/hypr/scripts/wlogout.
 bind(mainMod,             "space", dsp.exec_cmd("~/.config/hypr/scripts/launcher.sh"))  -- app launcher (rofi, 43PR style)
 bind(mainMod,             "A",   dsp.exec_cmd("ags request toggle-destination"))  -- Destiny-style Destination menu
 bind(mainMod .. " + SHIFT", "A",   dsp.exec_cmd("ags request toggle-galaxy"))       -- Galaxy overlay
+bind(mainMod,             "slash", dsp.exec_cmd("~/.config/hypr/scripts/keybinds-menu.sh"))  -- keybind cheat sheet
 
 -- Screenshot
 bind(mainMod,             "I", dsp.exec_cmd("~/.config/hypr/scripts/screenshot.sh s"))  -- drag to snip / click window
