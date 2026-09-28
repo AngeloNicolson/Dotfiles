@@ -29,6 +29,8 @@ interface Destination {
   subItems?: SubItem[]
 }
 
+// System entries open the AGS Settings window on the matching page
+// (`ags request toggle-settings <page>`) instead of GNOME/blueman apps.
 const DESTINATIONS: Destination[] = [
   // === LARGE PLANETS (corners) ===
   // VENUS position - Top left large planet
@@ -93,10 +95,10 @@ const DESTINATIONS: Destination[] = [
   {
     id: "system", label: "SYSTEM", icon: "", x: 0.85, y: 0.68, size: 1.1, ringStyle: "icon",
     subItems: [
-      { id: "gnome-settings", label: "SETTINGS", icon: "", command: "gnome-control-center" },
+      { id: "gnome-settings", label: "SETTINGS", icon: "", command: "ags request toggle-settings system" },
       { id: "nvidia", label: "NVIDIA", icon: "󰾲", command: "nvidia-settings" },
-      { id: "monitor", label: "MONITOR", icon: "", command: "gnome-system-monitor" },
-      { id: "audio", label: "AUDIO", icon: "", command: "pavucontrol" },
+      { id: "monitor", label: "MONITOR", icon: "", command: "ags request toggle-settings system" },
+      { id: "audio", label: "AUDIO", icon: "", command: "ags request toggle-settings audio" },
     ]
   },
 
@@ -111,13 +113,13 @@ const DESTINATIONS: Destination[] = [
   {
     id: "settings", label: "CONFIG", icon: "", x: 0.04, y: 0.45, size: 0.7, ringStyle: "icon",
     subItems: [
-      { id: "gnome-settings", label: "SYSTEM", icon: "", command: "gnome-control-center" },
-      { id: "bluetooth", label: "BLUETOOTH", icon: "", command: "blueman-manager" },
+      { id: "gnome-settings", label: "SYSTEM", icon: "", command: "ags request toggle-settings system" },
+      { id: "bluetooth", label: "BLUETOOTH", icon: "", command: "ags request toggle-settings bluetooth" },
     ]
   },
   {
     id: "network", label: "NETWORK", icon: "󰖩", x: 0.04, y: 0.55, size: 0.7, ringStyle: "icon",
-    command: "nm-connection-editor"
+    command: "ags request toggle-settings network"
   },
   {
     id: "power", label: "POWER", icon: "⏻", x: 0.04, y: 0.65, size: 0.7, ringStyle: "icon",
