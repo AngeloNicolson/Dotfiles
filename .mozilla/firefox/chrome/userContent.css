@@ -2,6 +2,7 @@
 /* SPDX-FileCopyrightText: 2024 awwpotato */
 
 @import url("vars.css");
+@import url("theme.css"); /* colours from the AGS theme switcher (generated, gitignored) */
 @import url("content/sidebery.css");
 @import url("content/about.css");
 

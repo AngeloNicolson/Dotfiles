@@ -50,3 +50,8 @@ user_pref("datareporting.policy.dataSubmissionEnabled", false);
 // Better garbage collection
 user_pref("javascript.options.mem.gc_incremental_slice_ms", 5);
 user_pref("javascript.options.mem.gc_high_frequency_time_limit_ms", 1000);
+
+// F11 fullscreen stays inside the window (Hyprlust look): toolbars/sidebar hide,
+// but Hyprland keeps the window tiled with its gaps and the bars stay visible.
+// Mouse to the top edge still reveals the toolbar.
+user_pref("full-screen-api.ignore-widgets", true);

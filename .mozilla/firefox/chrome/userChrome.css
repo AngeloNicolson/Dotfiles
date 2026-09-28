@@ -3,6 +3,7 @@
 
 @import url("browser/main.css");
 @import url("vars.css");
+@import url("theme.css"); /* colours from the AGS theme switcher (generated, gitignored) */
 
 /* Sidebar auto-hide */
 #sidebar-box {
@@ -65,7 +66,7 @@
   position: relative !important;
   z-index: 1000 !important;
   overflow: visible !important; /* allow hover area outside normal bounds */
-  background-color: #333439 !important;
+  background-color: var(--uc-bar-bg, #333439) !important;
 }
 
 #titlebar {
@@ -138,7 +139,7 @@
 
 #urlbar {
   border-radius: 20px !important;
-  background-color: #333439 !important; /* Same as bar by default */
+  background-color: var(--uc-field-bg, #333439) !important; /* Same as bar by default */
   padding: 4px 12px !important;
   width: 30% !important;
   transition: background-color 0.3s ease !important;
@@ -155,7 +156,7 @@
 /* Dark brown when focused */
 #urlbar[focused="true"],
 #urlbar:focus-within {
-  background-color: #0f0f0f !important;
+  background-color: var(--uc-field-focus-bg, #0f0f0f) !important;
 }
 
 #nav-bar {
@@ -185,4 +186,27 @@
 /* Adjust toolbar background */
 #nav-bar {
   border-inline: var(--uc-window-drag-space-width) solid var(--toolbar-bgcolor);
+}
+
+/* === F11 (browser) fullscreen: hide the toolbar, reveal at the top edge ===
+   Page fullscreen (YouTube's button) is already handled by Potatofox. With
+   full-screen-api.ignore-widgets (user.js) F11 stays inside the tiled window;
+   Potatofox's navbar.css and the "URL bar always visible" block above would
+   otherwise keep the toolbar showing. Ctrl+L still focuses the URL bar, which
+   slides it in via :focus-within. */
+:root[inFullscreen="true"]:not([inDOMFullscreen="true"]) #navigator-toolbox {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+  margin-top: 0 !important;
+  transform: translateY(calc(-100% + 4px)) !important; /* 4px strip stays as the hover target */
+  opacity: 0 !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+:root[inFullscreen="true"]:not([inDOMFullscreen="true"]) #navigator-toolbox:hover,
+:root[inFullscreen="true"]:not([inDOMFullscreen="true"]) #navigator-toolbox:focus-within {
+  transform: none !important;
+  opacity: 1 !important;
 }
