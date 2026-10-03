@@ -164,4 +164,4 @@ bind("", "XF86MonBrightnessDown", dsp.exec_cmd("~/.config/hypr/scripts/brightnes
 -- Lid switch
 bind("", "switch:on:Lid Switch",  dsp.exec_cmd("~/.config/hypr/scripts/lid_handler.sh close"), { locked = true })
 bind("", "switch:off:Lid Switch", dsp.exec_cmd("~/.config/hypr/scripts/lid_handler.sh open"),  { locked = true })
-bind("", "XF86PowerOff", dsp.exec_cmd("systemctl suspend && ~/.config/hypr/scripts/lock.sh"))
+bind("", "XF86PowerOff", dsp.exec_cmd("systemctl suspend"))  -- hypridle locks before sleep

@@ -65,6 +65,10 @@ button:focus:not(:hover) {
     }
 }
 
+#lock {
+    background-image: url("icons/lock.png");
+}
+
 #shutdown {
     background-image: url("icons/shutdown.png");
 }
