@@ -54,7 +54,7 @@ window {
     width: 420px;
     height: 420px;
     background-color: @bg;
-    border: 1px;
+    border: 0;
     border-color: @border-color;
     border-radius: 5px;
     padding: 10;

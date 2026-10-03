@@ -41,7 +41,7 @@
     "opacity": 0.9,
     "terminalAlpha": 0.9,
     "dimInactive": 0,
-    "blur": { "size": 5, "passes": 1, "vibrancy": 0.2 },
+    "blur": { "size": 10, "passes": 3, "vibrancy": 0.2 },
     "shadow": { "range": 8, "renderPower": 3 }
   }
 }
