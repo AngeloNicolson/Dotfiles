@@ -1,0 +1,2 @@
+-- Written by AGS Settings → Display → TILING. Window layout: dwindle | master | scrolling.
+-- hl.config({ general = { layout = "dwindle" } })

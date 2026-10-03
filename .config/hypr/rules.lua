@@ -50,3 +50,6 @@ end
 -- App launcher (rofi): blur behind its translucent box and pop it in smoothly
 -- (43PR's layer rule + a popin animation).
 hl.layer_rule({ match = { namespace = "rofi" }, blur = true, ignore_alpha = 0.15, animation = "popin 90%" })
+
+-- AGS Settings window: frost the whole screen behind its dimmed backdrop.
+hl.layer_rule({ match = { namespace = "settings" }, blur = true, ignore_alpha = 0.2 })

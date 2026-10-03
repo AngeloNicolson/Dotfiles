@@ -83,6 +83,7 @@ hl.config({
     kb_options   = "caps:escape,lv3:ralt_switch",
     repeat_rate  = 50,
     repeat_delay = 300,
+    numlock_by_default = true,
 
     follow_mouse  = 1,
     mouse_refocus = true,
@@ -148,6 +149,8 @@ lib.optional_require("custom/keybinds")
 -- Written by the AGS theme switcher: the current theme's gaps/borders/rounding,
 -- blur, shadow and window opacity, so a theme survives a login.
 lib.optional_require("custom/theme")
+-- Written by AGS Settings → Display → TILING: general.layout (dwindle/master/scrolling).
+lib.optional_require("custom/layout")
 -- Written by the AGS display arranger (SUPER+SHIFT+P); last so its monitor
 -- layout and workspace pins win over general.lua / rules.lua.
 lib.optional_require("custom/displays")

@@ -3,7 +3,7 @@
 //
 //   System     spinning wallpaper disc, OS/WM/kernel/uptime, live CPU/GPU/RAM graphs
 //   Audio      output devices, master volume, per-app volume, microphones
-//   Display    the display arranger (DisplayLayout, embedded) + colour controls
+//   Display    the display arranger (DisplayLayout, embedded), tiling layout, colour controls
 //   Network    Wi-Fi on/off, networks (connect / password / forget), wired state
 //   Bluetooth  the Bluetooth manager (embedded)
 //   Storage    mounted filesystems with usage bars
@@ -15,7 +15,7 @@
 import app from "ags/gtk3/app"
 import { Astal } from "ags/gtk3"
 import { execAsync } from "ags/process"
-import { readFile } from "ags/file"
+import { readFile, writeFile } from "ags/file"
 import { createRoot } from "gnim"
 import cairo from "cairo"
 import GLib from "gi://GLib"
@@ -27,6 +27,7 @@ import Network from "gi://AstalNetwork"
 import { settingsVisible, setSettingsVisible, settingsPage, setSettingsPage } from "../state"
 import { px } from "../scale"
 import caps from "../capabilities"
+import { hyprSetOption } from "../compositor"
 import { DisplayLayout } from "./DisplayLayout"
 import DisplayEQ from "./DisplayEQ"
 import { BluetoothManager } from "./BluetoothWindow"
@@ -400,6 +401,94 @@ function AudioPage() {
   return { widget, start: () => { active = true; rebuildAll() }, stop: () => { active = false } }
 }
 
+// ── Tiling (Display → TILING) ────────────────────────────────────────────────
+// Hyprland's window layout. Applied live, and written to custom/layout.lua so
+// it survives a login (hyprland.lua optional_requires it).
+
+const LAYOUT_LUA = HOME + "/.config/hypr/custom/layout.lua"
+const LAYOUTS = [
+  { id: "dwindle", label: "DWINDLE", desc: "Each new window splits the focused one in half" },
+  { id: "master", label: "MASTER", desc: "One big main window, the rest stacked beside it" },
+  { id: "scrolling", label: "SCROLLING", desc: "Columns on an endless strip; scroll sideways" },
+]
+
+// Miniature of each layout: grey tiles inside a screen outline.
+function LayoutDiagram(id: string) {
+  const da = new Gtk.DrawingArea()
+  da.set_size_request(px(200), px(110))
+  da.connect("draw", (_w: any, cr: any) => {
+    const W = da.get_allocated_width(), H = da.get_allocated_height()
+    const g = px(4)
+    const tile = (x: number, y: number, w: number, h: number, a = 0.18) => {
+      cr.rectangle(x + g / 2, y + g / 2, w - g, h - g)
+      cr.setSourceRGBA(...colorOf(da, "fg", a))
+      cr.fill()
+    }
+    // scrolling's strip runs past the screen, so its screen is inset
+    const sx = id === "scrolling" ? W * 0.2 : 0, sw = id === "scrolling" ? W * 0.6 : W
+    if (id === "dwindle") {
+      tile(0, 0, W / 2, H)
+      tile(W / 2, 0, W / 2, H / 2)
+      tile(W / 2, H / 2, W / 4, H / 2)
+      tile(W * 3 / 4, H / 2, W / 4, H / 2)
+    } else if (id === "master") {
+      tile(0, 0, W * 0.6, H, 0.26)
+      for (let i = 0; i < 3; i++) tile(W * 0.6, (H / 3) * i, W * 0.4, H / 3)
+    } else {
+      const cw = sw / 2
+      for (let i = -1; i < 4; i++) {
+        const onScreen = i === 0 || i === 1
+        tile(sx + cw * i, 0, cw, H, onScreen ? 0.22 : 0.07)
+      }
+    }
+    cr.rectangle(sx + 0.5, 0.5, sw - 1, H - 1)
+    cr.setSourceRGBA(...colorOf(da, "fg_dim", 0.6))
+    cr.setLineWidth(1)
+    cr.stroke()
+    return false
+  })
+  da.show()
+  return da
+}
+
+function TilingTab() {
+  const row = (<box name="st-layout-row" homogeneous />) as Gtk.Box
+  let cur = ""
+  const build = rebuilder(row, () => {
+    for (const l of LAYOUTS) {
+      row.add(
+        <button name="st-layout-card" class={l.id === cur ? "active" : ""} onClicked={() => apply(l.id)}>
+          <box vertical>
+            {LayoutDiagram(l.id)}
+            <label name="st-layout-name" label={l.label} xalign={0} />
+            <label name="st-layout-desc" label={l.desc} xalign={0} wrap />
+          </box>
+        </button> as Gtk.Widget)
+    }
+  })
+  async function apply(id: string) {
+    cur = id
+    build()
+    await hyprSetOption("general:layout", id)
+    writeFile(LAYOUT_LUA,
+      "-- Written by AGS Settings → Display → TILING. Window layout: dwindle | master | scrolling.\n" +
+      `hl.config({ general = { layout = "${id}" } })\n`)
+  }
+  async function load() {
+    try { cur = JSON.parse(await execAsync(["hyprctl", "getoption", "general:layout", "-j"])).str } catch { cur = "dwindle" }
+    build()
+  }
+  const widget = (
+    <box vertical name="st-tiling">
+      {sectionLabel("WINDOW LAYOUT")}
+      {row}
+      <label name="st-layout-hint" xalign={0} wrap
+        label="Applies to every workspace immediately and is remembered across logins. SUPER+H/J/K/L move focus in all three." />
+    </box>
+  ) as Gtk.Widget
+  return { widget, load }
+}
+
 // ── Display ──────────────────────────────────────────────────────────────────
 
 function DisplayPage() {
@@ -408,8 +497,10 @@ function DisplayPage() {
   // Screens + their workspace pins stay together: select a screen on the map,
   // then click workspaces below to pin/unpin them to it.
   const screens = (<box vertical name="st-screens">{layout}{workspaces}</box>) as Gtk.Widget
+  const tiling = TilingTab()
   const tabs = [
     { id: "layout", label: "SCREENS", widget: screens },
+    { id: "tiling", label: "TILING", widget: tiling.widget },
     { id: "colour", label: "COLOUR", widget: <DisplayEQ /> as Gtk.Widget },
   ]
   const stack = new Gtk.Stack({ transition_type: Gtk.StackTransitionType.CROSSFADE, transition_duration: 120, vexpand: false })
@@ -434,8 +525,8 @@ function DisplayPage() {
   function select(id: string) {
     cur = id
     stack.set_visible_child_name(id)
-    actionsHost.set_visible(id !== "colour")
-    if (id !== "colour") actionsHost.show_all()
+    actionsHost.set_visible(id === "layout")
+    if (id === "layout") actionsHost.show_all()
     buildBar()
   }
   select("layout")
@@ -448,7 +539,7 @@ function DisplayPage() {
     </box>
   ) as Gtk.Widget
   // Mid keep/revert countdown, Escape reverts the layout instead of closing.
-  return { widget, start: () => arranger.reload(), stop: () => {}, escape: (k: number) => !arranger.idle() && arranger.escape(k) }
+  return { widget, start: () => { arranger.reload(); tiling.load() }, stop: () => {}, escape: (k: number) => !arranger.idle() && arranger.escape(k) }
 }
 
 // ── Network ──────────────────────────────────────────────────────────────────
@@ -772,6 +863,7 @@ export default function SettingsWindow(gdkMonitor: number | any) {
   return (
     <window
       name="settings"
+      namespace="settings"
       visible={settingsVisible}
       monitor={gdkMonitor}
       anchor={TOP | LEFT | BOTTOM | RIGHT}

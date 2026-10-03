@@ -3378,6 +3378,36 @@ const STATIC_CSS = `
     #st-sub-actions {
       margin-top: 18px;
     }
+    /* Settings → Display → TILING: layout cards */
+    #st-layout-row {
+      margin-bottom: 14px;
+    }
+    #st-layout-card {
+      background: alpha(@fg, 0.03);
+      border: 1px solid alpha(@fg_dim, 0.15);
+      border-radius: 2px;
+      padding: 14px;
+      margin-right: 10px;
+    }
+    #st-layout-card:hover {
+      border-color: alpha(@fg_dim, 0.5);
+    }
+    #st-layout-card.active {
+      border-color: @fg_bright;
+      background: alpha(@fg, 0.07);
+    }
+    #st-layout-name {
+      font-size: 12px;
+      letter-spacing: 4px;
+      color: @fg_bright;
+      margin-top: 12px;
+    }
+    #st-layout-desc, #st-layout-hint {
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: @fg_dim;
+      margin-top: 4px;
+    }
     #st-screens #displays-ws-header {
       margin-top: 22px;
     }
