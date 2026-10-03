@@ -178,6 +178,7 @@ packages/
     ollama.txt
     tablet.txt
     firefox.txt
+    zen.txt
     extras.txt
   ubuntu/        # Add lists for other distros
     core.txt

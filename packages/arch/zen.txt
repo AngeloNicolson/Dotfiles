@@ -1,0 +1,2 @@
+# Zen Browser: Firefox-based, vertical tabs/workspaces (AUR, built via yay)
+zen-browser-bin

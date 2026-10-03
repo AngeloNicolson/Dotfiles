@@ -50,6 +50,7 @@ COMPONENTS=(
     "clojure|n|Clojure toolchain: JDK, clojure, babashka, clojure-lsp"
     "nvidia|n|NVIDIA: VA-API driver + CUDA build of ollama"
     "firefox|n|Firefox: browser + custom CSS / Sidebery theme"
+    "zen|y|Zen Browser: Firefox-based browser with vertical tabs + workspaces (AUR)"
     "tablet|n|OpenTabletDriver: Wacom tablet support"
     "extras|n|Extras: kitty, ktouch, rnote"
     "ntfs|n|NTFS: mount Windows drives (ntfs-3g)"
