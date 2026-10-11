@@ -26,6 +26,9 @@ return {
 							callback = function(chat)
 								require("config.monolith").slash(chat)
 							end,
+							-- Slash commands only run when picked from the `/` completion menu;
+							-- these keys run it directly in the chat buffer.
+							keymaps = { modes = { n = "ge", i = "<M-e>" } },
 							opts = { contains_code = true },
 						},
 					},
