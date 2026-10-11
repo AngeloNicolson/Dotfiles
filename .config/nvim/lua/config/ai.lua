@@ -1,6 +1,6 @@
 local M = {}
 
-local DEFAULT_MODEL = "qwen3-coder:30b"
+local DEFAULT_MODEL = "qwen3.8:27b"
 local MONOLITH = vim.fn.exepath("monolith")
 
 local current_model = nil

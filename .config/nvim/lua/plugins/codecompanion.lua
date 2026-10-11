@@ -10,21 +10,30 @@ return {
 	},
 	config = function()
 		require("codecompanion").setup({
+			-- NB: no `strategies` key — if present, setup() rebuilds `interactions`
+			-- from it and silently drops everything configured here.
 			interactions = {
 				chat = {
+					adapter = "ollama",
 					opts = {
 						completion_provider = "cmp",
 					},
-				},
-			},
-			strategies = {
-				chat = {
-					adapter = "ollama",
+					slash_commands = {
+						-- /expert → "<engine|study|setup|code> question": retrieved chunks from
+						-- monolith's indexes become hidden context for the next message.
+						["expert"] = {
+							description = "Retrieve from a monolith expert (study/setup/code/engine)",
+							callback = function(chat)
+								require("config.monolith").slash(chat)
+							end,
+							opts = { contains_code = true },
+						},
+					},
 				},
 				inline = {
 					adapter = "ollama",
 				},
-				agent = {
+				cmd = {
 					adapter = "ollama",
 				},
 			},
