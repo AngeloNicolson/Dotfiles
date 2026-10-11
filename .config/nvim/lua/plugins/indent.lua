@@ -9,9 +9,14 @@ return {
 		vim.opt.list = true
 		vim.opt.listchars:append("eol:↴")
 
-		-- Custom highlight for indentation lines
-		vim.api.nvim_set_hl(0, "IndentBlanklineIndent2", { fg = "#262626" })
-		vim.api.nvim_set_hl(0, "IblScope", { fg = "#3a3a3a" })
+		-- Custom highlight for indentation lines. Registered as an ibl hook so
+		-- they come back after a colorscheme change (`highlight clear` wipes
+		-- them, and ibl errors if they're missing on ColorScheme).
+		local hooks = require("ibl.hooks")
+		hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
+			vim.api.nvim_set_hl(0, "IndentBlanklineIndent2", { fg = "#262626" })
+			vim.api.nvim_set_hl(0, "IblScope", { fg = "#3a3a3a" })
+		end)
 
 		-- Setup indent-blankline plugin
 		require("ibl").setup({
