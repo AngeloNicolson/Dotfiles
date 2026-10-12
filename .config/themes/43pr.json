@@ -38,10 +38,10 @@
     "borderSize": 0
   },
   "look": {
-    "opacity": 0.9,
-    "terminalAlpha": 0.9,
+    "opacity": 0.72,
+    "terminalAlpha": 1.0,
     "dimInactive": 0,
-    "blur": { "size": 10, "passes": 3, "vibrancy": 0.2 },
+    "blur": { "size": 6, "passes": 2, "vibrancy": 0.2 },
     "shadow": { "range": 8, "renderPower": 3 }
   }
 }

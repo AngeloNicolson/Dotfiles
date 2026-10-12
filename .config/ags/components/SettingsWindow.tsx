@@ -31,7 +31,7 @@ import { hyprSetOption } from "../compositor"
 import { DisplayLayout } from "./DisplayLayout"
 import DisplayEQ from "./DisplayEQ"
 import { BluetoothManager } from "./BluetoothWindow"
-import { getHwSpeakers, sinkDesc, selectSink } from "./AudioEQ"
+import { getHwSpeakers, sinkDesc, selectSink, getActiveSinkId } from "./AudioEQ"
 
 const FONT = "JetBrainsMono Nerd Font"
 const HOME = GLib.get_home_dir()
@@ -316,13 +316,21 @@ function AudioPage() {
   const apps = (<box vertical />) as Gtk.Box
   const mics = (<box vertical />) as Gtk.Box
 
+  function activeHardwareSink() {
+    const speakers = getHwSpeakers()
+    const active = getActiveSinkId()
+    return speakers.find((s: any) => s.id === active) ?? speakers[0]
+  }
+
   const rebuildOutputs = rebuilder(outputs, () => {
-    const def = audio.default_speaker
+    // the EQ filter is usually the default sink; mark the device behind it
+    const active = activeHardwareSink()?.id
     for (const s of getHwSpeakers()) {
+      const isActive = s.id === active
       outputs.add(
-        <button name="st-row-btn" class={def && s.id === def.id ? "active" : ""} onClicked={() => { selectSink(s.id); later(rebuildAll) }}>
+        <button name="st-row-btn" class={isActive ? "active" : ""} onClicked={() => { selectSink(s.id); later(rebuildAll) }}>
           <box>
-            <label name="st-row-icon" label={def && s.id === def.id ? "\u{f0765}" : "\u{f0766}"} />
+            <label name="st-row-icon" label={isActive ? "\u{f0765}" : "\u{f0766}"} />
             <label label={sinkDesc(s)} xalign={0} hexpand ellipsize={3} />
           </box>
         </button> as Gtk.Widget)
@@ -330,14 +338,18 @@ function AudioPage() {
   })
 
   const rebuildMaster = rebuilder(master, () => {
-    const sp = audio.default_speaker
+    const sp = activeHardwareSink()
     if (!sp) return
-    const mute = (<button name="st-mini-btn" class={sp.mute ? "active" : ""} onClicked={() => { sp.set_mute(!sp.mute); later(rebuildMaster) }}>
+    const sinkId = String(sp.id)
+    const mute = (<button name="st-mini-btn" class={sp.mute ? "active" : ""} onClicked={() => {
+      execAsync(["wpctl", "set-mute", sinkId, "toggle"]).catch(() => {})
+      later(rebuildMaster)
+    }}>
       <label label={sp.mute ? "MUTED" : "MUTE"} />
     </button>) as Gtk.Widget
     const row = (<box name="st-slider-row" />) as Gtk.Box
     row.add(<label name="st-slider-label" label="MASTER" xalign={0} /> as Gtk.Widget)
-    row.add(slider(sp.volume, 1.5, (v) => sp.set_volume(v)))
+    row.add(slider(sp.volume, 1.5, (v) => execAsync(["wpctl", "set-volume", sinkId, v.toFixed(2)]).catch(() => {})))
     row.add(mute)
     master.add(row)
   })

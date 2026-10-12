@@ -94,8 +94,6 @@ function themeHyprLua(t: Theme): string {
   if (L.opacity < 1) {
     lines.push(
       `_G.__theme_opacity = hl.window_rule({ name = "theme-opacity", match = { class = ".*" }, opacity = "${L.opacity} override" })`,
-      "-- foot handles its own alpha (terminalAlpha) — don't stack both",
-      `_G.__theme_opacity_keep = hl.window_rule({ name = "theme-opacity-foot", match = { class = "^(foot|footclient)$" }, opacity = "1.0 override" })`,
       `_G.__theme_opacity_fs = hl.window_rule({ name = "theme-opacity-fullscreen", match = { class = ".*", fullscreen = true }, opacity = "1.0 override" })`,
     )
   }
