@@ -5,6 +5,10 @@ import { execAsync } from "ags/process"
 import { px } from "../scale"
 import { toggleBluetoothWindow } from "../state"
 import { placementFrom } from "../flyout"
+import {
+  setAdapterProp, startDiscovery, stopDiscovery, removeDevice,
+  connectDevice, disconnectDevice, bluezError,
+} from "../bluez"
 
 // Devices with no name (bare addresses) are ambient BLE noise during a scan;
 // only paired ones are worth listing without a name.
@@ -33,64 +37,83 @@ export function deviceClass(dev: Bluetooth.Device): string {
   return ""
 }
 
-function errText(e: unknown): string {
-  const m = e instanceof Error ? e.message : String(e)
-  return m.replace(/^.*org\.bluez\.Error\./, "").replace(/\s+/g, " ").trim().substring(0, 40)
-}
+export type Notice = (text: string, clearAfterMs?: number) => void
+const noNotice: Notice = () => {}
 
+// Connect / disconnect a paired device, or pair+trust+connect a new one.
+// Every BlueZ call is async (see bluez.ts) so the shell never stalls on it.
 export function toggleDevice(
   dev: Bluetooth.Device,
   adapter: Bluetooth.Adapter,
   onError: (msg: string) => void = () => {},
+  onInfo: Notice = noNotice,
 ) {
-  // BlueZ misbehaves when connecting mid-discovery
-  try { if (adapter.discovering) adapter.stop_discovery() } catch {}
+  const name = (dev.alias || dev.name || dev.address).substring(0, 20).toUpperCase()
+  const run = async () => {
+    // BlueZ misbehaves when connecting mid-discovery
+    await stopDiscovery(adapter).catch(() => {})
 
-  if (dev.connected) {
-    dev.disconnect_device((_d, res) => {
-      try { dev.disconnect_device_finish(res) } catch (e) {
+    if (dev.connected) {
+      try { await disconnectDevice(dev) } catch (e) {
         console.error("BT disconnect failed:", e)
-        onError(`DISCONNECT FAILED: ${errText(e)}`)
+        onError(`DISCONNECT FAILED: ${bluezError(e)}`)
       }
-    })
-  } else if (dev.paired) {
-    dev.connect_device((_d, res) => {
-      try { dev.connect_device_finish(res) } catch (e) {
+    } else if (dev.paired) {
+      try { await connectDevice(dev) } catch (e) {
         console.error("BT connect failed:", e)
-        const msg = errText(e)
+        const msg = bluezError(e)
         // Link key rejected — usually re-paired on the Windows dual-boot or reset.
         onError(/key-missing|Permission denied/i.test(msg)
           ? "PAIRING KEY STALE — HIT RE-PAIR 󰑐"
           : `CONNECT FAILED: ${msg}`)
       }
-    })
-  } else {
-    // bluetoothctl brings its own agent, which unpaired devices need
-    const addr = dev.address
-    execAsync(["bash", "-c",
-      `bluetoothctl pair ${addr} && bluetoothctl trust ${addr}; bluetoothctl connect ${addr}`,
-    ]).catch((e) => {
-      console.error("BT pair/connect failed:", e)
-      const msg = errText(e)
-      onError(/Authentication/i.test(msg)
-        ? "PAIR REFUSED — PUT HEADSET IN PAIRING MODE"
-        : `PAIR FAILED: ${msg}`)
-    })
+    } else {
+      // bluetoothctl brings its own agent, which unpaired devices need.
+      // BlueZ gives the device ~30s to answer, so say what we're waiting on.
+      onInfo(`PAIRING ${name}… HOLD AN EARBUD 3S UNTIL "READY TO PAIR"`)
+      const addr = dev.address
+      try {
+        await execAsync(["bash", "-c",
+          `bluetoothctl pair ${addr} && bluetoothctl trust ${addr}; bluetoothctl connect ${addr}`,
+        ])
+        onInfo(`${name} READY`, 4000)
+      } catch (e) {
+        console.error("BT pair/connect failed:", e)
+        const msg = bluezError(e)
+        onError(/Authentication|not available/i.test(msg)
+          ? "PAIR REFUSED — PUT HEADSET IN PAIRING MODE, THEN SCAN"
+          : `PAIR FAILED: ${msg}`)
+      }
+    }
+  }
+  run().catch((e) => onError(`FAILED: ${bluezError(e)}`))
+}
+
+export async function forgetDevice(dev: Bluetooth.Device, adapter: Bluetooth.Adapter): Promise<void> {
+  await stopDiscovery(adapter).catch(() => {})
+  try { await removeDevice(adapter, dev) } catch (e) {
+    console.error("BT forget failed:", e)
+    throw e
   }
 }
 
-export function forgetDevice(dev: Bluetooth.Device, adapter: Bluetooth.Adapter) {
-  try { if (adapter.discovering) adapter.stop_discovery() } catch {}
-  try { adapter.remove_device(dev) } catch (e) {
-    console.error("BT forget failed:", e)
+// Flip the radio / scan without blocking the main loop; errors go to onError.
+export function toggleScan(adapter: Bluetooth.Adapter, onError: (msg: string) => void = () => {}) {
+  const run = async () => {
+    if (!adapter.powered) {
+      await setAdapterProp(adapter, "Powered", true)
+      return startDiscovery(adapter)
+    }
+    return adapter.discovering ? stopDiscovery(adapter) : startDiscovery(adapter)
   }
+  run().catch((e) => { console.error("BT scan toggle failed:", e); onError(`SCAN FAILED: ${bluezError(e)}`) })
 }
 
 // Pair/trust retry loop: the device only becomes pairable once the user puts
-// it in pairing mode and discovery finds it again, so poll for ~60s.
+// it in pairing mode and discovery finds it again, so poll for ~90s.
 export const REPAIR_SCRIPT = `
 addr="$1"
-for _ in $(seq 1 12); do
+for _ in $(seq 1 18); do
   bluetoothctl pair "$addr" && bluetoothctl trust "$addr" && exit 0
   sleep 5
 done
@@ -100,34 +123,33 @@ exit 1`
 // "br-connection-key-missing" state a headset lands in after being paired
 // on another OS sharing this adapter (dual-boot).
 let repairing = false
-export function repairDevice(
+export async function repairDevice(
   dev: Bluetooth.Device,
   adapter: Bluetooth.Adapter,
-  setNotice: (text: string, clearAfterMs?: number) => void,
+  setNotice: Notice,
 ) {
   if (repairing) return
   repairing = true
   const addr = dev.address
-  const name = (dev.alias || dev.name || addr).substring(0, 20)
-  forgetDevice(dev, adapter)
-  setNotice(`PUT ${name.toUpperCase()} IN PAIRING MODE…`)
-  try { adapter.set_pairable(true) } catch {}
-  try { adapter.start_discovery() } catch (e) { console.error("BT discovery failed:", e) }
-
-  execAsync(["bash", "-c", REPAIR_SCRIPT, "repair", addr])
-    .then(() => {
-      // BlueZ misbehaves when connecting mid-discovery
-      try { if (adapter.discovering) adapter.stop_discovery() } catch {}
-      setNotice(`PAIRED ${name.toUpperCase()} — LINKING…`)
-      return execAsync(["bluetoothctl", "connect", addr])
-    })
-    .then(() => setNotice(`${name.toUpperCase()} READY`, 4000))
-    .catch((e) => {
-      console.error("BT re-pair failed:", e)
-      try { if (adapter.discovering) adapter.stop_discovery() } catch {}
-      setNotice(`RE-PAIR FAILED — ${name.toUpperCase()} NOT IN PAIRING MODE?`, 8000)
-    })
-    .finally(() => { repairing = false })
+  const name = (dev.alias || dev.name || addr).substring(0, 20).toUpperCase()
+  try {
+    setNotice(`PUT ${name} IN PAIRING MODE… (HOLD AN EARBUD 3S)`)
+    await forgetDevice(dev, adapter)
+    await setAdapterProp(adapter, "Pairable", true).catch(() => {})
+    await startDiscovery(adapter).catch((e) => console.error("BT discovery failed:", e))
+    await execAsync(["bash", "-c", REPAIR_SCRIPT, "repair", addr])
+    // BlueZ misbehaves when connecting mid-discovery
+    await stopDiscovery(adapter).catch(() => {})
+    setNotice(`PAIRED ${name} — LINKING…`)
+    await execAsync(["bluetoothctl", "connect", addr])
+    setNotice(`${name} READY`, 4000)
+  } catch (e) {
+    console.error("BT re-pair failed:", e)
+    stopDiscovery(adapter).catch(() => {})
+    setNotice(`RE-PAIR FAILED — ${name} NOT IN PAIRING MODE? SCAN + PAIR WHEN IT IS`, 10000)
+  } finally {
+    repairing = false
+  }
 }
 
 export default function BluetoothPanel() {
@@ -210,7 +232,7 @@ export default function BluetoothPanel() {
           name="bt-device"
           class={deviceClass(dev)}
           hexpand
-          onClicked={() => toggleDevice(dev, adapter, (m) => setNotice(m, 8000))}
+          onClicked={() => toggleDevice(dev, adapter, (m) => setNotice(m, 8000), setNotice)}
         >
           <box>
             <label
@@ -241,7 +263,7 @@ export default function BluetoothPanel() {
           name="bt-device-action"
           class="forget"
           tooltipText="Forget device"
-          onClicked={() => forgetDevice(dev, adapter)}
+          onClicked={() => forgetDevice(dev, adapter).catch((e) => setNotice(`FORGET FAILED: ${bluezError(e)}`, 8000))}
         >
           <label label="󰅖" />
         </button> as Gtk.Widget,
@@ -268,15 +290,7 @@ export default function BluetoothPanel() {
   // Scan button updated imperatively for the same no-tracking-context reason
   const scanLabel = (<label name="bt-scan-label" label="SCAN" />) as Gtk.Label
   const scanBtn = (
-    <button name="bt-scan-btn" onClicked={() => {
-      try {
-        if (!adapter.powered) adapter.set_powered(true)
-        if (adapter.discovering) adapter.stop_discovery()
-        else adapter.start_discovery()
-      } catch (e) {
-        console.error("BT scan toggle failed:", e)
-      }
-    }}>
+    <button name="bt-scan-btn" onClicked={() => toggleScan(adapter, (m) => setNotice(m, 8000))}>
       {scanLabel}
     </button>
   ) as Gtk.Button

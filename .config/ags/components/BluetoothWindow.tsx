@@ -17,8 +17,9 @@ import { bluetoothWindowVisible, setBluetoothWindowVisible, bluetoothPlacement, 
 import { makeClip, preparePanel, openPanel, closePanel, clickedOutside, registerCloser, closeFlyout } from "../flyout"
 import { px } from "../scale"
 import {
-  listable, deviceSortKey, deviceClass, toggleDevice, forgetDevice, repairDevice,
+  listable, deviceSortKey, deviceClass, toggleDevice, toggleScan, forgetDevice, repairDevice,
 } from "./BluetoothPanel"
+import { setAdapterProp, stopDiscovery, setTrusted, bluezError } from "../bluez"
 
 function deviceIcon(dev: Bluetooth.Device): string {
   const i = dev.icon || ""
@@ -126,18 +127,22 @@ export function BluetoothManager(active?: () => boolean) {
 
   function buildAdapterRow() {
     if (!adapter) return
-    const safe = (fn: () => void) => () => { try { fn() } catch (e) { setNotice(`FAILED: ${String(e).slice(0, 60)}`, 6000) } }
-    adapterRow.add(toggleBtn("POWER", adapter.powered, safe(() => adapter.set_powered(!adapter.powered)),
+    // Async property writes: the radio can take seconds to power down with a
+    // headset attached, and that used to freeze the whole shell.
+    const flip = (prop: "Powered" | "Discoverable" | "Pairable", on: boolean) => () => {
+      if (prop === "Powered") setNotice(on ? "POWERING ON…" : "POWERING OFF…")
+      setAdapterProp(adapter, prop, on)
+        .then(() => { if (prop === "Powered") setNotice("") })
+        .catch((e) => setNotice(`${prop.toUpperCase()} FAILED: ${bluezError(e)}`, 6000))
+    }
+    adapterRow.add(toggleBtn("POWER", adapter.powered, flip("Powered", !adapter.powered),
       "Bluetooth radio on/off"))
-    adapterRow.add(toggleBtn("VISIBLE", adapter.discoverable, safe(() => adapter.set_discoverable(!adapter.discoverable)),
+    adapterRow.add(toggleBtn("VISIBLE", adapter.discoverable, flip("Discoverable", !adapter.discoverable),
       "Let other devices find this laptop (for pairing from a phone)"))
-    adapterRow.add(toggleBtn("PAIRABLE", adapter.pairable, safe(() => adapter.set_pairable(!adapter.pairable)),
+    adapterRow.add(toggleBtn("PAIRABLE", adapter.pairable, flip("Pairable", !adapter.pairable),
       "Accept incoming pairing requests"))
-    adapterRow.add(toggleBtn("SCAN", adapter.discovering, safe(() => {
-      if (!adapter.powered) adapter.set_powered(true)
-      if (adapter.discovering) adapter.stop_discovery()
-      else adapter.start_discovery()
-    }), "Search for new devices (put the device in pairing mode first)"))
+    adapterRow.add(toggleBtn("SCAN", adapter.discovering, () => toggleScan(adapter, (m) => setNotice(m, 6000)),
+      "Search for new devices (put the device in pairing mode first)"))
   }
 
   function actionBtn(label: string, tip: string, onClick: () => void, cls = ""): Gtk.Widget {
@@ -159,8 +164,11 @@ export function BluetoothManager(active?: () => boolean) {
         if (armTimer) { GLib.source_remove(armTimer); armTimer = 0 }
         if (armed) {
           armedForget = ""
+          const label = (dev.alias || dev.address).toUpperCase()
+          setNotice(`FORGETTING ${label}…`)
           forgetDevice(dev, adapter!)
-          setNotice(`FORGOT ${(dev.alias || dev.address).toUpperCase()}`, 4000)
+            .then(() => setNotice(`FORGOT ${label}`, 4000))
+            .catch((e) => setNotice(`FORGET FAILED: ${bluezError(e)}`, 8000))
         } else {
           armedForget = dev.address
           armTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
@@ -207,17 +215,17 @@ export function BluetoothManager(active?: () => boolean) {
       if (dev.paired) {
         actions.add(actionBtn(dev.connected ? "DISCONNECT" : "CONNECT",
           dev.connected ? "Disconnect" : "Connect",
-          () => toggleDevice(dev, adapter, err), dev.connected ? "" : "primary"))
+          () => toggleDevice(dev, adapter, err, setNotice), dev.connected ? "" : "primary"))
         actions.add(actionBtn(dev.trusted ? "TRUSTED" : "TRUST",
           "Trusted devices may reconnect on their own",
-          () => { try { dev.set_trusted(!dev.trusted) } catch (e) { err(`TRUST FAILED: ${e}`) } },
+          () => setTrusted(dev, !dev.trusted).catch((e) => err(`TRUST FAILED: ${bluezError(e)}`)),
           dev.trusted ? "on" : ""))
         actions.add(actionBtn("󰑐 RE-PAIR",
           "Forget and pair fresh — fixes 'key missing' after using the device on Windows",
           () => repairDevice(dev, adapter, setNotice), "repair"))
       } else {
         actions.add(actionBtn("PAIR", "Pair and connect (device must be in pairing mode)",
-          () => toggleDevice(dev, adapter, err), "primary"))
+          () => toggleDevice(dev, adapter, err, setNotice), "primary"))
       }
       actions.add(forgetBtn(dev))
       top.add(actions)
@@ -303,7 +311,7 @@ export function BluetoothManager(active?: () => boolean) {
   }
   function hide() {
     // Don't leave a scan running in the background
-    try { if (adapter?.discovering) adapter.stop_discovery() } catch {}
+    if (adapter) stopDiscovery(adapter).catch(() => {})
   }
   if (!active) bluetoothWindowVisible.subscribe(() => bluetoothWindowVisible.get() ? show() : hide())
 
