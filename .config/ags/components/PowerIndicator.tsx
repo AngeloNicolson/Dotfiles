@@ -212,11 +212,9 @@ export default function PowerIndicator() {
               : "")} />
             <label
               name="power-status-badge"
-              css={bat.as((d) => d.status === "Charging"
-                ? "background: #2a2e0a; border-color: #6e7116; color: #b8bb26;"
-                : d.status === "Discharging"
-                ? "background: #2e0a0a; border-color: #992222; color: #cc4444;"
-                : "background: #3c3836; border-color: #504945; color: #a89984;")}
+              class={bat.as((d) => d.status === "Charging" ? "charging"
+                : d.status === "Discharging" ? "discharging"
+                : "idle")}
               label={bat.as((d) => d.status === "Charging" ? "CHG" : d.status === "Discharging" ? "ACT" : "RDY")}
             />
           </box>

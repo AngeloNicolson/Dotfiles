@@ -71,14 +71,24 @@ function gtkRGBA(r: number, g: number, b: number, a: number = 1) {
   return c
 }
 
-const CD_BG = gtkRGBA(0x0d / 255, 0x11 / 255, 0x17 / 255)
-const CD_WHITE = gtkRGBA(0xe6 / 255, 0xed / 255, 0xf3 / 255)
-const CD_DIM = gtkRGBA(0x8b / 255, 0x94 / 255, 0x9e / 255)
-const CD_DIMMER = gtkRGBA(0x48 / 255, 0x4f / 255, 0x58 / 255)
+// Resolve a theme colour (a @define-color key from theme.ts, e.g. "fg_bright")
+// through the widget's style context so forced colours follow the active theme.
+// Looked up at call time: the card-detail modal rebuilds on open, so a theme
+// switch is picked up the next time it is shown.
+function themeRGBA(w: Gtk.Widget, name: string): Gdk.RGBA {
+  const [ok, c] = w.get_style_context().lookup_color(name)
+  return ok ? c : gtkRGBA(1, 1, 1)
+}
 
-function forceColor(w: Gtk.Widget, fg?: any, bg?: any) {
-  if (fg) w.override_color(Gtk.StateFlags.NORMAL, fg)
-  if (bg) w.override_background_color(Gtk.StateFlags.NORMAL, bg)
+function themeHex(w: Gtk.Widget, name: string): string {
+  const c = themeRGBA(w, name)
+  const h = (v: number) => Math.round(v * 255).toString(16).padStart(2, "0")
+  return `#${h(c.red)}${h(c.green)}${h(c.blue)}`
+}
+
+function forceColor(w: Gtk.Widget, fg?: string, bg?: string) {
+  if (fg) w.override_color(Gtk.StateFlags.NORMAL, themeRGBA(w, fg))
+  if (bg) w.override_background_color(Gtk.StateFlags.NORMAL, themeRGBA(w, bg))
 }
 
 function generateId(): string {
@@ -1848,7 +1858,7 @@ export default function Planner() {
         const modalEB = new Gtk.EventBox({ visible_window: true })
         modalEB.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         modalEB.connect("button-press-event", () => true)
-        forceColor(modalEB, undefined, CD_BG)
+        forceColor(modalEB, undefined, "bg_dark")
         const modal = (<box name="cd-panel" vertical>
           <box name="cd-body" vertical $={(self) => {
 
@@ -1862,15 +1872,8 @@ export default function Planner() {
 
               const { notes, checklist } = parseDescription(task.description)
 
-              // GitHub colors for forceColor
-              const GH_WHITE = gtkRGBA(0xe6/255, 0xed/255, 0xf3/255)
-              const GH_DIM = gtkRGBA(0x8b/255, 0x94/255, 0x9e/255)
-              const GH_DIMMER = gtkRGBA(0x6e/255, 0x76/255, 0x81/255)
-              const GH_GREEN = gtkRGBA(0x3f/255, 0xb9/255, 0x50/255)
-              const GH_RED = gtkRGBA(0xf8/255, 0x51/255, 0x49/255)
-              const GH_BLUE = gtkRGBA(0x58/255, 0xa6/255, 0xff/255)
-              const GH_BG = gtkRGBA(0x0d/255, 0x11/255, 0x17/255)
-              const GH_SURFACE = gtkRGBA(0x16/255, 0x1b/255, 0x22/255)
+              // Modal backdrop surface: re-forced on every rebuild so it follows theme switches
+              forceColor(modalEB, undefined, "bg_dark")
 
               // ═══════════════════════════════════════════
               // TOP: Title + close button (like GitHub header)
@@ -1889,7 +1892,7 @@ export default function Planner() {
                 titleLabel.set_hexpand(true)
                 titleLabel.set_line_wrap(true)
                 titleLabel.set_max_width_chars(80)
-                forceColor(titleLabel, GH_WHITE)
+                forceColor(titleLabel, "fg_bright")
                 const titleClickEB = new Gtk.EventBox()
                 titleClickEB.add(titleLabel)
                 titleClickEB.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
@@ -1931,7 +1934,7 @@ export default function Planner() {
 
               // Close X button (top right like GitHub)
               const closeLbl = new Gtk.Label({ label: "\u2715" })
-              forceColor(closeLbl, GH_DIM)
+              forceColor(closeLbl, "fg_dim")
               const closeBtn = new Gtk.Button()
               closeBtn.set_name("cd-close-btn")
               closeBtn.add(closeLbl)
@@ -1951,7 +1954,7 @@ export default function Planner() {
 
               const pathLabel = new Gtk.Label({ label: activeBoard.get() })
               pathLabel.set_name("cd-path-label")
-              forceColor(pathLabel, GH_DIM)
+              forceColor(pathLabel, "fg_dim")
               badgeRow.pack_start(pathLabel, false, false, 0)
 
               self.pack_start(badgeRow, false, false, 0)
@@ -1986,9 +1989,9 @@ export default function Planner() {
               // Comment header bar (like "AngeloNicolson opened on...")
               const descHeader = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
               descHeader.set_name("cd-desc-header")
-              forceColor(descHeader, undefined, GH_SURFACE)
+              forceColor(descHeader, undefined, "bg")
               const descHeaderLbl = new Gtk.Label({ label: "Description" })
-              forceColor(descHeaderLbl, GH_DIM)
+              forceColor(descHeaderLbl, "fg_dim")
               descHeader.pack_start(descHeaderLbl, false, false, 0)
               descBox.pack_start(descHeader, false, false, 0)
 
@@ -2007,16 +2010,16 @@ export default function Planner() {
               descView.set_top_margin(14)
               descView.set_bottom_margin(14)
               // Force dark bg on textview (CSS alone doesn't work in GTK3)
-              forceColor(descView, GH_WHITE, GH_BG)
+              forceColor(descView, "fg_bright", "bg_dark")
               descView.set_cursor_visible(true)
               // Set cursor color via override so it's visible on dark bg
               const cursorCSS = new Gtk.CssProvider()
-              cursorCSS.load_from_data(`textview text { caret-color: #58a6ff; }`, -1)
+              cursorCSS.load_from_data(`textview text { caret-color: ${themeHex(descView, "accent")}; }`, -1)
               descView.get_style_context().add_provider(cursorCSS, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
               const buf = descView.get_buffer()
               buf.set_text(notes || "No description provided.", -1)
               descScroll.add(descView)
-              forceColor(descScroll as Gtk.Widget, undefined, GH_BG)
+              forceColor(descScroll as Gtk.Widget, undefined, "bg_dark")
               descBox.pack_start(descScroll as Gtk.Widget, false, false, 0)
 
               let lastSaved = notes
@@ -2044,12 +2047,12 @@ export default function Planner() {
                 checkHeader.set_name("cd-check-header-row")
                 const checkLbl = new Gtk.Label({ label: "Sub Items" })
                 checkLbl.set_name("cd-section-label")
-                forceColor(checkLbl, GH_WHITE)
+                forceColor(checkLbl, "fg_bright")
                 checkHeader.pack_start(checkLbl, false, false, 0)
                 if (checklist.length > 0) {
                   const done = checklist.filter(i => i.checked).length
                   const cntLbl = new Gtk.Label({ label: `${done}/${checklist.length}` })
-                  forceColor(cntLbl, GH_DIM)
+                  forceColor(cntLbl, "fg_dim")
                   checkHeader.pack_end(cntLbl, false, false, 0)
                 }
                 checkSection.pack_start(checkHeader, false, false, 0)
@@ -2082,7 +2085,7 @@ export default function Planner() {
                   row.set_name("cd-check-row")
 
                   const icon = new Gtk.Label({ label: item.checked ? "\u2611" : "\u2610" })
-                  forceColor(icon, item.checked ? GH_GREEN : GH_DIMMER)
+                  forceColor(icon, item.checked ? "green" : "gray")
                   const iconBtn = new Gtk.Button()
                   iconBtn.set_name("cd-checkbox")
                   iconBtn.add(icon)
@@ -2099,14 +2102,14 @@ export default function Planner() {
                   textLabel.set_hexpand(true)
                   textLabel.set_line_wrap(true)
                   textLabel.set_max_width_chars(70)
-                  forceColor(textLabel, item.checked ? GH_DIMMER : GH_WHITE)
+                  forceColor(textLabel, item.checked ? "gray" : "fg_bright")
                   if (item.checked) textLabel.get_style_context().add_class("checked")
 
                   row.pack_start(iconBtn, false, false, 0)
                   row.pack_start(textLabel, true, true, 0)
 
                   const rmLbl = new Gtk.Label({ label: "\u2715" })
-                  forceColor(rmLbl, GH_DIMMER)
+                  forceColor(rmLbl, "gray")
                   const rmBtn = new Gtk.Button()
                   rmBtn.set_name("cd-remove-btn")
                   rmBtn.add(rmLbl)
@@ -2125,7 +2128,7 @@ export default function Planner() {
                 addEntry.set_name("cd-add-entry")
                 addEntry.set_placeholder_text("Add sub item...")
                 addEntry.set_hexpand(true)
-                forceColor(addEntry as Gtk.Widget, GH_DIM, GH_BG)
+                forceColor(addEntry as Gtk.Widget, "fg_dim", "bg_dark")
                 addEntry.connect("activate", () => {
                   let text = ""; try { text = addEntry.get_text().trim() } catch {}
                   if (!text) return
@@ -2144,25 +2147,23 @@ export default function Planner() {
 
               // ── RIGHT SIDEBAR (GitHub sidebar clone) ──
               // Use an EventBox to create a visible left border (CSS borders unreliable on GtkBox)
-              const GH_BORDER = gtkRGBA(0x21/255, 0x26/255, 0x2d/255)
-              const GH_BTN_BG = gtkRGBA(0x21/255, 0x26/255, 0x2d/255)
 
               const sidebarOuter = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL })
               // Visible left border line
               const sidebarBorderLine = new Gtk.EventBox({ visible_window: true })
               sidebarBorderLine.set_size_request(1, -1)
-              forceColor(sidebarBorderLine as Gtk.Widget, undefined, GH_BORDER)
+              forceColor(sidebarBorderLine as Gtk.Widget, undefined, "bg_lighter")
               sidebarOuter.pack_start(sidebarBorderLine as Gtk.Widget, false, false, 0)
 
               const sidebar = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
               sidebar.set_name("cd-sidebar")
-              forceColor(sidebar, undefined, GH_BG)
+              forceColor(sidebar, undefined, "bg_dark")
 
               // Separator line widget
               function sidebarLine(): Gtk.Widget {
                 const line = new Gtk.EventBox({ visible_window: true })
                 line.set_size_request(-1, 1)
-                forceColor(line as Gtk.Widget, undefined, GH_BORDER)
+                forceColor(line as Gtk.Widget, undefined, "bg_lighter")
                 return line as Gtk.Widget
               }
 
@@ -2172,11 +2173,11 @@ export default function Planner() {
                 const header = new Gtk.Label({ label: headerText })
                 header.set_halign(Gtk.Align.START)
                 header.set_name("cd-sidebar-header")
-                forceColor(header, GH_DIM) // GitHub uses muted gray for section headers
+                forceColor(header, "fg_dim") // GitHub uses muted gray for section headers
                 headerRow.pack_start(header, true, true, 0)
                 if (dotsMenu) {
                   const dotsLbl = new Gtk.Label({ label: "\u22EF" })
-                  forceColor(dotsLbl, GH_DIM)
+                  forceColor(dotsLbl, "fg_dim")
                   const dotsBtn = new Gtk.Button()
                   dotsBtn.set_name("cd-dots-btn")
                   dotsBtn.add(dotsLbl)
@@ -2193,7 +2194,7 @@ export default function Planner() {
               const assignVal = new Gtk.Label({ label: task.assignment || "No one — assign yourself" })
               assignVal.set_halign(Gtk.Align.START)
               assignVal.set_name("cd-sidebar-value")
-              forceColor(assignVal, task.assignment ? GH_WHITE : GH_DIMMER)
+              forceColor(assignVal, task.assignment ? "fg_bright" : "gray")
               sidebarSection("Assignees", assignVal)
 
               // ── Status section with 3-dot dropdown for move options
@@ -2216,9 +2217,9 @@ export default function Planner() {
                 const itemBtn = new Gtk.Button()
                 itemBtn.set_name(s.value === task.status ? "planner-popover-item" : "planner-popover-item")
                 if (s.value === task.status) {
-                  forceColor(itemLbl, GH_BLUE)
+                  forceColor(itemLbl, "accent")
                 } else {
-                  forceColor(itemLbl, GH_WHITE)
+                  forceColor(itemLbl, "fg_bright")
                 }
                 itemBtn.add(itemLbl)
                 itemBtn.connect("clicked", () => {
@@ -2236,7 +2237,7 @@ export default function Planner() {
               const boardVal = new Gtk.Label({ label: activeBoard.get() })
               boardVal.set_halign(Gtk.Align.START)
               boardVal.set_name("cd-sidebar-value")
-              forceColor(boardVal, GH_WHITE)
+              forceColor(boardVal, "fg_bright")
               sidebarSection("Board", boardVal)
 
               // ── Checklist summary
@@ -2245,7 +2246,7 @@ export default function Planner() {
                 const checkVal = new Gtk.Label({ label: `${done} of ${checklist.length} complete` })
                 checkVal.set_halign(Gtk.Align.START)
                 checkVal.set_name("cd-sidebar-value")
-                forceColor(checkVal, GH_DIM)
+                forceColor(checkVal, "fg_dim")
                 sidebarSection("Sub Items", checkVal)
               }
 
@@ -2254,7 +2255,7 @@ export default function Planner() {
               spacer.set_vexpand(true)
               sidebar.pack_start(spacer, true, true, 0)
               const delLbl = new Gtk.Label({ label: "Delete card" })
-              forceColor(delLbl, GH_RED)
+              forceColor(delLbl, "red")
               const deleteBtn = new Gtk.Button()
               deleteBtn.set_name("cd-delete-btn")
               deleteBtn.add(delLbl)
@@ -2626,21 +2627,17 @@ export default function Planner() {
         const modalEB = new Gtk.EventBox({ visible_window: true })
         modalEB.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         modalEB.connect("button-press-event", () => true)
-        forceColor(modalEB, undefined, gtkRGBA(0x0d/255, 0x11/255, 0x17/255))
+        forceColor(modalEB, undefined, "bg_dark")
 
         const modal = (<box name="sync-modal" vertical $={(modalSelf) => {
-          const SM_WHITE = gtkRGBA(0xe6/255, 0xed/255, 0xf3/255)
-          const SM_DIM = gtkRGBA(0x8b/255, 0x94/255, 0x9e/255)
-          const SM_GREEN = gtkRGBA(0x3f/255, 0xb9/255, 0x50/255)
-          const SM_BLUE = gtkRGBA(0x58/255, 0xa6/255, 0xff/255)
-
           function rebuild() {
             modalSelf.get_children().forEach((c: Gtk.Widget) => c.destroy())
+            forceColor(modalEB, undefined, "bg_dark")
 
             // Title
             const title = new Gtk.Label({ label: "PLANSYNC" })
             title.set_name("sync-modal-title")
-            forceColor(title, SM_WHITE)
+            forceColor(title, "fg_bright")
             modalSelf.pack_start(title as Gtk.Widget, false, false, 8)
 
             // Status
@@ -2650,7 +2647,7 @@ export default function Planner() {
               const connected = syncConnected.get()
               const count = syncPeerCount.get()
               statusLabel.set_label(connected ? `Connected · ${count} peer${count !== 1 ? "s" : ""}` : "No peers connected")
-              forceColor(statusLabel, connected ? SM_GREEN : SM_DIM)
+              forceColor(statusLabel, connected ? "green" : "fg_dim")
             }
             syncConnected.subscribe(updateStatus)
             syncPeerCount.subscribe(updateStatus)
@@ -2660,7 +2657,7 @@ export default function Planner() {
             // Last sync info
             const syncInfoLabel = new Gtk.Label()
             syncInfoLabel.set_name("sync-modal-info")
-            forceColor(syncInfoLabel, SM_DIM)
+            forceColor(syncInfoLabel, "fg_dim")
             function updateSyncInfo() {
               const file = lastSyncedFile.get()
               const time = lastSyncTime.get()
@@ -2677,7 +2674,7 @@ export default function Planner() {
             // Generate invite section
             const inviteTitle = new Gtk.Label({ label: "PAIR DEVICE" })
             inviteTitle.set_halign(Gtk.Align.START)
-            forceColor(inviteTitle, SM_WHITE)
+            forceColor(inviteTitle, "fg_bright")
             modalSelf.pack_start(inviteTitle as Gtk.Widget, false, false, 4)
 
             const inviteRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
@@ -2718,7 +2715,7 @@ export default function Planner() {
               uriLabel.set_selectable(true)
               uriLabel.set_line_wrap(true)
               uriLabel.set_max_width_chars(60)
-              forceColor(uriLabel, SM_BLUE)
+              forceColor(uriLabel, "accent")
               modalSelf.pack_start(uriLabel as Gtk.Widget, false, false, 4)
 
               // QR code image if available
@@ -2745,7 +2742,7 @@ export default function Planner() {
             // Accept invite section
             const acceptTitle = new Gtk.Label({ label: "ACCEPT INVITE" })
             acceptTitle.set_halign(Gtk.Align.START)
-            forceColor(acceptTitle, SM_WHITE)
+            forceColor(acceptTitle, "fg_bright")
             modalSelf.pack_start(acceptTitle as Gtk.Widget, false, false, 4)
 
             const acceptRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
@@ -2781,7 +2778,7 @@ export default function Planner() {
             // Peers list
             const peersTitle = new Gtk.Label({ label: "PEERS" })
             peersTitle.set_halign(Gtk.Align.START)
-            forceColor(peersTitle, SM_WHITE)
+            forceColor(peersTitle, "fg_bright")
             modalSelf.pack_start(peersTitle as Gtk.Widget, false, false, 4)
 
             getPeers().then((resp: any) => {
@@ -2789,11 +2786,11 @@ export default function Planner() {
                 for (const peer of resp.data) {
                   const peerRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
                   const idLabel = new Gtk.Label({ label: peer.device_id })
-                  forceColor(idLabel, SM_WHITE)
+                  forceColor(idLabel, "fg_bright")
                   const roleLabel = new Gtk.Label({ label: `[${peer.role}]` })
-                  forceColor(roleLabel, SM_DIM)
+                  forceColor(roleLabel, "fg_dim")
                   const statusDot = new Gtk.Label({ label: peer.connected ? "●" : "○" })
-                  forceColor(statusDot, peer.connected ? SM_GREEN : SM_DIM)
+                  forceColor(statusDot, peer.connected ? "green" : "fg_dim")
                   peerRow.pack_start(statusDot as Gtk.Widget, false, false, 0)
                   peerRow.pack_start(idLabel as Gtk.Widget, false, false, 0)
                   peerRow.pack_start(roleLabel as Gtk.Widget, false, false, 0)
@@ -2801,7 +2798,7 @@ export default function Planner() {
                 }
                 if (resp.data.length === 0) {
                   const noPeers = new Gtk.Label({ label: "No peers yet" })
-                  forceColor(noPeers, SM_DIM)
+                  forceColor(noPeers, "fg_dim")
                   modalSelf.pack_start(noPeers as Gtk.Widget, false, false, 2)
                 }
               }

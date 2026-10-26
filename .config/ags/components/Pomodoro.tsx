@@ -493,12 +493,14 @@ export default function Pomodoro() {
           const timeLabel = new Gtk.Label()
           timeLabel.set_name("pomo-time-display")
 
+          // Colours come from the static theme CSS (#pomo-time-display / #pomo-phase-label
+          // in theme.ts); these providers only carry scaled sizes.
           const timeCss = new Gtk.CssProvider()
-          timeCss.load_from_data(`#pomo-time-display { font-size: ${px(56)}px; color: #f0f2f4; font-weight: 700; letter-spacing: ${px(4)}px; }`)
+          timeCss.load_from_data(`#pomo-time-display { font-size: ${px(56)}px; font-weight: 700; letter-spacing: ${px(4)}px; }`)
           timeLabel.get_style_context().add_provider(timeCss, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
           const phaseCss = new Gtk.CssProvider()
-          phaseCss.load_from_data(`#pomo-phase-label { font-size: ${px(9)}px; color: #5090a0; font-weight: 700; letter-spacing: ${px(2)}px; margin-top: ${px(2)}px; }`)
+          phaseCss.load_from_data(`#pomo-phase-label { font-size: ${px(9)}px; font-weight: 700; letter-spacing: ${px(2)}px; margin-top: ${px(2)}px; }`)
           phaseLabel.get_style_context().add_provider(phaseCss, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
           labelBox.pack_start(timeLabel, false, false, 0)
@@ -511,10 +513,10 @@ export default function Pomodoro() {
           const update = () => {
             const p = phase.get()
             const phaseText = p === "work" ? "WORK SESSION" : p === "break" ? "BREAK TIME" : "READY"
-            phaseLabel.set_markup(`<span font_size="9000" weight="bold" color="#5090a0" letter_spacing="2048">${phaseText}</span>`)
+            phaseLabel.set_markup(`<span font_size="9000" weight="bold" letter_spacing="2048">${phaseText}</span>`)
             const s = secondsRemaining.get()
             const timeText = p === "idle" ? formatTime(workMinutes.get() * 60) : formatTime(s)
-            timeLabel.set_markup(`<span font_size="38000" weight="bold" color="#f0f2f4" letter_spacing="4096">${timeText}</span>`)
+            timeLabel.set_markup(`<span font_size="38000" weight="bold" letter_spacing="4096">${timeText}</span>`)
             da.queue_draw()
           }
 

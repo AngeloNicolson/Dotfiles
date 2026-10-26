@@ -380,7 +380,7 @@ const STATIC_CSS = `
 
     /* Horizontal grid line between each hour */
     #plan-gridline {
-      background: #3a5565;
+      background: @gray;
       min-height: 1px;
     }
 
@@ -392,7 +392,7 @@ const STATIC_CSS = `
 
     /* Vertical divider between hour label and cell */
     #plan-divider {
-      background: #3a5565;
+      background: @gray;
       min-width: 1px;
     }
 
@@ -403,7 +403,7 @@ const STATIC_CSS = `
 
     /* Hour label on the left */
     #plan-hour-label {
-      color: #7aabb8;
+      color: @blue;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
@@ -418,13 +418,13 @@ const STATIC_CSS = `
 
     /* Event block */
     #plan-event {
-      background: #1a3248;
+      background: mix(@bg_light, @accent, 0.2);
       border-left: 3px solid @accent;
       border-radius: 3px;
       padding: 1px 8px;
     }
     #plan-event-time {
-      color: #80a8b8;
+      color: @fg_dim;
       font-size: 10px;
       font-weight: 700;
     }
@@ -436,11 +436,11 @@ const STATIC_CSS = `
 
     /* Schedule event (from schedule.plan — read-only, muted template) */
     #plan-event.schedule {
-      background: #0c1820;
-      border-left: 2px solid #1e3a48;
+      background: @bg;
+      border-left: 2px solid @bg_lighter;
     }
-    #plan-event.schedule #plan-event-time { color: #304858; }
-    #plan-event.schedule #plan-event-text { color: #4a6878; }
+    #plan-event.schedule #plan-event-time { color: alpha(@gray, 0.7); }
+    #plan-event.schedule #plan-event-text { color: @gray; }
 
     /* 3-dot menu button (cal events + kanban cards) */
     #planner-dots-btn {
@@ -498,20 +498,20 @@ const STATIC_CSS = `
       padding: 6px 16px;
     }
     #planner-popover-item-danger:hover {
-      background: alpha(#c05050, 0.15);
+      background: alpha(@red, 0.15);
     }
     #planner-popover-item-danger label {
-      color: #a05050;
+      color: @red;
       font-size: 11px;
       font-weight: 600;
     }
     #planner-popover-item-danger:hover label {
-      color: #e08080;
+      color: @red_bright;
     }
 
     /* Inline entry for adding/editing events */
     #plan-entry {
-      background: #1a3248;
+      background: mix(@bg_light, @accent, 0.2);
       color: @fg_bright;
       border: 1px solid @accent;
       border-radius: 3px;
@@ -523,13 +523,13 @@ const STATIC_CSS = `
     /* Drag guide line — grey dotted, full pane width */
     #plan-drag-guide {
       background: transparent;
-      border-top: 1px dotted #808080;
+      border-top: 1px dotted @fg_dim;
       min-height: 1px;
     }
 
     /* Burgundy now-line */
     #plan-now-line {
-      background: #cc2244;
+      background: @red;
     }
 
     /* Empty state */
@@ -566,24 +566,24 @@ const STATIC_CSS = `
     }
     #planner-create-btn {
       background: @bg;
-      border: 1px solid #2a4a35;
+      border: 1px solid alpha(@green, 0.4);
       border-radius: 4px;
       padding: 10px 20px;
       margin-top: 16px;
     }
     #planner-create-btn:hover {
-      background: #15281c;
-      border-color: #50c070;
-      box-shadow: inset 0 0 12px alpha(#50c070, 0.3);
+      background: mix(@bg_light, @green, 0.15);
+      border-color: @green_bright;
+      box-shadow: inset 0 0 12px alpha(@green_bright, 0.3);
     }
     #planner-create-btn label {
-      color: #50a060;
+      color: @green_bright;
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
     }
     #planner-create-btn:hover label {
-      color: #80e0a0;
+      color: @green_bright;
     }
     #planner-footer-bar {
       padding: 4px 4px;
@@ -620,13 +620,13 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #5a7888;
+      color: @fg_dim;
     }
     #planner-inner-tab:hover label {
-      color: #90d0e0;
+      color: @fg_bright;
     }
     #planner-inner-tab.active label {
-      color: #a0f0ff;
+      color: @accent;
     }
 
     /* ── Kanban subpane tabs (TODO / DOING / DONE) ── */
@@ -645,20 +645,20 @@ const STATIC_CSS = `
       border-color: @gray;
     }
     #kanban-subpane-tab.active {
-      background: alpha(#1a3040, 0.7);
+      background: alpha(@bg_light, 0.7);
       border: 1px solid @accent;
     }
     #kanban-subpane-tab label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #5a7888;
+      color: @fg_dim;
     }
     #kanban-subpane-tab:hover label {
-      color: #90d0e0;
+      color: @fg_bright;
     }
     #kanban-subpane-tab.active label {
-      color: #a0f0ff;
+      color: @accent;
     }
 
     /* ── Board selector header ── */
@@ -682,16 +682,16 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #5a7888;
+      color: @fg_dim;
     }
     button#kanban-board-selector:hover label {
       color: @fg_bright;
     }
     #board-modal-backdrop {
-      background: alpha(#000000, 0.6);
+      background: alpha(@bg_dark, 0.6);
     }
     #board-modal {
-      background: #0a1820;
+      background: @bg;
       border: 1px solid @bg_lighter;
       border-radius: 8px;
       padding: 20px 28px;
@@ -708,22 +708,22 @@ const STATIC_CSS = `
       padding: 0;
     }
     #board-modal-msg {
-      color: #90b0c0;
+      color: @fg_dim;
       font-size: 10px;
       letter-spacing: 1px;
     }
 
     /* ── Kanban card ── */
     #kanban-card {
-      background: #1a3248;
+      background: mix(@bg_light, @accent, 0.2);
       border-left: 3px solid @accent;
       border-radius: 3px;
       padding: 6px 8px;
       margin: 3px 4px;
     }
     #kanban-card.done {
-      background: #0c1820;
-      border-left: 2px solid #1e3a48;
+      background: @bg;
+      border-left: 2px solid @bg_lighter;
     }
     #kanban-card-title {
       color: @fg_bright;
@@ -731,15 +731,15 @@ const STATIC_CSS = `
       font-weight: 600;
     }
     #kanban-card.done #kanban-card-title {
-      color: #4a6878;
+      color: @gray;
     }
     #kanban-card-desc {
-      color: #80a8b8;
+      color: @fg_dim;
       font-size: 9px;
       margin-top: 2px;
     }
     #kanban-card.done #kanban-card-desc {
-      color: #304858;
+      color: alpha(@gray, 0.7);
     }
     #kanban-card-badge {
       color: @accent;
@@ -752,8 +752,8 @@ const STATIC_CSS = `
       margin-top: 4px;
     }
     #kanban-card.done #kanban-card-badge {
-      color: #2a4858;
-      background: alpha(#2a4858, 0.12);
+      color: @gray;
+      background: alpha(@gray, 0.12);
     }
 
     /* Move / delete buttons on cards */
@@ -777,23 +777,23 @@ const STATIC_CSS = `
       color: @fg_bright;
     }
     #kanban-delete-btn {
-      background: alpha(#2a1a1a, 0.4);
-      border: 1px solid #4a2a2a;
+      background: alpha(mix(@bg_light, @red, 0.15), 0.4);
+      border: 1px solid alpha(@red, 0.35);
       border-radius: 3px;
       padding: 2px 6px;
       margin: 0 1px;
     }
     #kanban-delete-btn:hover {
-      background: #271616;
-      border-color: #c05050;
+      background: mix(@bg_light, @red, 0.15);
+      border-color: @red;
     }
     #kanban-delete-btn label {
       font-size: 10px;
       font-weight: 700;
-      color: #a05050;
+      color: @red;
     }
     #kanban-delete-btn:hover label {
-      color: #e08080;
+      color: @red_bright;
     }
 
     /* ── Add item button + entry ── */
@@ -812,13 +812,13 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #5a7888;
+      color: @fg_dim;
     }
     #kanban-add-btn:hover label {
-      color: #a0f0ff;
+      color: @accent;
     }
     #kanban-add-entry {
-      background: #1a3248;
+      background: mix(@bg_light, @accent, 0.2);
       color: @fg_bright;
       border: 1px solid @accent;
       border-radius: 3px;
@@ -842,27 +842,27 @@ const STATIC_CSS = `
       min-width: 18px;
     }
     #kanban-card-check-label {
-      color: #90c0d0;
+      color: @fg;
       font-size: 9px;
       font-weight: 500;
     }
     #kanban-card-check-label.checked {
-      color: #4a6878;
+      color: @gray;
     }
     #kanban-card.done #kanban-card-check-icon {
-      color: #2a4858;
+      color: @gray;
     }
     #kanban-card.done #kanban-card-check-label {
-      color: #304858;
+      color: alpha(@gray, 0.7);
     }
 
     /* ══════════════════════════════════════════════
        Card detail modal — GitHub Issue exact clone
        bg: @bg_dark  surface: @bg  border: @bg_lighter
-       text: #e6edf3  muted: @fg_dim  link: @blue_bright
+       text: @fg_bright  muted: @fg_dim  link: @blue_bright
        ══════════════════════════════════════════════ */
     #cd-backdrop {
-      background: alpha(#010409, 0.7);
+      background: alpha(@bg_dark, 0.7);
     }
     #cd-panel {
       background: @bg_dark;
@@ -881,13 +881,13 @@ const STATIC_CSS = `
       margin-bottom: 8px;
     }
     #cd-title {
-      color: #e6edf3;
+      color: @fg_bright;
       font-size: 26px;
       font-weight: 600;
     }
     #cd-title-entry {
       background: @bg_dark;
-      color: #e6edf3;
+      color: @fg_bright;
       border: 1px solid @blue_bright;
       border-radius: 6px;
       padding: 8px 14px;
@@ -911,7 +911,7 @@ const STATIC_CSS = `
       font-size: 18px;
     }
     #cd-close-btn:hover label {
-      color: #e6edf3;
+      color: @fg_bright;
     }
 
     /* Badge row (status + board path) */
@@ -926,15 +926,15 @@ const STATIC_CSS = `
     }
     #cd-status-badge.todo {
       background: @bg_lighter;
-      color: #e6edf3;
+      color: @fg_bright;
     }
     #cd-status-badge.doing {
-      background: alpha(#d29922, 0.2);
-      color: #d29922;
+      background: alpha(@yellow, 0.2);
+      color: @yellow;
     }
     #cd-status-badge.done {
-      background: #238636;
-      color: #e6edf3;
+      background: @green;
+      color: @fg_bright;
     }
     #cd-path-label {
       color: @fg_dim;
@@ -944,7 +944,7 @@ const STATIC_CSS = `
 
     /* Separator line */
     #cd-separator {
-      background: #21262d;
+      background: @bg_lighter;
       min-height: 1px;
       margin-bottom: 16px;
     }
@@ -984,11 +984,11 @@ const STATIC_CSS = `
     }
     textview#cd-desc-view {
       background: @bg_dark;
-      color: #e6edf3;
+      color: @fg_bright;
     }
     textview#cd-desc-view text {
       background: @bg_dark;
-      color: #e6edf3;
+      color: @fg_bright;
       caret-color: @blue_bright;
       font-size: 14px;
     }
@@ -1004,7 +1004,7 @@ const STATIC_CSS = `
     #cd-section-label {
       font-size: 16px;
       font-weight: 600;
-      color: #e6edf3;
+      color: @fg_bright;
     }
 
     /* Progress bar */
@@ -1013,12 +1013,12 @@ const STATIC_CSS = `
       margin-bottom: 8px;
     }
     #cd-progress-fill {
-      background: #238636;
+      background: @green;
       border-radius: 4px 0 0 4px;
       min-height: 8px;
     }
     #cd-progress-empty {
-      background: #21262d;
+      background: @bg_lighter;
       border-radius: 0 4px 4px 0;
       min-height: 8px;
     }
@@ -1046,7 +1046,7 @@ const STATIC_CSS = `
       font-size: 16px;
     }
     .checked {
-      color: #484f58;
+      color: @gray;
     }
 
     /* Remove item button */
@@ -1058,7 +1058,7 @@ const STATIC_CSS = `
       opacity: 0.3;
     }
     #cd-remove-btn:hover {
-      background: alpha(#f85149, 0.1);
+      background: alpha(@red, 0.1);
       opacity: 1;
     }
     #cd-remove-btn label {
@@ -1077,7 +1077,7 @@ const STATIC_CSS = `
     }
     #cd-add-entry:focus {
       background: @bg_dark;
-      color: #e6edf3;
+      color: @fg_bright;
       border-color: @blue_bright;
       box-shadow: 0 0 0 3px alpha(@blue_bright, 0.3);
     }
@@ -1086,16 +1086,16 @@ const STATIC_CSS = `
     #cd-sidebar {
       min-width: 260px;
       padding: 0 0 0 32px;
-      border-left: 1px solid #21262d;
+      border-left: 1px solid @bg_lighter;
     }
     #cd-sidebar-section {
       padding: 16px 0;
-      border-bottom: 1px solid #21262d;
+      border-bottom: 1px solid @bg_lighter;
     }
     #cd-sidebar-header {
       font-size: 12px;
       font-weight: 600;
-      color: #e6edf3;
+      color: @fg_bright;
       margin-bottom: 6px;
     }
     #cd-sidebar-value {
@@ -1107,7 +1107,7 @@ const STATIC_CSS = `
 
     /* Move buttons in sidebar */
     #cd-move-btn {
-      background: #21262d;
+      background: @bg_light;
       border: 1px solid @bg_lighter;
       border-radius: 6px;
       padding: 6px 16px;
@@ -1120,10 +1120,10 @@ const STATIC_CSS = `
     #cd-move-btn label {
       font-size: 12px;
       font-weight: 500;
-      color: #c9d1d9;
+      color: @fg;
     }
     #cd-move-btn:hover label {
-      color: #e6edf3;
+      color: @fg_bright;
     }
 
     /* Sidebar 3-dot menu button */
@@ -1142,7 +1142,7 @@ const STATIC_CSS = `
       font-weight: 700;
     }
     #cd-dots-btn:hover label {
-      color: #e6edf3;
+      color: @fg_bright;
     }
 
     /* Delete button (red, bottom of sidebar) */
@@ -1153,19 +1153,19 @@ const STATIC_CSS = `
       padding: 8px 12px;
     }
     #cd-delete-btn:hover {
-      background: alpha(#f85149, 0.1);
+      background: alpha(@red, 0.1);
     }
     #cd-delete-btn label {
-      color: #f85149;
+      color: @red;
       font-size: 12px;
       font-weight: 500;
     }
     #cd-delete-btn:hover label {
-      color: #ff7b72;
+      color: @red_bright;
     }
 
     #kanban-edit-entry {
-      background: #1a3248;
+      background: mix(@bg_light, @accent, 0.2);
       color: @fg_bright;
       border: 1px solid @accent;
       border-radius: 3px;
@@ -1898,13 +1898,13 @@ const STATIC_CSS = `
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #90d0e0;
+      color: @cyan;
     }
     #power-panel-data {
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 1px;
-      color: #a0e0f0;
+      color: @cyan_bright;
     }
 
     /* Power bar container */
@@ -1921,7 +1921,7 @@ const STATIC_CSS = `
     #power-scale-mark {
       font-size: 9px;
       font-weight: 600;
-      color: #90b0c0;
+      color: @fg_dim;
       letter-spacing: 1px;
     }
 
@@ -1931,7 +1931,7 @@ const STATIC_CSS = `
       min-width: 150px;
       min-height: 200px;
       padding: 4px;
-      background: alpha(#0a1015, 0.5);
+      background: alpha(@bg_dark, 0.5);
     }
     #power-segments {
       background: transparent;
@@ -1948,8 +1948,8 @@ const STATIC_CSS = `
       background: @accent;
     }
     #power-segment.discharge {
-      background: #3a0a0a;
-      border: 1px solid #992222;
+      background: mix(@bg_dark, @red, 0.3);
+      border: 1px solid mix(@bg_dark, @red, 0.6);
       margin: 2px 0;
       min-height: 16px;
     }
@@ -1959,7 +1959,7 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 1px;
-      color: #a0e0f0;
+      color: @cyan_bright;
       margin: 0 6px;
     }
     #power-status-badge {
@@ -1971,6 +1971,21 @@ const STATIC_CSS = `
       margin-left: 6px;
       border: 1px solid transparent;
     }
+    #power-status-badge.charging {
+      background: mix(@bg, @green, 0.25);
+      border-color: @green;
+      color: @green_bright;
+    }
+    #power-status-badge.discharging {
+      background: mix(@bg, @red, 0.25);
+      border-color: @red;
+      color: @red_bright;
+    }
+    #power-status-badge.idle {
+      background: @bg_lighter;
+      border-color: @gray;
+      color: @fg_dim;
+    }
 
     /* Right side indicators */
     #power-indicators {
@@ -1981,7 +1996,7 @@ const STATIC_CSS = `
     #power-indicator {
       font-size: 9px;
       font-weight: 700;
-      color: #90b0c0;
+      color: @fg_dim;
       letter-spacing: 1px;
     }
 
@@ -1989,7 +2004,7 @@ const STATIC_CSS = `
     #power-big-percent {
       font-size: 56px;
       font-weight: 700;
-      color: #e0f4f8;
+      color: @fg_bright;
       letter-spacing: 4px;
       margin-top: 10px;
       margin-bottom: 6px;
@@ -2003,7 +2018,7 @@ const STATIC_CSS = `
     #power-footer-data {
       font-size: 9px;
       font-weight: 600;
-      color: #90b0c0;
+      color: @fg_dim;
       letter-spacing: 2px;
     }
 
@@ -2024,7 +2039,7 @@ const STATIC_CSS = `
       margin-top: 6px;
     }
     #gpu-mode-btn {
-      background: #0a1015;
+      background: @bg_dark;
       border: 1px solid @bg_lighter;
       border-radius: 4px;
       padding: 10px 6px;
@@ -2038,20 +2053,20 @@ const STATIC_CSS = `
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #90b0c0;
+      color: @fg_dim;
     }
     #gpu-mode-btn.active #gpu-mode-label {
-      color: #e0f4f8;
+      color: @fg_bright;
     }
     #gpu-mode-watts {
       font-size: 13px;
       font-weight: 600;
-      color: #8095a8;
+      color: mix(@gray, @fg_dim, 0.5);
       letter-spacing: 0;
       margin-top: 2px;
     }
     #gpu-mode-btn.active #gpu-mode-watts {
-      color: #a0e0f0;
+      color: @cyan_bright;
     }
 
     /* ============ POMODORO PAGE - Holographic Style ============ */
@@ -2067,7 +2082,7 @@ const STATIC_CSS = `
       margin-bottom: 10px;
     }
     #pomo-time-display {
-      color: #f0f2f4;
+      color: @fg_bright;
       font-size: 56px;
       font-weight: 700;
       letter-spacing: 4px;
@@ -2187,7 +2202,7 @@ const STATIC_CSS = `
       min-height: 0;
     }
     #pomo-block-dot-btn:hover #pomo-block-dot {
-      border-color: #c03030;
+      border-color: @red;
     }
     #pomo-block-dot {
       min-width: 10px;
@@ -2197,9 +2212,9 @@ const STATIC_CSS = `
       border: 1px solid @bg_lighter;
     }
     #pomo-block-dot-btn.selected #pomo-block-dot {
-      background: #8b0000;
-      border: 1px solid #c03030;
-      box-shadow: 0 0 6px alpha(#c03030, 0.5);
+      background: shade(@red, 0.6);
+      border: 1px solid @red;
+      box-shadow: 0 0 6px alpha(@red, 0.5);
     }
     #pomo-block-dot-btn.completed #pomo-block-dot {
       background: alpha(@bg_light, 0.2);
@@ -2213,48 +2228,48 @@ const STATIC_CSS = `
     }
     #pomo-start-btn {
       background: @bg;
-      border: 1px solid #2a4a35;
+      border: 1px solid alpha(@green, 0.4);
       border-radius: 4px;
       padding: 10px 14px;
       margin: 0 4px;
     }
     #pomo-start-btn:hover {
-      background: #15281c;
-      border-color: #50c070;
-      box-shadow: inset 0 0 12px alpha(#50c070, 0.3);
+      background: mix(@bg_light, @green, 0.15);
+      border-color: @green_bright;
+      box-shadow: inset 0 0 12px alpha(@green_bright, 0.3);
     }
     #pomo-start-btn label {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #50a060;
+      color: @green_bright;
     }
     #pomo-start-btn:hover label {
-      color: #80e0a0;
+      color: @green_bright;
     }
     #pomo-start-btn.running label {
-      color: #c0a050;
+      color: @yellow;
     }
     #pomo-stop-btn {
       background: @bg;
-      border: 1px solid #4a2a2a;
+      border: 1px solid alpha(@red, 0.35);
       border-radius: 4px;
       padding: 10px 14px;
       margin: 0 4px;
     }
     #pomo-stop-btn:hover {
-      background: #271616;
-      border-color: #c05050;
-      box-shadow: inset 0 0 12px alpha(#c05050, 0.3);
+      background: mix(@bg_light, @red, 0.15);
+      border-color: @red;
+      box-shadow: inset 0 0 12px alpha(@red, 0.3);
     }
     #pomo-stop-btn label {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #a05050;
+      color: @red;
     }
     #pomo-stop-btn:hover label {
-      color: #e08080;
+      color: @red_bright;
     }
 
     /* Maintain focus row */
@@ -2293,7 +2308,7 @@ const STATIC_CSS = `
       margin-bottom: 0;
     }
     #eq-tab-btn {
-      background: #0a1018;
+      background: @bg_dark;
       border: 1px solid @bg_lighter;
       border-bottom: none;
       border-radius: 4px 4px 0 0;
@@ -2301,7 +2316,7 @@ const STATIC_CSS = `
       margin: 0 1px;
     }
     #eq-tab-btn:hover {
-      background: #152028;
+      background: @bg_light;
     }
     #eq-tab-btn.active {
       background: @bg;
@@ -2564,7 +2579,7 @@ const STATIC_CSS = `
       min-width: 0;
       min-height: 14px;
       border-radius: 1px;
-      border: 1px solid rgba(4, 6, 8, 0.85);
+      border: 1px solid alpha(@bg_dark, 0.85);
       padding: 0;
       margin: 0;
     }
@@ -3606,21 +3621,21 @@ const STATIC_CSS = `
     }
     #task-popup-panel {
       background: alpha(@bg, 0.95);
-      border: 2px solid #d4a847;
+      border: 2px solid @yellow;
       border-radius: 8px;
       padding: 32px 44px;
-      box-shadow: 0 0 40px alpha(#d4a847, 0.25),
-                  0 0 80px alpha(#d4a847, 0.08);
+      box-shadow: 0 0 40px alpha(@yellow, 0.25),
+                  0 0 80px alpha(@yellow, 0.08);
     }
     #task-popup-label {
-      color: #d4a847;
+      color: @yellow;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 4px;
       margin-bottom: 12px;
     }
     #task-popup-title {
-      color: #f0e6c8;
+      color: @fg_bright;
       font-size: 28px;
       font-weight: 700;
       letter-spacing: 2px;
