@@ -7,8 +7,8 @@
 // or the active handle icon).
 // Never takes the keyboard (so the planner's text inputs can't be typed in yet).
 //
-//   ags request edge-page <pomodoro|planner>     open (no arg closes)
-//   ags request edge-toggle [pomodoro|planner]   open, or close if it's out
+//   ags request edge-page <pomodoro|planner|power>   open (no arg closes)
+//   ags request edge-toggle [pomodoro|planner|power] open, or close if it's out
 //                                                (no arg: planner / close)
 // Both act on the focused monitor.
 
@@ -25,11 +25,12 @@ import { px, U, withU } from "../scale"
 import { buildPage } from "./Sidebar"
 
 // Pages the tab offers, in handle order, and the one it opens on.
-export const EDGE_PAGES = ["pomodoro", "planner"]
+export const EDGE_PAGES = ["pomodoro", "planner", "power"]
 export const DEFAULT_EDGE_PAGE = "planner"
 const ICONS: Record<string, string> = {
   pomodoro: "\u{f051b}",  // timer
   planner: "\u{f00c5}",   // calendar-check
+  power: "\u{f0e7}",      // lightning bolt
 }
 
 function colorOf(w: Gtk.Widget, name: string, alpha = 1): [number, number, number, number] {
