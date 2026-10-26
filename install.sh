@@ -49,6 +49,7 @@ COMPONENTS=(
     "wallpapers|n|Wallpaper pack: download ~2 GB of images/videos from the GitHub release"
     "clojure|n|Clojure toolchain: JDK, clojure, babashka, clojure-lsp"
     "gpu-debug|n|GPU & JVM debugging: Nsight Compute/Systems, perf+hotspot, heaptrack, async-profiler, tracy, visualvm"
+    "tablet|n|OpenTabletDriver: Wacom tablet support"
     "nvidia|n|NVIDIA: VA-API driver (libva-nvidia-driver)"
     "firefox|n|Firefox: browser + custom CSS / Sidebery theme"
     "zen|y|Zen Browser: Firefox-based browser with vertical tabs + workspaces (AUR)"
@@ -443,7 +444,7 @@ mod_symlinks() {
     local config_dirs=(
         ags fish foot gtk-3.0 gtk-4.0 hypr mpv nvim swappy
         systemd themes tmux-powerline wireplumber zathura
-        hyperdocs
+        hyperdocs OpenTabletDriver
     )
 
     info "Config directories"
@@ -996,6 +997,7 @@ run_module() {
         theme)     mod_theme ;;
         firefox)   mod_firefox ;;
         ollama)    mod_ollama ;;
+        tablet)    header "Tablet"; skip "Handled by symlinked configs (OpenTabletDriver)" ;;
         nvim)      mod_nvim ;;
         tmux)      mod_tmux ;;
         shell)     mod_shell ;;
@@ -1064,6 +1066,7 @@ if [[ $# -eq 0 ]]; then
     chosen tmux    && OPTIONAL_MODULES+=(tmux)
     chosen firefox && OPTIONAL_MODULES+=(firefox)
     chosen ollama  && OPTIONAL_MODULES+=(ollama)
+    chosen tablet  && OPTIONAL_MODULES+=(tablet)
 
     ALL_MODULES=("${CORE_MODULES[@]}" "${OPTIONAL_MODULES[@]}" doctor)
     TOTAL_MODULES=${#ALL_MODULES[@]}
