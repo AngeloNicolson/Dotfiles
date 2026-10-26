@@ -17,7 +17,7 @@ return {
 			context_window = 4096,
 			throttle = 800,
 			debounce = 300,
-			request_timeout = 4,
+			request_timeout = 10, -- first request after idle cold-loads the model (~3 s)
 			notify = "warn",
 			provider_options = {
 				openai_fim_compatible = {
@@ -31,7 +31,7 @@ return {
 			-- ghost text on by default for the languages the engine is written in
 			virtualtext = {
 				auto_trigger_ft = { "c", "cpp", "cuda", "glsl", "lua", "python", "clojure" },
-				show_on_completion_menu = false,
+				show_on_completion_menu = true, -- clangd keeps the cmp menu open a lot; still show ghost text
 				keymap = {
 					-- Alt keys: nothing collides with cmp's <Tab>/<CR>/<C-n>/<C-p>
 					accept = "<A-a>",
@@ -44,6 +44,34 @@ return {
 			},
 			cmp = { enable_auto_complete = false }, -- cmp source is manual: <A-y>
 		})
+		-- The plugin only arms auto-trigger from a FileType autocmd it registers in
+		-- setup(); buffers opened before this lazy load (the file nvim started
+		-- with) never see that event, so arm them here.
+		local cfg = require("minuet").config.virtualtext
+		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+			if vim.api.nvim_buf_is_loaded(buf)
+				and vim.tbl_contains(cfg.auto_trigger_ft, vim.bo[buf].filetype)
+				and not vim.tbl_contains(cfg.auto_trigger_ignore_ft or {}, vim.bo[buf].filetype) then
+				vim.b[buf].minuet_virtual_text_auto_trigger = true
+			end
+		end
+
+		-- Keep the FIM model resident. Ollama unloads after 5 min idle and the
+		-- OpenAI-style endpoint ignores keep_alive, so poke the native API (no
+		-- prompt = load only) when entering insert mode, at most every 20 min.
+		local last_warm = 0
+		vim.api.nvim_create_autocmd("InsertEnter", {
+			group = vim.api.nvim_create_augroup("minuet-keep-warm", { clear = true }),
+			callback = function()
+				if not vim.tbl_contains(cfg.auto_trigger_ft, vim.bo.filetype) then return end
+				local now = os.time()
+				if now - last_warm < 1200 then return end
+				last_warm = now
+				vim.system({ "curl", "-s", "-m", "30", "http://localhost:11434/api/generate",
+					"-d", '{"model":"qwen2.5-coder:7b","keep_alive":"1h"}' }, { detach = false })
+			end,
+		})
+
 		-- Manual cmp trigger for the minuet source (see plugins/autocomplete.lua sources)
 		local ok, cmp = pcall(require, "cmp")
 		if ok then
