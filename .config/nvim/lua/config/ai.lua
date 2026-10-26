@@ -149,4 +149,38 @@ function M.setup()
 	end, { desc = "Select local AI model" })
 end
 
+-- Explain the visual selection, or in normal mode the function the cursor is
+-- in (treesitter walks up to the enclosing definition and selects it first).
+-- Runs the "Explain" prompt from codecompanion's prompt library.
+local FUNCTION_NODES = {
+	function_definition = true, function_declaration = true, method_definition = true,
+	method_declaration = true, function_item = true, lambda_expression = true,
+	arrow_function = true, function_expression = true, list_lit = true, -- clojure defn
+}
+function M.explain(opts)
+	opts = opts or {}
+	if opts.visual then
+		vim.cmd("'<,'>CodeCompanion /explain")
+		return
+	end
+	local ok, node = pcall(vim.treesitter.get_node)
+	if not ok or not node then
+		vim.notify("AI explain: no treesitter node under the cursor", vim.log.levels.WARN)
+		return
+	end
+	while node and not FUNCTION_NODES[node:type()] do
+		node = node:parent()
+	end
+	if not node then
+		vim.notify("AI explain: not inside a function — select the code and try again", vim.log.levels.WARN)
+		return
+	end
+	local sr, sc, er, ec = node:range()
+	vim.api.nvim_win_set_cursor(0, { sr + 1, sc })
+	vim.cmd("normal! v")
+	vim.api.nvim_win_set_cursor(0, { er + 1, math.max(ec - 1, 0) })
+	vim.cmd("normal! \27") -- leave visual so '< '> marks are set
+	vim.cmd("'<,'>CodeCompanion /explain")
+end
+
 return M

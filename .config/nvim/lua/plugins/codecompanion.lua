@@ -22,6 +22,8 @@ return {
 		{ "<leader>ai", ":CodeCompanion ", desc = "AI inline (selection)", mode = "v" },
 		{ "<leader>ag", "<cmd>CodeCompanion /gpu<cr>", desc = "AI debug GPU error", mode = { "n", "v" } },
 		{ "ga", "<cmd>CodeCompanionChat Add<cr>", desc = "Add selection to AI chat", mode = "v" },
+		{ "<leader>ae", function() require("config.ai").explain({ visual = false }) end, desc = "AI explain function under cursor", mode = "n" },
+		{ "<leader>ae", function() require("config.ai").explain({ visual = true }) end, desc = "AI explain selection", mode = "v" },
 	},
 	config = function()
 		local function ollama(model_default)
@@ -117,8 +119,8 @@ user to run `/expert engine <question>` so the retrieved sources appear in the c
 				},
 				["Explain"] = {
 					interaction = "chat",
-					description = "Explain how code works",
-					opts = { modes = { "v" }, auto_submit = true },
+					description = "Explain how code works (<leader>ae: selection, or the function under the cursor)",
+					opts = { modes = { "v" }, auto_submit = true, short_name = "explain", is_slash_cmd = true },
 					prompts = {
 						{ role = "system", content = "You are an expert programmer. Explain the selected code clearly and concisely." },
 						{
