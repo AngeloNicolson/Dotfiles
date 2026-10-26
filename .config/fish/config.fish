@@ -35,8 +35,8 @@ end
 set -gx EDITOR nvim
 set -gx VISUAL nvim
 
-set -x JAVA_HOME /opt/android-studio/jbr
-set -x PATH $JAVA_HOME/bin $PATH
+# System JDK (archlinux-java default). Android Studio uses its own bundled JBR regardless.
+test -d /usr/lib/jvm/default; and set -gx JAVA_HOME (readlink -f /usr/lib/jvm/default)
 
 # Go
 set -x GOPATH $HOME/.local/share/go

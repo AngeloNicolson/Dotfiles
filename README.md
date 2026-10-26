@@ -10,7 +10,7 @@ Personal configuration files for a Wayland desktop built on Hyprland, AGS, Neovi
 - **Fish + Starship** - Shell and prompt
 - **Foot** - Terminal emulator
 - **Tmux** - Terminal multiplexer with powerline
-- **Theme System** - Unified colors across all apps (Mech, Famicom, E-Ink)
+- **Theme System** - Unified colors across all apps (Mech, Famicom, E-Ink, Indy, Miasma, 43PR)
 - **Firefox** - Custom CSS with auto-hiding navbar and Sidebery integration
 - **Ollama** - Local AI/LLM server integrated with Neovim
 
@@ -49,15 +49,15 @@ hyprlock is missing.
 
   Optional components (Enter keeps the default shown; saved to install.conf)
 
-    Themed look: adw-gtk3 GTK theme, Tela icons, Bibata cursor ... [Y/n]
-    Idle management: dim after 2.5 min, screen off after 5 min (hypridle) [Y/n]
+    Themed look: adw-gtk3 GTK theme + Bibata cursor ... [Y/n]
+    Idle management: lock + dim after 7 min, screen off after 77 min (hypridle) [Y/n]
     Lock screen: hyprlock on lid-close / power key (skip if you never lock) [y/N]
     Neovim: editor with LSP/Treesitter, plugins pinned by lazy-lock.json [Y/n]
     Tmux: multiplexer with powerline + tpm plugins [Y/n]
     ...
     Wallpaper pack: download ~2 GB of images/videos from the GitHub release [y/N]
-    NVIDIA: VA-API driver + CUDA build of ollama [y/N]
-    Ollama: local LLM server (~18 GB model download) [y/N]
+    NVIDIA: VA-API driver (libva-nvidia-driver) [y/N]
+    Ollama: enable the service + pull the model (ollama itself is a manual install) [y/N]
 ```
 
 Each component maps to `packages/<distro>/<id>.txt` (the required set is
@@ -76,9 +76,9 @@ locker, and `hypridle` only starts if installed.
 | `scripts` | Makes all scripts executable |
 | `templates` | Copies `.example` templates for machine-specific configs |
 | `dirs` | Creates supplementary dirs (PipeWire, shaders) |
-| `services` | Enables systemd user services |
+| `services` | Enables the user units listed in `install.sh` (`bluetooth-autoconnect.service`, `monolith-reindex.timer`) — not every unit in the repo |
 | `ags` | Runs `npm install`, clears compiled bundle |
-| `theme` | Applies default theme (mech) |
+| `theme` | Applies the default theme (mech) via `ags request theme` when AGS is running, plus dunst via `apply-theme.sh` |
 | `wallpapers` | Downloads wallpapers from the `wallpapers-v1` GitHub release (skips existing); generates a default if none |
 | `nvim` | `Lazy! restore` — installs the exact plugin versions in `lazy-lock.json` |
 | `tmux` | Clones tpm and installs tmux plugins |
@@ -86,7 +86,6 @@ locker, and `hypridle` only starts if installed.
 | `hostconfig` | Runs `gen-host-config.sh` (monitors + scale) when inside a Hyprland session |
 | `doctor` | Read-only audit: binaries, min versions, fonts, themes, templates, config parse, symlinks (exit 1 on problems) |
 | `firefox` | Symlinks chrome/ + user.js into Firefox profile |
-| `rnote` | Loads rnote dconf settings (extras) |
 | `ollama` | Enables service, pulls AI model |
 | `lock` | Regenerates `packages/arch/versions.lock` from the running system |
 
@@ -134,11 +133,9 @@ Hyprland ≥ 0.55 reads `hypr/hyprland.lua` (the hyprlang `.conf` format is remo
 in 0.57). The Lua tree mirrors the old split — `hyprland.lua`, `animations.lua`,
 `keybindings.lua`, `rules.lua`, `theme.lua`, `lib.lua` (helpers), `custom/*.lua`
 — and is validated by `Hyprland --verify-config` in CI and `install.sh doctor`.
-The `.conf` files are kept only as a fallback: delete/rename `hyprland.lua` and
-Hyprland uses `hyprland.conf` again.
 
 Runtime scripts talk to Hyprland through `hypr/scripts/hypr-compat.sh`
-(`hypr_set`, `hypr_monitor`, `hypr_dispatch`) / `hypr_compat.py` and AGS's
+(`hypr_set`, `hypr_monitor`, `hypr_dispatch`, `hypr_eval`) and AGS's
 `compositor.ts` (`hyprSetOption`, `hyprDispatch`) — under Lua `hyprctl keyword`
 no longer exists and `hyprctl dispatch` takes `hl.dsp.*` expressions, so these
 helpers pick the right dialect for the running session.
@@ -146,13 +143,23 @@ helpers pick the right dialect for the running session.
 ### How sizing stays consistent across screens
 
 Everything is authored against a 2048×1280 *logical* reference (2560×1600 @ 1.25)
-and scales from there:
+and scales from there. The goal: on any machine and screen the bar, widgets and
+overlays occupy the *same fraction* of the display. One number drives it —
+`U = min(logical width, logical height) / 1280`, so `U = 1` here, ≈0.84 on a
+1080p panel at scale 1, ≈1.69 on 4K at scale 1 — and nothing machine-specific
+(monitor names, GPU env, backlight device) lives in a tracked file.
 
-- **Hyprland** — `monitor = ,preferred,auto,1` is the universal fallback;
-  `gen-host-config.sh` picks a scale from the panel's physical DPI.
-- **AGS** — `scale.ts` computes one unit `U` from the focused monitor's logical
-  short side and scales the whole stylesheet and JS-sized widgets (see
-  `PORTABILITY_PLAN.md`).
+- **Hyprland** — `hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })`
+  is the universal fallback; `gen-host-config.sh` picks a scale from the panel's
+  physical DPI and writes the gitignored `custom/monitors.lua`; workspace → monitor
+  pins, GPU env and autostart that depend on hardware live in `custom/*.lua`.
+  Scripts detect the laptop panel / external by connector class, never by name.
+- **AGS** — `scale.ts` computes `U` from the focused monitor's logical short
+  side and scales the whole generated stylesheet with one regex pass (`px` →
+  `px·U`) plus the JS-sized widgets via `px()`; windows on a second monitor with
+  a different factor get a scoped copy of the px rules (`scopedCss`). Overlays
+  open on the focused monitor, and GDK monitors are matched to Hyprland ones by
+  geometry rather than index.
 - **foot** — `dpi-aware=no`, sizes in logical points so text tracks the compositor
   scale; bump per machine in `foot/host.ini`.
 - **GTK** — no hardcoded `gtk-xft-dpi`; cursor theme/size come from one place
@@ -176,10 +183,8 @@ packages/
     core.txt
     nvidia.txt
     ollama.txt
-    tablet.txt
     firefox.txt
     zen.txt
-    extras.txt
   ubuntu/        # Add lists for other distros
     core.txt
     ...
@@ -199,31 +204,25 @@ are pinned by the tracked `nvim/lazy-lock.json` and `packages/arch/versions.lock
 
 ## Theme system
 
-Three themes that synchronize colors across Foot, GTK, Hyprland, and Neovim:
+Themes in `~/.config/themes/*.json` synchronize colors across the AGS shell,
+Foot, GTK, Hyprland (gaps/borders/blur/opacity via `hypr/custom/theme.lua`),
+Firefox, dunst and Neovim:
 
 - **Mech** — warm dark theme (gruvbox-inspired)
 - **Famicom** — cream light theme (retro)
 - **E-Ink** — pure monochrome
+- **Indy**, **Miasma**, **43PR** — see each JSON's `_source` note
+
+Switch from the AGS CORE page, the `SUPER+W` carousel, or the shell:
 
 ```bash
-~/.config/themes/apply-theme.sh mech
-~/.config/themes/apply-theme.sh famicom
-~/.config/themes/apply-theme.sh e-ink
+ags request theme mech
 ```
 
-Neovim syncs on startup via `~/.config/themes/.current`. Reload in Neovim with `:ReloadSystemTheme`.
-
-## Layout manager
-
-Custom window layout system for Hyprland with predefined workspace arrangements:
-
-- **Visual designer** — create layouts with a GTK GUI
-- **Layout browser** — browse and preview saved layouts
-- **Apply** — snap windows into a saved layout
-
-Layouts: Study-Code, WebBrowsing, Blender, Math, Pure-Reading, and more.
-
-See [ENVIRONMENT_LOADING.md](ENVIRONMENT_LOADING.md) for details.
+`ags/theme.ts` applies everything in-process and then runs
+`~/.config/themes/apply-theme.sh <name>`, which only restyles dunst and pokes
+running apps (foot `SIGUSR1`, nvim `:ReloadSystemTheme` over its server socket,
+`SIGWINCH` to the TUIs). Neovim also syncs on startup via `~/.config/themes/.current`.
 
 ## AI coding
 
@@ -239,13 +238,15 @@ Requires a GPU with enough VRAM for the configured model. Model and VRAM require
 
 | Key | Action |
 |-----|--------|
-| `Super + Enter` | Terminal (foot) |
-| `Super + A` | App launcher |
-| `Super + Q` | Close window |
-| `Super + F` | Firefox |
-| `Super + T` | Kitty |
+| `Right Alt + Enter` | Terminal (foot) |
+| `Super + Space` | App launcher (rofi) |
+| `Super + Ctrl + X` | Close window |
+| `Right Alt + F` | Firefox |
+| `Super + /` | Keybind cheat sheet |
 
-See `~/.config/hypr/keybindings.lua` for the full list.
+`SUPER` = focus & navigate, `SUPER+SHIFT` = move, `SUPER+CTRL` = window
+properties, `Right Alt` = app launching. See `~/.config/hypr/keybindings.lua`
+for the full list.
 
 ## Firefox
 
@@ -256,10 +257,68 @@ To set up Sidebery:
 2. Import settings from `.mozilla/firefox/Sidebery-Data.json`
 3. Restart Firefox
 
-## Wacom tablet
-
-See [README_WACOM.md](README_WACOM.md) for tablet setup with OpenTabletDriver.
-
 ## License
 
 MIT
+
+## GPU & JVM debugging
+
+Profiling/debugging toolchain for the C++/Vulkan engine (Kondor), CUDA, and the Clojure/XTDB side.
+
+**Install** (component `gpu-debug`, off by default):
+
+```sh
+sudo pacman -S --needed $(sed 's/#.*//' packages/arch/gpu-debug.txt | grep -vE '^\s*$' | grep -vE '^(hotspot|async-profiler|tracy)$')
+yay -S --needed hotspot async-profiler tracy      # AUR
+```
+
+**System files** (root-owned, staged under `system/`, see `system/README.md`): `etc/modprobe.d/nvidia-profiling.conf` lets non-root use GPU counters (`NVreg_RestrictProfilingToAdminUsers=0`, needs `sudo mkinitcpio -P` + reboot); `etc/sysctl.d/99-perf.conf` lowers `kernel.perf_event_paranoid` to -1 and `kptr_restrict` to 0 (`sudo sysctl --system`).
+
+**Shell:** `JAVA_HOME` now follows `/usr/lib/jvm/default` (`archlinux-java`), not Android Studio's JBR. Android Studio keeps using its bundled JBR; Gradle honours `JAVA_HOME`.
+
+**Kondor (C++) presets** — `CMakePresets.json` in the repo, all building to `build/<preset>/` so nvim cmake-tools / nvim-dap find `build/Debug/Kondor`:
+
+```sh
+cmake --preset Debug && cmake --build --preset Debug      # clangd + dap target (compile_commands.json -> build/Debug/)
+cmake --preset RelWithDebInfo && cmake --build --preset RelWithDebInfo   # profile this one
+cmake --preset ASan && cmake --build --preset ASan && ./build/ASan/Kondor   # address + UB sanitizer
+cmake --preset TSan && cmake --build --preset TSan        # data races
+```
+
+`.clangd` reads `build/Debug`, `.clang-tidy` runs a modest bugprone/performance/modernize set. For non-CMake builds: `bear -- make` produces `compile_commands.json`.
+
+**Vulkan validation layers** (settings dir created separately under `~/.config/vulkan/kondor-debug`):
+
+```sh
+VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation VK_LAYER_SETTINGS_PATH=~/.config/vulkan/kondor-debug ./build/Debug/Kondor
+```
+
+**Frame capture:** `renderdoccmd capture ./build/Debug/Kondor` or launch `qrenderdoc` and inject; `ngfx --activity="Frame Debugger" --exe ./build/RelWithDebInfo/Kondor` for Nsight Graphics (`nsight-graphics` GUI if installed).
+
+**CPU / memory:**
+
+```sh
+heaptrack ./build/RelWithDebInfo/Kondor && heaptrack_gui heaptrack.Kondor.*.zst
+perf record -g --call-graph dwarf ./build/RelWithDebInfo/Kondor && hotspot perf.data
+```
+
+**CUDA:**
+
+```sh
+compute-sanitizer --tool memcheck ./app          # also: racecheck, initcheck, synccheck
+ncu --set full -o profile ./app                  # kernel profiler (needs the modprobe option above)
+nsys profile -o timeline --trace=cuda,nvtx ./app # system timeline; open with nsys-ui
+ASAN_OPTIONS=protect_shadow_gap=0 ./asan-build   # ASan + CUDA runtime: CUDA maps into the shadow gap otherwise
+```
+
+**Clojure / JVM** (aliases in `~/.clojure/deps.edn`: `:nrepl`, `:prof`, `:jfr`, `:portal`, `:test`):
+
+```sh
+cd ~/projects/personal/arcadia/spike0
+clj -M:xtdb:nrepl            # writes .nrepl-port; Conjure (nvim) connects automatically
+clj -M:xtdb:nrepl:prof       # + async-profiler and NativeMemoryTracking
+clj -M:xtdb:jfr -m spike0.core   # flight recording -> recording.jfr; open in visualvm or `jfr print`
+clj -X:test                  # cognitect test-runner
+```
+
+In the REPL with `:prof`: `(require '[clj-async-profiler.core :as prof]) (prof/profile (dotimes [_ 1e6] (work))) (prof/serve-ui 8080)` then open http://localhost:8080 for the flame graph. From a shell, `jcmd <pid> GC.heap_info`, `jcmd <pid> VM.native_memory summary` (needs the `:prof` alias's `-XX:NativeMemoryTracking=summary`), `jcmd <pid> JFR.start settings=profile duration=60s filename=rec.jfr`, or attach `visualvm` to the running JVM. `(require '[portal.api :as p]) (p/open) (add-tap #'p/submit)` with `:portal` for data inspection.

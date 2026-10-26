@@ -1,0 +1,12 @@
+# GPU & JVM debugging / profiling (see README "GPU & JVM debugging")
+# Repo (extra)
+nsight-compute        # ncu: CUDA kernel profiler (needs NVreg_RestrictProfilingToAdminUsers=0, see system/)
+nsight-systems        # nsys: system-wide CPU/GPU timeline
+heaptrack             # heap allocation profiler + GUI
+perf                  # Linux perf (needs kernel.perf_event_paranoid lowered, see system/)
+bear                  # compile_commands.json for non-CMake builds
+visualvm              # JVM heap/CPU/JFR viewer
+# AUR (yay builds these; not in versions.lock until './install.sh lock' is run on a machine that has them)
+hotspot               # perf GUI (flame graphs, off-CPU)
+async-profiler        # JVM sampling profiler (clj-async-profiler ships its own copy; this is the CLI/agent)
+tracy                 # frame profiler for the C++ engine (client header + Tracy-Profiler GUI)

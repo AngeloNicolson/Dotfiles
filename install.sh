@@ -48,6 +48,7 @@ COMPONENTS=(
     "display|y|Display controls: colour temperature/gamma (wl-gammarelay), shaders (hyprshade)"
     "wallpapers|n|Wallpaper pack: download ~2 GB of images/videos from the GitHub release"
     "clojure|n|Clojure toolchain: JDK, clojure, babashka, clojure-lsp"
+    "gpu-debug|n|GPU & JVM debugging: Nsight Compute/Systems, perf+hotspot, heaptrack, async-profiler, tracy, visualvm"
     "nvidia|n|NVIDIA: VA-API driver (libva-nvidia-driver)"
     "firefox|n|Firefox: browser + custom CSS / Sidebery theme"
     "zen|y|Zen Browser: Firefox-based browser with vertical tabs + workspaces (AUR)"
