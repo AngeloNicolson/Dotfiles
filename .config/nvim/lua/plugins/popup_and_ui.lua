@@ -40,6 +40,17 @@ return {
 					enabled = true,
 					view = "notify",
 				},
+				lsp = {
+					-- noice auto-opens signature help on every "(" and ","; with clangd
+					-- that is a full doc comment fighting the completion menu. Manual
+					-- only: <C-k> (insert or normal) shows it, capped in height.
+					signature = {
+						enabled = true,
+						auto_open = { enabled = false },
+						opts = { size = { max_height = 12, max_width = 100 } },
+					},
+					hover = { opts = { size = { max_height = 20, max_width = 100 } } },
+				},
 				-- Views for cmdline popup and popup menu
 				views = {
 					-- Cmdline popup configuration

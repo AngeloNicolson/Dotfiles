@@ -39,3 +39,5 @@ vim.opt.isfname:append("@-@")
 -- Performance tuning
 vim.opt.updatetime = 50
 
+-- Completion menu: at most 12 rows, so it cannot cover the whole window
+vim.o.pumheight = 12
