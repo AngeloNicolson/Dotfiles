@@ -1,29 +1,29 @@
 {
   "name": "halo",
   "displayName": "Halo",
-  "_source": "Halo / Xbox green: Xbox brand green #107C10 and Xbox One accent #9BF00B on deep green-black, warm off-white text, Cortana blue, visor gold, UNSC red. Hand-made palette, contrast checked (fg 16.2:1, fg_dim 8.7:1 on bg).",
+  "_source": "Original 2001 Xbox: matte black console, translucent jewel green (the 2026 Series X25 'OG Green' revisits it), Duke controller ABXY for red/blue/yellow.",
   "colors": {
-    "bg": "#0A0F0B",
-    "bg_dark": "#0E1410",
-    "bg_light": "#15201A",
-    "bg_lighter": "#1F2E25",
-    "fg": "#E6EDE4",
-    "fg_dim": "#9FB3A3",
-    "fg_bright": "#F4F8F2",
-    "accent": "#9BF00B",
-    "red": "#D7432F",
-    "red_bright": "#F06A57",
-    "green": "#107C10",
-    "green_bright": "#9BF00B",
-    "yellow": "#E0A526",
-    "yellow_bright": "#F2C55C",
-    "blue": "#4FA8D8",
-    "blue_bright": "#7CC6EE",
-    "magenta": "#9B7FD4",
-    "magenta_bright": "#B9A3E6",
-    "cyan": "#5CD6C0",
-    "cyan_bright": "#8AE8D8",
-    "gray": "#4F6358"
+    "bg": "#060906",
+    "bg_dark": "#030503",
+    "bg_light": "#0F1A0F",
+    "bg_lighter": "#19291A",
+    "fg": "#E4ECE0",
+    "fg_dim": "#93AB90",
+    "fg_bright": "#F3F7F0",
+    "accent": "#6FBE44",
+    "red": "#CF3A2B",
+    "red_bright": "#EE6A5C",
+    "green": "#3E9A2E",
+    "green_bright": "#A4E868",
+    "yellow": "#E9C23A",
+    "yellow_bright": "#F5D86B",
+    "blue": "#3F86D6",
+    "blue_bright": "#74ABEB",
+    "magenta": "#A57BD1",
+    "magenta_bright": "#C19FE4",
+    "cyan": "#5CC9AE",
+    "cyan_bright": "#8EDFCB",
+    "gray": "#4C5E4A"
   },
   "gtk": {
     "theme": "Adwaita",
@@ -41,7 +41,14 @@
     "opacity": 0.9,
     "terminalAlpha": 0.95,
     "dimInactive": 0,
-    "blur": { "size": 6, "passes": 2, "vibrancy": 0.2 },
-    "shadow": { "range": 8, "renderPower": 3 }
+    "blur": {
+      "size": 6,
+      "passes": 2,
+      "vibrancy": 0.2
+    },
+    "shadow": {
+      "range": 8,
+      "renderPower": 3
+    }
   }
 }
