@@ -78,7 +78,7 @@ export function scanWallpapers(): Wallpaper[] {
 }
 
 // "01-earth" → "EARTH", "jovian-moons" → "JOVIAN MOONS"
-export function prettyName(s: string): string {
+function prettyName(s: string): string {
   return s.replace(/^\d+[-_. ]+/, "").replace(/[-_]+/g, " ").toUpperCase()
 }
 

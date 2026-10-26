@@ -4,7 +4,6 @@ import caps from "../capabilities"
 import {
   setSyncConnected,
   setSyncPeerCount,
-  setSyncPeers,
   setPendingChangeRequests,
 } from "../state"
 
@@ -26,12 +25,13 @@ let pendingCRs = 0
 // Track last synced file for footer display
 export const [lastSyncedFile, setLastSyncedFile] = createState("")
 export const [lastSyncTime, setLastSyncTime] = createState("")
+// Only the setter is used (nothing reads the state yet); keep the pair so a
+// consumer can import daemonRunning later without re-plumbing.
 export const [daemonRunning, setDaemonRunning] = createState(false)
 
 function updateState() {
   setSyncConnected(connectedPeers.size > 0)
   setSyncPeerCount(connectedPeers.size)
-  setSyncPeers(Array.from(connectedPeers))
   setPendingChangeRequests(pendingCRs)
 }
 
@@ -115,14 +115,3 @@ export async function getPeers(): Promise<any> {
   return plansyncCmd("peers")
 }
 
-export async function getStatus(): Promise<any> {
-  return plansyncCmd("status")
-}
-
-export async function approveChangeRequest(id: string): Promise<any> {
-  return plansyncCmd(`approve ${id}`)
-}
-
-export async function rejectChangeRequest(id: string): Promise<any> {
-  return plansyncCmd(`reject ${id}`)
-}

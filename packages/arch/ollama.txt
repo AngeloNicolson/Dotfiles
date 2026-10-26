@@ -1,2 +1,5 @@
-# Ollama AI (local LLMs)
-ollama
+# Ollama AI (local LLMs) — no package here on purpose.
+# ollama is installed by hand from the upstream script to /usr/local/bin/ollama
+# (`curl -fsSL https://ollama.com/install.sh | sh`), which also sets up the
+# system service. `./install.sh ollama` only enables that service and pulls
+# the model; it warns if the binary is missing.

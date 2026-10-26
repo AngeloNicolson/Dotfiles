@@ -51,31 +51,13 @@ function computeU(): number {
 // Current scale factor. Mutable: updated by recomputeScale().
 export let U = computeU()
 
-type Listener = () => void
-const listeners = new Set<Listener>()
-
-// Subscribe to scale changes (e.g. to re-render a widget that sizes itself in JS
-// rather than CSS). Returns an unsubscribe function.
-export function onScaleChange(cb: Listener): () => void {
-  listeners.add(cb)
-  return () => {
-    listeners.delete(cb)
-  }
-}
-
-// Recompute U from the connected monitors. Returns true if it changed (and
-// fires listeners). Call this on monitor add/remove (focus changes are harmless).
+// Recompute U from the connected monitors. Returns true if it changed.
+// Call this on monitor add/remove (focus changes are harmless); the caller
+// re-applies the CSS and refreshWindowScales() on true.
 export function recomputeScale(): boolean {
   const next = computeU()
   if (Math.abs(next - U) < 0.001) return false
   U = next
-  listeners.forEach((cb) => {
-    try {
-      cb()
-    } catch (e) {
-      print(`scale: listener error (${e})`)
-    }
-  })
   return true
 }
 
@@ -85,7 +67,7 @@ export function px(n: number): number {
 }
 
 // Same as px() but as a CSS string, e.g. pxStr(48) -> "48px" (at U=1).
-export function pxStr(n: number): string {
+function pxStr(n: number): string {
   return `${px(n)}px`
 }
 
@@ -98,7 +80,7 @@ export function uFor(mon: MonitorInfo): number {
 }
 
 // Window class for a factor, e.g. 1.6875 → "ui-u169".
-export function scaleClass(u: number): string {
+function scaleClass(u: number): string {
   return `ui-u${Math.round(u * 100)}`
 }
 

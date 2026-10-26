@@ -1,3 +1,3 @@
-# NVIDIA drivers and hardware acceleration
+# NVIDIA hardware acceleration (VA-API). The CUDA build of ollama comes with
+# the upstream installer (see ollama.txt), not from a package.
 libva-nvidia-driver
-ollama-cuda

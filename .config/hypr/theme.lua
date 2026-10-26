@@ -12,8 +12,8 @@ local function apply_theme_execs()
   hl.exec_cmd("gsettings set org.gnome.desktop.interface cursor-theme 'Bibata-Modern-Ice'")
   hl.exec_cmd("gsettings set org.gnome.desktop.interface cursor-size 20")
 
-  hl.exec_cmd("gsettings set org.gnome.desktop.interface icon-theme 'Tela-circle-black'")
-  hl.exec_cmd("gsettings set org.gnome.desktop.interface gtk-theme 'Gruvbox-Retro'")
+  -- gtk-theme / icon-theme are set by the AGS theme switcher (ags/theme.ts)
+  -- from the active theme's "gtk" block; GTK_THEME=adw-gtk3-dark is in hyprland.lua.
   hl.exec_cmd("gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'")
 
   -- Fonts
@@ -55,8 +55,6 @@ hl.config({
     },
   },
 })
-
-hl.layer_rule({ match = { namespace = "pomodoro.*" }, blur = true, ignore_alpha = 0.5 })
 
 -- ┏━┓┏━┓┏━╸┏━╸╻┏━┓╻
 -- ┗━┓┣━┛┣╸ ┃  ┃┣━┫┃

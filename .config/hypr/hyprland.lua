@@ -42,14 +42,13 @@ hl.on("hyprland.start", function()
 
   hl.exec_cmd("ags run ~/.config/ags/app.tsx")
 
-  hl.exec_cmd("~/.config/hypr/scripts/controls.sh")
   hl.exec_cmd("~/.config/hypr/scripts/resetxdgportal.sh")
   hl.exec_cmd("~/.config/hypr/scripts/batterynotify.sh")
   hl.exec_cmd("~/.config/hypr/scripts/wallpaperdaemon.sh")
   -- Auto-detects the backlight device instead of assuming intel_backlight
   hl.exec_cmd("~/.config/hypr/scripts/init-backlight.sh 20")
 
-  -- Idle daemon: dim at 2.5 min, panel off at 5 min (OLED care) — see hypridle.conf
+  -- Idle daemon: lock + dim at 7 min, panel off at 77 min (OLED care) — see hypridle.conf
   hl.exec_cmd("command -v hypridle >/dev/null && hypridle") -- optional component; no-op if not installed
 end)
 
@@ -63,7 +62,6 @@ hl.env("XDG_SESSION_TYPE", "wayland")
 hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 hl.env("QT_QPA_PLATFORM", "wayland")
 hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
-hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 hl.env("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
 hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("HYPRLAND_NO_SD_NOTIFY", "0")
@@ -160,7 +158,4 @@ hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_S
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"))
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"))
 
--- Brightness keys (keybindings.lua also binds these to brightnesscontrol.sh;
--- both fire, as they did with the .conf files)
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 5%-"))
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl set 5%+"))
+-- Brightness keys: keybindings.lua (scripts/brightnesscontrol.sh, with OSD).

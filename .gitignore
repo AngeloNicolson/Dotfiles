@@ -26,7 +26,6 @@
 .config/hypr/*.log
 
 # Machine-specific Hyprland configs (use .example templates)
-.config/hypr/custom/*.conf
 .config/hypr/custom/*.lua
 
 # Python cache
@@ -37,9 +36,6 @@ __pycache__/
 # Claude Code
 .claude/
 **/.claude/
-
-# Study cleanup list (local-only)
-to-be-deleted.txt
 
 # Installer component choices (per machine)
 install.conf

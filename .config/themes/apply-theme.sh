@@ -1,6 +1,14 @@
 #!/bin/bash
-# Theme applier script
+# Theme companion script — the parts of a theme switch that live outside AGS.
 # Usage: apply-theme.sh <theme-name>
+#
+# The AGS theme switcher (ags/theme.ts applyTheme — CORE page, SUPER+W carousel,
+# `ags request theme <name>`) writes the shell CSS, foot.ini, GTK gsettings,
+# hypr/custom/theme.lua (+ live hyprctl eval), the Firefox chrome and
+# themes/.current itself, then runs this script (ThemeSelector.tsx) for what
+# is left: dunst colours and the live-reload hooks for running apps.
+# Run it by hand only to re-trigger those; use `ags request theme <name>` to
+# switch themes.
 
 THEME_DIR="$HOME/.config/themes"
 THEME_NAME="${1:-mech}"
@@ -16,91 +24,13 @@ get() {
   jq -r "$1" "$THEME_FILE"
 }
 
-# Colors
-BG=$(get '.colors.bg')
 BG_DARK=$(get '.colors.bg_dark')
-BG_LIGHT=$(get '.colors.bg_light')
 BG_LIGHTER=$(get '.colors.bg_lighter')
 FG=$(get '.colors.fg')
-FG_DIM=$(get '.colors.fg_dim')
-FG_BRIGHT=$(get '.colors.fg_bright')
 ACCENT=$(get '.colors.accent')
-RED=$(get '.colors.red')
 RED_BRIGHT=$(get '.colors.red_bright')
-GREEN=$(get '.colors.green')
-GREEN_BRIGHT=$(get '.colors.green_bright')
-YELLOW=$(get '.colors.yellow')
-YELLOW_BRIGHT=$(get '.colors.yellow_bright')
-BLUE=$(get '.colors.blue')
-BLUE_BRIGHT=$(get '.colors.blue_bright')
-MAGENTA=$(get '.colors.magenta')
-MAGENTA_BRIGHT=$(get '.colors.magenta_bright')
-CYAN=$(get '.colors.cyan')
-CYAN_BRIGHT=$(get '.colors.cyan_bright')
-GRAY=$(get '.colors.gray')
 
-# GTK settings
-GTK_THEME=$(get '.gtk.theme')
-ICON_THEME=$(get '.gtk.iconTheme')
-CURSOR_THEME=$(get '.gtk.cursorTheme')
-COLOR_SCHEME=$(get '.gtk.colorScheme')
-
-# Hyprland settings
-BORDER_RADIUS=$(get '.hyprland.borderRadius')
-GAPS_IN=$(get '.hyprland.gapsIn')
-GAPS_OUT=$(get '.hyprland.gapsOut')
-BORDER_SIZE=$(get '.hyprland.borderSize')
-
-# Strip # from hex colors for configs that need it
-strip_hash() {
-  echo "${1#\#}"
-}
-
-echo "Applying theme: $THEME_NAME"
-
-# --- FOOT ---
-FOOT_CONFIG="$HOME/.config/foot/foot.ini"
-if [[ -f "$FOOT_CONFIG" ]]; then
-  echo "  Updating foot..."
-  sed -i "s/^background=.*/background=$(strip_hash $BG)/" "$FOOT_CONFIG"
-  sed -i "s/^foreground=.*/foreground=$(strip_hash $FG)/" "$FOOT_CONFIG"
-  sed -i "s/^regular0=.*/regular0=$(strip_hash $BG_LIGHT)/" "$FOOT_CONFIG"
-  sed -i "s/^regular1=.*/regular1=$(strip_hash $RED)/" "$FOOT_CONFIG"
-  sed -i "s/^regular2=.*/regular2=$(strip_hash $GREEN)/" "$FOOT_CONFIG"
-  sed -i "s/^regular3=.*/regular3=$(strip_hash $YELLOW)/" "$FOOT_CONFIG"
-  sed -i "s/^regular4=.*/regular4=$(strip_hash $BLUE)/" "$FOOT_CONFIG"
-  sed -i "s/^regular5=.*/regular5=$(strip_hash $MAGENTA)/" "$FOOT_CONFIG"
-  sed -i "s/^regular6=.*/regular6=$(strip_hash $CYAN)/" "$FOOT_CONFIG"
-  sed -i "s/^regular7=.*/regular7=$(strip_hash $FG_DIM)/" "$FOOT_CONFIG"
-  sed -i "s/^bright0=.*/bright0=$(strip_hash $GRAY)/" "$FOOT_CONFIG"
-  sed -i "s/^bright1=.*/bright1=$(strip_hash $RED_BRIGHT)/" "$FOOT_CONFIG"
-  sed -i "s/^bright2=.*/bright2=$(strip_hash $GREEN_BRIGHT)/" "$FOOT_CONFIG"
-  sed -i "s/^bright3=.*/bright3=$(strip_hash $YELLOW_BRIGHT)/" "$FOOT_CONFIG"
-  sed -i "s/^bright4=.*/bright4=$(strip_hash $BLUE_BRIGHT)/" "$FOOT_CONFIG"
-  sed -i "s/^bright5=.*/bright5=$(strip_hash $MAGENTA_BRIGHT)/" "$FOOT_CONFIG"
-  sed -i "s/^bright6=.*/bright6=$(strip_hash $CYAN_BRIGHT)/" "$FOOT_CONFIG"
-  sed -i "s/^bright7=.*/bright7=$(strip_hash $FG_BRIGHT)/" "$FOOT_CONFIG"
-fi
-
-# --- GTK (via gsettings) ---
-echo "  Updating GTK..."
-gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME" 2>/dev/null
-gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME" 2>/dev/null
-gsettings set org.gnome.desktop.interface cursor-theme "$CURSOR_THEME" 2>/dev/null
-gsettings set org.gnome.desktop.interface color-scheme "$COLOR_SCHEME" 2>/dev/null
-
-# --- HYPRLAND ---
-echo "  Updating Hyprland..."
-# hypr_set works with both the hyprlang (.conf) and Lua (hyprland.lua) config
-# managers — `hyprctl keyword` does not exist under Lua.
-source "$HOME/.config/hypr/scripts/hypr-compat.sh"
-hypr_set general:gaps_in "$GAPS_IN" 2>/dev/null
-hypr_set general:gaps_out "$GAPS_OUT" 2>/dev/null
-hypr_set general:border_size "$BORDER_SIZE" 2>/dev/null
-hypr_set decoration:rounding "$BORDER_RADIUS" 2>/dev/null
-hypr_set general:col.active_border "rgb($(strip_hash $BG_DARK))" 2>/dev/null
-hypr_set general:col.inactive_border "rgb($(strip_hash $BG_DARK))" 2>/dev/null
-hyprctl setcursor "$CURSOR_THEME" 20 2>/dev/null
+echo "Applying theme (dunst + reload hooks): $THEME_NAME"
 
 # --- DUNST ---
 DUNST_CONFIG="$HOME/.config/dunst/dunstrc"
@@ -112,19 +42,18 @@ if [[ -f "$DUNST_CONFIG" ]]; then
   sed -i "/^\[urgency_low\]/,/^\[/ s/^    frame_color = .*/    frame_color = \"$BG_LIGHTER\"/" "$DUNST_CONFIG"
   sed -i "/^\[urgency_critical\]/,/^\[/ s/^    frame_color = .*/    frame_color = \"$RED_BRIGHT\"/" "$DUNST_CONFIG"
   sed -i "/^\[global\]/,/^\[/ s/^    frame_color = .*/    frame_color = \"$ACCENT\"/" "$DUNST_CONFIG"
-  killall dunst 2>/dev/null
+  killall dunst 2>/dev/null   # dunst is D-Bus activated; it restarts on the next notification
 fi
-
-# --- Save current theme ---
-echo "$THEME_NAME" > "$THEME_DIR/.current"
 
 # --- Live reload running apps ---
 
 echo "  Reloading foot..."
 killall -USR1 foot 2>/dev/null
 
+# nvim's server socket is a flat file: $XDG_RUNTIME_DIR/nvim.<pid>.0
+# (older builds: /tmp/nvim.<user>/<random>/nvim.<pid>.0)
 echo "  Reloading nvim..."
-for sock in "${XDG_RUNTIME_DIR:-/tmp}"/nvim.*/0 /tmp/nvim.*/0; do
+for sock in "${XDG_RUNTIME_DIR:-/tmp}"/nvim.*.0 /tmp/nvim.*/*/nvim.*.0; do
   [[ -S "$sock" ]] || continue
   nvim --server "$sock" --remote-send '<Cmd>ReloadSystemTheme<CR>' 2>/dev/null
 done

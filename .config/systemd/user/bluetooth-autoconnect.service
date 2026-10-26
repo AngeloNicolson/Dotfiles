@@ -1,10 +1,16 @@
 [Unit]
 Description=Auto-connect trusted Bluetooth devices at login
+# Needs the system bluetooth daemon; a user unit cannot order after it, so the
+# script polls the adapter (up to ~60 s) instead.
+ConditionPathExists=%h/.local/bin/bt-autoconnect
 
 [Service]
-Type=oneshot
+# simple, not oneshot: the script retries for up to a minute and each
+# bluetoothctl call is bounded, so login must not wait for it and a device that
+# is out of range must not fail the unit.
+Type=simple
 ExecStart=%h/.local/bin/bt-autoconnect
-TimeoutStartSec=120
+TimeoutStopSec=20
 
 [Install]
 WantedBy=default.target

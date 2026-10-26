@@ -7,7 +7,7 @@
 #                  OPT_NVIDIA=y etc. are set in the environment)
 #   doctor       = check this machine against what the config expects
 # Modules: packages symlinks scripts templates dirs services ags theme nvim tmux
-#          shell wallpapers hostconfig firefox rnote ollama doctor lock
+#          shell wallpapers hostconfig firefox ollama doctor lock
 
 set +e
 
@@ -38,8 +38,8 @@ version_ge() { [[ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]; 
 # anything) and may gate installer modules / doctor checks.
 #   id | default | one-line description shown in the prompt
 COMPONENTS=(
-    "themes|y|Themed look: adw-gtk3 GTK theme, Tela icons, Bibata cursor (the config is written for these)"
-    "idle|y|Idle management: dim after 2.5 min, screen off after 5 min (hypridle)"
+    "themes|y|Themed look: adw-gtk3 GTK theme + Bibata cursor (the config is written for these)"
+    "idle|y|Idle management: lock + dim after 7 min, screen off after 77 min (hypridle)"
     "lockscreen|n|Lock screen: hyprlock on lid-close / power key (skip if you never lock)"
     "neovim|y|Neovim: editor with LSP/Treesitter, plugins pinned by lazy-lock.json"
     "tmux|y|Tmux: multiplexer with powerline + tpm plugins"
@@ -48,15 +48,13 @@ COMPONENTS=(
     "display|y|Display controls: colour temperature/gamma (wl-gammarelay), shaders (hyprshade)"
     "wallpapers|n|Wallpaper pack: download ~2 GB of images/videos from the GitHub release"
     "clojure|n|Clojure toolchain: JDK, clojure, babashka, clojure-lsp"
-    "nvidia|n|NVIDIA: VA-API driver + CUDA build of ollama"
+    "nvidia|n|NVIDIA: VA-API driver (libva-nvidia-driver)"
     "firefox|n|Firefox: browser + custom CSS / Sidebery theme"
     "zen|y|Zen Browser: Firefox-based browser with vertical tabs + workspaces (AUR)"
-    "tablet|n|OpenTabletDriver: Wacom tablet support"
-    "extras|n|Extras: kitty, ktouch, rnote"
     "ntfs|n|NTFS: mount Windows drives (ntfs-3g)"
-    "ollama|n|Ollama: local LLM server (~18 GB model download)"
+    "ollama|n|Ollama: enable the service + pull the model (ollama itself is a manual install, see packages/arch/ollama.txt)"
 )
-REQUIRED_SUMMARY="Hyprland, AGS shell, foot + fish, fonts, PipeWire, wallpaper daemon, notifications, screenshot/clipboard/volume/brightness tools"
+REQUIRED_SUMMARY="Hyprland, AGS shell, foot + fish, fonts, PipeWire, wallpaper daemon, notifications, launcher/power menu, screenshot/clipboard/brightness tools"
 CHOICES_FILE="$DOTFILES_DIR/install.conf"   # gitignored, per machine
 declare -A CHOICE
 
@@ -444,7 +442,7 @@ mod_symlinks() {
     local config_dirs=(
         ags fish foot gtk-3.0 gtk-4.0 hypr mpv nvim swappy
         systemd themes tmux-powerline wireplumber zathura
-        OpenTabletDriver hyperdocs
+        hyperdocs
     )
 
     info "Config directories"
@@ -551,11 +549,17 @@ mod_services() {
         return 0
     fi
 
-    # Only units shipped in this repo (.config/systemd/user/*.service)
-    local svc unit
-    for unit in "$DOTFILES_DIR"/.config/systemd/user/*.service; do
-        [[ -f "$unit" ]] || continue
-        svc="$(basename "$unit" .service)"
+    # Explicit list — NOT every unit in .config/systemd/user. A unit that is
+    # shipped but left out here stays opt-in (enable it by hand).
+    #   bluetooth-autoconnect.service  reconnect trusted BT devices at login
+    #   monolith-reindex.timer         nightly retrieval-index rebuild (needs monolith-tui)
+    local -a units=(bluetooth-autoconnect.service monolith-reindex.timer)
+    local svc
+    for svc in "${units[@]}"; do
+        if [[ ! -f "$DOTFILES_DIR/.config/systemd/user/$svc" ]]; then
+            warn "$svc not in repo — skipping"
+            continue
+        fi
         if systemctl --user is-enabled "$svc" &>/dev/null; then
             skip "$svc"
         else
@@ -596,10 +600,17 @@ mod_ags() {
 mod_theme() {
     header "Theme"
 
+    # The full theme (shell CSS, foot, GTK, Hyprland, Firefox) is applied by AGS
+    # (ags/theme.ts). apply-theme.sh only does dunst + live-reload hooks.
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v ags &>/dev/null && ags request help &>/dev/null; then
+        run ags request theme mech && success "Applied via AGS: mech"
+    else
+        info "AGS not running — theme is applied on its first start (themes/.current)"
+    fi
     local theme_script="$DOTFILES_DIR/.config/themes/apply-theme.sh"
     if [[ -x "$theme_script" ]]; then
         run bash "$theme_script" mech
-        success "Applied: mech"
+        success "dunst colours: mech"
     else
         warn "Theme script not found or not executable"
     fi
@@ -775,26 +786,6 @@ mod_hostconfig() {
     bash "$gen" && success "monitors.lua / LAPTOP_SCALE generated from connected displays"
 }
 
-mod_rnote() {
-    header "rnote settings"
-
-    if ! command -v dconf &>/dev/null; then
-        warn "dconf not found — skipping"
-        return 0
-    fi
-    local src="$DOTFILES_DIR/.config/rnote-dconf-settings.ini"
-    [[ -f "$src" ]] || { warn "rnote-dconf-settings.ini missing"; return 0; }
-    if [[ "$DRY_RUN" == "1" ]]; then
-        info "(dry-run) would dconf load /com/github/flxzt/rnote/ (with @HOME@ -> $HOME)"
-        return 0
-    fi
-    if sed "s|@HOME@|$HOME|g" "$src" | dconf load /com/github/flxzt/rnote/; then
-        success "rnote dconf settings loaded"
-    else
-        warn "dconf load failed (is a session bus running?)"
-    fi
-}
-
 # ─── Doctor ───────────────────────────────────────────────────────────────
 # Read-only. Exit 1 if anything the config depends on is missing/outdated.
 
@@ -814,7 +805,7 @@ mod_doctor() {
 
     info "Binaries"
     local bin
-    for bin in Hyprland hyprctl foot fish ags gjs jq brightnessctl grim slurp wl-copy awww ffmpeg fc-list gsettings dunst pamixer socat; do
+    for bin in Hyprland hyprctl foot fish ags gjs jq brightnessctl grim slurp wl-copy awww ffmpeg fc-list gsettings dunst rofi wlogout socat bluetoothctl; do
         if command -v "$bin" &>/dev/null; then d_ok "$bin"; else d_bad "$bin missing"; fi
     done
     for bin in npm git; do
@@ -847,14 +838,14 @@ mod_doctor() {
 
     info "Fonts (fc-list)"
     local font
-    for font in "JetBrainsMono Nerd Font" "CaskaydiaCove Nerd Font Mono" "Noto Sans" "Noto Sans CJK JP"; do
+    for font in "JetBrainsMono Nerd Font" "CaskaydiaCove Nerd Font Mono" "Noto Sans CJK JP" "Symbols Nerd Font"; do
         if fc-list 2>/dev/null | grep -qi "$font"; then d_ok "$font"; else d_bad "font missing: $font"; fi
     done
 
     if chosen themes; then
     info "Themes / cursors / icons"
     local d found
-    for d in "themes/adw-gtk3-dark:GTK theme adw-gtk3-dark" "icons/Tela-circle-black:icon theme Tela-circle-black" "icons/Bibata-Modern-Ice:cursor Bibata-Modern-Ice"; do
+    for d in "themes/adw-gtk3-dark:GTK theme adw-gtk3-dark" "icons/Bibata-Modern-Ice:cursor Bibata-Modern-Ice"; do
         found=0
         for root in /usr/share "$HOME/.local/share" "$HOME/.themes" "$HOME/.icons"; do
             [[ -d "$root/${d%%:*}" || -d "$root/$(basename "${d%%:*}")" ]] && found=1
@@ -1003,14 +994,12 @@ run_module() {
         ags)       mod_ags ;;
         theme)     mod_theme ;;
         firefox)   mod_firefox ;;
-        tablet)    header "Tablet"; skip "Handled by symlinked configs" ;;
         ollama)    mod_ollama ;;
         nvim)      mod_nvim ;;
         tmux)      mod_tmux ;;
         shell)     mod_shell ;;
         wallpapers) mod_wallpapers ;;
         hostconfig) mod_hostconfig ;;
-        rnote)     mod_rnote ;;
         doctor)    mod_doctor ;;
         lock)      mod_lock ;;
         *)         error "Unknown module: $mod"; return 1 ;;
@@ -1073,8 +1062,6 @@ if [[ $# -eq 0 ]]; then
     chosen neovim  && OPTIONAL_MODULES+=(nvim)
     chosen tmux    && OPTIONAL_MODULES+=(tmux)
     chosen firefox && OPTIONAL_MODULES+=(firefox)
-    chosen tablet  && OPTIONAL_MODULES+=(tablet)
-    chosen extras  && OPTIONAL_MODULES+=(rnote)
     chosen ollama  && OPTIONAL_MODULES+=(ollama)
 
     ALL_MODULES=("${CORE_MODULES[@]}" "${OPTIONAL_MODULES[@]}" doctor)

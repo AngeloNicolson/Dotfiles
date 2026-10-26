@@ -1,7 +1,7 @@
-# Themed look: GTK theme, icon theme and cursor the config is written for.
-# Without these GTK apps fall back to Adwaita/hicolor/default cursor — works,
-# just doesn't look like the screenshots.
+# Themed look: GTK theme and cursor the config is written for.
+# Without these GTK apps fall back to Adwaita/default cursor — works,
+# just doesn't look like the screenshots. (Icon theme: the themes name
+# Tela-circle; install tela-circle-icon-theme-* from the AUR if you want it,
+# GTK falls back to the default icon set otherwise.)
 adw-gtk-theme
-tela-circle-icon-theme-black
-tela-circle-icon-theme-red
 bibata-cursor-theme-bin

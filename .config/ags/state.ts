@@ -96,7 +96,6 @@ export const [breakPopupVisible, setBreakPopupVisible] = createState(false)
 // PlanSync state
 export const [syncConnected, setSyncConnected] = createState(false)
 export const [syncPeerCount, setSyncPeerCount] = createState(0)
-export const [syncPeers, setSyncPeers] = createState<string[]>([])
 export const [pendingChangeRequests, setPendingChangeRequests] = createState(0)
 export const [syncDialogVisible, setSyncDialogVisible] = createState(false)
 
@@ -273,19 +272,6 @@ export function getPageState(monitorName: string) {
     pageStates.set(monitorName, createState(HOME_PAGE))
   }
   return pageStates.get(monitorName)!
-}
-
-export function clearSidebarStacks() {
-  sidebarStacks.clear()
-  pageIndices.clear()
-  pageStates.clear()
-}
-
-export function removeSidebarStack(monitorName: string) {
-  console.log(`Removing stack for monitor: ${monitorName}`)
-  sidebarStacks.delete(monitorName)
-  pageIndices.delete(monitorName)
-  pageStates.delete(monitorName)
 }
 
 export function setSidebarStack(monitorName: string, stack: Gtk.Stack) {

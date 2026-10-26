@@ -2,6 +2,8 @@
 Description=Rebuild monolith retrieval indexes (study, setup, code) from their sources
 # Embedding goes through the system Ollama service; the builder skips nothing
 # that is already cached, so a run with no changes takes a few seconds.
+# monolith-tui is not shipped in this repo: it is built from
+# ~/projects/personal/monolith and installed to ~/.local/bin by that project.
 After=network.target
 
 [Service]

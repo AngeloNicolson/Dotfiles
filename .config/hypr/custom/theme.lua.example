@@ -2,3 +2,20 @@
 -- (CORE page, SUPER+W carousel, or `ags request theme <name>`). Don't edit by hand.
 -- It holds the theme's gaps/borders/rounding, blur, shadow, dimming and — for
 -- themes with a "look" section, like 43pr — the all-windows opacity rules.
+-- Loaded by hyprland.lua after rules.lua, so it overrides theme.lua's defaults.
+--
+-- Shape of the generated file:
+-- if _G.__theme_opacity then _G.__theme_opacity:set_enabled(false); _G.__theme_opacity = nil end
+-- if _G.__theme_opacity_keep then _G.__theme_opacity_keep:set_enabled(false); _G.__theme_opacity_keep = nil end
+-- if _G.__theme_opacity_fs then _G.__theme_opacity_fs:set_enabled(false); _G.__theme_opacity_fs = nil end
+-- hl.config({
+--   general = { gaps_in = 8, gaps_out = 15, border_size = 1,
+--     col = { active_border = "rgb(bdae93)", inactive_border = "rgb(1d2021)" } },
+--   decoration = { rounding = 4,
+--     dim_inactive = true, dim_strength = 0.15,
+--     blur = { enabled = true, size = 6, passes = 3, vibrancy = 0.15 },
+--     shadow = { enabled = false, range = 8, render_power = 3 } },
+-- })
+-- -- only for themes with a "look" section (window opacity):
+-- _G.__theme_opacity = hl.window_rule({ name = "theme-opacity", match = { class = ".*" }, opacity = "0.72 override" })
+-- _G.__theme_opacity_fs = hl.window_rule({ name = "theme-opacity-fullscreen", match = { class = ".*", fullscreen_state_internal = 2 }, opacity = "1.0 override" })

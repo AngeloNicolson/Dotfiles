@@ -28,8 +28,6 @@ try {
   print(`compositor: Hyprland unavailable, using GDK fallback (${e})`)
 }
 
-export const compositorName = hypr ? "hyprland" : "gdk"
-
 function display(): Gdk.Display | null {
   return Gdk.Display.get_default()
 }

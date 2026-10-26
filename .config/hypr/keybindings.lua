@@ -18,7 +18,7 @@ local function bind(mods, key, dispatcher, opts)
   return hl.bind(keys, dispatcher, opts)
 end
 
--- ── Focus & Navigate (SUPER + HJKL / 1-5) ──────────────────────────────────
+-- ── Focus & Navigate (SUPER + HJKL / 1-7) ──────────────────────────────────
 
 bind(mainMod, "H", dsp.focus({ direction = "l" }))
 bind(mainMod, "L", dsp.focus({ direction = "r" }))
@@ -39,7 +39,7 @@ bind(mainMod, "M", dsp.workspace.toggle_special("media"))
 bind(mainMod, "N", dsp.exec_cmd("~/.config/hypr/scripts/open_nvim_workspace.sh"))
 bind(mainMod, "S", dsp.workspace.toggle_special())
 
--- ── Move & Send (SUPER + SHIFT + HJKL / 1-5) ───────────────────────────────
+-- ── Move & Send (SUPER + SHIFT + HJKL / 1-7) ───────────────────────────────
 
 bind(mainMod .. " + SHIFT", "H", dsp.window.move({ direction = "l" }))
 bind(mainMod .. " + SHIFT", "L", dsp.window.move({ direction = "r" }))
@@ -160,7 +160,5 @@ bind("SUPER + SHIFT", "code:201",      dsp.exec_cmd("~/.config/hypr/scripts/rota
 bind("", "XF86MonBrightnessUp",   dsp.exec_cmd("~/.config/hypr/scripts/brightnesscontrol.sh i"), { repeating = true, locked = true })
 bind("", "XF86MonBrightnessDown", dsp.exec_cmd("~/.config/hypr/scripts/brightnesscontrol.sh d"), { repeating = true, locked = true })
 
--- Lid switch
-bind("", "switch:on:Lid Switch",  dsp.exec_cmd("~/.config/hypr/scripts/lid_handler.sh close"), { locked = true })
-bind("", "switch:off:Lid Switch", dsp.exec_cmd("~/.config/hypr/scripts/lid_handler.sh open"),  { locked = true })
+-- Lid switch: bound in hyprland.lua (scripts/lid-switch.sh)
 bind("", "XF86PowerOff", dsp.exec_cmd("systemctl suspend"))  -- hypridle locks before sleep

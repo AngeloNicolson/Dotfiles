@@ -1,10 +1,29 @@
--- You can make apps auto-start here
+-- Machine-specific autostart (gitignored). Copy to execs.lua and edit.
 -- https://wiki.hypr.land/Configuring/Basics/Autostart/
 -- Everything inside the hyprland.start handler is the old `exec-once`.
+-- Shell-wide autostart (AGS, portal reset, battery notify, wallpaper daemon,
+-- backlight, hypridle) already lives in the tracked hyprland.lua — only add
+-- what is specific to THIS machine here.
 
 hl.on("hyprland.start", function()
-  -- Auto-start applications
-  -- hl.exec_cmd("foot")
+  -- Laptops: apply the lid state at login (panel off / workspaces moved when
+  -- the lid is already closed). Adjust the LID* path to your ACPI button name.
+  -- hl.exec_cmd("sleep 1 && if grep -q closed /proc/acpi/button/lid/LID0/state 2>/dev/null; then ~/.config/hypr/scripts/lid-switch.sh close; else ~/.config/hypr/scripts/lid-switch.sh open; fi")
+
+  -- Auto-start applications (with optional exec rules)
+  -- hl.exec_cmd("foot -e fish -c 'fetch; exec fish'", { workspace = "1 silent" })
   -- hl.exec_cmd("firefox")
-  -- hl.exec_cmd("foot", { workspace = "1 silent" })   -- with exec rules
+
+  -- Multi-monitor: with more than one `default = true` workspace (one per
+  -- screen in custom/rules.lua) Hyprland may focus the external at login —
+  -- force workspace 1 once the monitors have settled.
+  -- hl.timer(function() hl.dispatch(hl.dsp.focus({ workspace = 1 })) end, { timeout = 2000, type = "oneshot" })
+
+  -- System tray applets / daemons that depend on this machine's hardware
+  -- hl.exec_cmd("nm-applet --indicator")   -- network-manager-applet
+  -- hl.exec_cmd("wl-gammarelay-rs")        -- gamma/temperature (display component)
+
+  -- Multi-monitor focus workaround: focus + warp the cursor to a window that
+  -- opens on an empty workspace of another monitor.
+  -- hl.exec_cmd("~/.config/hypr/scripts/autofocus_new_window.sh")
 end)

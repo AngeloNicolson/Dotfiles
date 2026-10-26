@@ -15,8 +15,10 @@ hl.window_rule({
 -- ┗┻┛┗━┛╹┗╸╹ ╹┗━┛╹  ╹ ╹┗━╸┗━╸   ╹┗╸┗━┛┗━╸┗━╸┗━┛
 
 hl.workspace_rule({ workspace = "special",          gaps_in = 24, gaps_out = 64 })
-hl.workspace_rule({ workspace = "special:browser",  gaps_in = 24, gaps_out = 64, monitor = "DP-2" })
-hl.workspace_rule({ workspace = "special:document", gaps_in = 24, gaps_out = 64, monitor = "DP-2" })
+-- To pin a special workspace to one monitor, add `monitor = "<name>"` in the
+-- gitignored custom/rules.lua (see custom/rules.lua.example) — not here.
+hl.workspace_rule({ workspace = "special:browser",  gaps_in = 24, gaps_out = 64 })
+hl.workspace_rule({ workspace = "special:document", gaps_in = 24, gaps_out = 64 })
 hl.workspace_rule({ workspace = "special:media",    gaps_in = 24, gaps_out = 64 })
 hl.workspace_rule({ workspace = "special:kondor",   gaps_in = 8,  gaps_out = 16 })
 hl.workspace_rule({ workspace = "special:nvim",     gaps_in = 8,  gaps_out = 16 })
@@ -44,10 +46,8 @@ hl.window_rule({ match = { class = "^nvim-terminal$" },  workspace = "special:nv
 -- ┃  ┣━┫┗┳┛┣╸ ┣┳┛   ┣┳┛┃ ┃┃  ┣╸ ┗━┓
 -- ┗━╸╹ ╹ ╹ ┗━╸╹┗╸   ╹┗╸┗━┛┗━╸┗━╸┗━┛
 
-hl.layer_rule({ match = { namespace = "logout" }, blur = true })
-for _, ns in ipairs({ "bar", "notifications", "audio_controls", "system_controls", "calendar", "workspace_osd" }) do
-  hl.layer_rule({ match = { namespace = ns }, no_anim = true })
-end
+hl.layer_rule({ match = { namespace = "logout" }, blur = true })   -- wlogout
+hl.layer_rule({ match = { namespace = "workspace_osd" }, no_anim = true })
 
 -- App launcher (rofi): blur behind its translucent box and pop it in smoothly
 -- (43PR's layer rule + a popin animation).

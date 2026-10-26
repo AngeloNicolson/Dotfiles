@@ -80,8 +80,8 @@ CONFIG_TERMINAL_EXEC=""
 CONFIG_NOTIFICATION_DURATION="5"
 
 # Directory where downloads are saved
-# Default: /home/Angel/Videos/yt-x
-CONFIG_DOWNLOAD_DIR="/home/Angel/Videos/yt-x"
+# Default: $HOME/Videos/yt-x (this file is sourced by yt-x, so $HOME expands)
+CONFIG_DOWNLOAD_DIR="$HOME/Videos/yt-x"
 CONFIG_DOWNLOADS_ENUMERATE="false"
 
 # Automatically check for script updates on startup

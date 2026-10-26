@@ -4,11 +4,11 @@
 
 import GLib from "gi://GLib"
 
-export function hasCmd(cmd: string): boolean {
+function hasCmd(cmd: string): boolean {
   return GLib.find_program_in_path(cmd) !== null
 }
 
-export function pathExists(p: string): boolean {
+function pathExists(p: string): boolean {
   return GLib.file_test(p, GLib.FileTest.EXISTS)
 }
 

@@ -16,13 +16,13 @@ foot
 fish
 starship
 
-# Fonts the config names (gtk-font-name, theme.conf, foot.ini)
-noto-fonts
-noto-fonts-cjk
+# Fonts the config names: foot.ini (JetBrainsMono Nerd Font + Noto Sans CJK JP),
+# theme.lua gsettings (CaskaydiaCove Nerd Font Mono), AGS CSS, plus the Nerd
+# symbols fallback for icon glyphs.
 ttf-jetbrains-mono-nerd
 ttf-cascadia-code-nerd
-ttf-font-awesome
-ttf-nerd-fonts-meta
+noto-fonts-cjk
+ttf-nerd-fonts-symbols
 
 # System plumbing
 polkit-kde-agent
@@ -33,6 +33,7 @@ gtk4
 pipewire
 wireplumber
 socat
+bluez-utils
 
 # Wallpaper daemon + default-wallpaper/thumbnail generation
 awww
@@ -41,13 +42,14 @@ ffmpeg
 # Notifications
 dunst
 
-# Scripts depend on these (volume/brightness/screenshot/clipboard keybinds)
+# App launcher (SUPER+space, scripts/launcher.sh) + power menu (SUPER+grave, scripts/wlogout.sh)
+rofi
+wlogout
+
+# Scripts depend on these (brightness/screenshot keybinds, clipboard, JSON parsing)
 brightnessctl
-pamixer
 wl-clipboard
-cliphist
 grim
 slurp
 swappy
 jq
-wl-color-picker

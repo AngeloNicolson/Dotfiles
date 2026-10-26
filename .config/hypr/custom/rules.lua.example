@@ -1,17 +1,31 @@
--- You can put custom rules here
+-- Machine-specific rules (gitignored). Copy to rules.lua and edit.
 -- Window/layer rules: https://wiki.hypr.land/Configuring/Basics/Window-Rules/
 -- Workspace rules: https://wiki.hypr.land/Configuring/Basics/Workspace-Rules/
---
--- This file is machine-specific (gitignored). Copy to rules.lua and edit.
+-- The app routing shared by every machine (browsers → special:browser, mpv →
+-- special:media, ...) is in the tracked rules.lua; put per-machine extras here.
 
 -- ── Window rules (examples) ──────────────────────────────────────────────────
--- hl.window_rule({ match = { class = "^foot$" },    opacity = "0.92 override 0.92 override" })
+-- Per-app opacity. (foot: Hyprland 0.56+ blurs it only when the alpha is set
+-- client-side in foot.ini, so no opacity rule is needed for it.)
+-- hl.window_rule({ match = { class = "^com\\.github\\.flxzt\\.rnote$" }, opacity = "0.95 override 0.95 override" })
+
+-- Applications to workspaces
+-- hl.window_rule({ match = { class = "^foot$" },    workspace = "1" })
 -- hl.window_rule({ match = { class = "^firefox$" }, workspace = "2" })
+-- hl.window_rule({ match = { title = "^Obsidian$" }, workspace = "3" })
+-- hl.window_rule({ match = { class = "^org\\.pwmt\\.zathura$" }, tile = true })
 
 -- ── Workspace → monitor bindings ─────────────────────────────────────────────
 -- Pin workspaces to monitors so they survive hotplug. Use your real monitor
 -- names (run `hyprctl monitors -j | jq -r '.[].name'`). Omit on a single-monitor
--- machine — everything defaults to the one screen.
+-- machine — everything defaults to the one screen. (The AGS display arranger,
+-- SUPER+SHIFT+P, writes the same kind of rules to custom/displays.lua.)
 -- hl.workspace_rule({ workspace = "1", monitor = "eDP-1", default = true })
 -- hl.workspace_rule({ workspace = "2", monitor = "eDP-1" })
 -- hl.workspace_rule({ workspace = "7", monitor = "DP-2",  default = true })
+
+-- Special (overlay) workspaces are declared in the tracked rules.lua without a
+-- monitor. To keep one on a particular screen, re-declare it here with the
+-- same gaps plus a monitor key — the later rule wins:
+-- hl.workspace_rule({ workspace = "special:browser",  gaps_in = 24, gaps_out = 64, monitor = "DP-2" })
+-- hl.workspace_rule({ workspace = "special:document", gaps_in = 24, gaps_out = 64, monitor = "DP-2" })
