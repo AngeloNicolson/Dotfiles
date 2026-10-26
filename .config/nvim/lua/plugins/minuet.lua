@@ -28,10 +28,10 @@ return {
 					optional = { max_tokens = 96, top_p = 0.9 },
 				},
 			},
-			-- On demand only: nothing appears until <C-]> / <A-]> asks for it.
-			-- (`:Minuet virtualtext enable` or <leader>aV turns auto mode on per buffer.)
+			-- Ghost text appears on its own in these filetypes; <leader>aV toggles it
+			-- per buffer, <C-]> / <A-]> asks for one explicitly.
 			virtualtext = {
-				auto_trigger_ft = {},
+				auto_trigger_ft = { "c", "cpp", "cuda", "glsl", "lua", "python", "clojure" },
 				show_on_completion_menu = true, -- clangd keeps the cmp menu open a lot; still show ghost text
 				keymap = {
 					-- Alt keys: nothing collides with cmp's <Tab>/<CR>/<C-n>/<C-p>
@@ -48,7 +48,17 @@ return {
 		-- Keep the FIM model resident. Ollama unloads after 5 min idle and the
 		-- OpenAI-style endpoint ignores keep_alive, so poke the native API (no
 		-- prompt = load only) when entering insert mode, at most every 20 min.
-		local WARM_FT = { "c", "cpp", "cuda", "glsl", "lua", "python", "clojure" }
+		-- The plugin only arms auto-trigger from a FileType autocmd it registers in
+		-- setup(); buffers opened before this lazy load (the file nvim started
+		-- with) never see that event, so arm them here.
+		local cfg = require("minuet").config.virtualtext
+		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+			if vim.api.nvim_buf_is_loaded(buf) and vim.tbl_contains(cfg.auto_trigger_ft, vim.bo[buf].filetype) then
+				vim.b[buf].minuet_virtual_text_auto_trigger = true
+			end
+		end
+
+		local WARM_FT = cfg.auto_trigger_ft
 		local last_warm = 0
 		vim.api.nvim_create_autocmd("InsertEnter", {
 			group = vim.api.nvim_create_augroup("minuet-keep-warm", { clear = true }),
