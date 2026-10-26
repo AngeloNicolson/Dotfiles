@@ -44,6 +44,7 @@ const [eqAvailable, setEqAvailable] = createState(true)
 const [activePreset, setActivePreset] = createState("flat")
 
 let reloadTimer: number | null = null
+let startTimer: number | null = null
 
 // Cava visualizer — one bar per EQ band, raw ASCII output.
 // framerate 60 + low noise_reduction keep the bars snappy and in time with
@@ -194,7 +195,12 @@ function waitForEqNode(retries: number, delay: number): Promise<void> {
 function startFilterChain(g: number[]) {
   clearEqDefault()
   execAsync(["pkill", "-f", "pipewire -c filter-chain.conf"]).catch(() => {})
-  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+  // Coalesce overlapping starts (e.g. a sink-change and a gain reload landing
+  // together on a Bluetooth reconnect) — otherwise each spawns its own chain
+  // and two effect_input.eq6 sinks fight over the default.
+  if (startTimer) GLib.source_remove(startTimer)
+  startTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+    startTimer = null
     print("EQ: starting filter chain...")
     try {
       GLib.spawn_command_line_async("pipewire -c filter-chain.conf")
@@ -387,6 +393,13 @@ let initialSyncDone = false
 
 function isEqSink(s: any): boolean {
   return s.description === "Equalizer Sink" || s.name === "effect_input.eq6" || s.name === "effect_output.eq6"
+}
+
+// The hardware output actually playing: the default sink, or — while the EQ
+// filter is the default — the device the EQ feeds.
+export function getActiveSinkId(): number {
+  const def = wpAudio.get_default_speaker()
+  return def && def.id && !isEqSink(def) ? def.id : selectedSinkId
 }
 
 export function getHwSpeakers(): any[] {

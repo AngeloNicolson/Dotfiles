@@ -3,6 +3,13 @@
 # Monolith - Ollama Manager
 # Manage ollama service and models
 
+# The C++ chat front end (~/projects/personal/monolith, installed as monolith-tui)
+# handles every command when present; this script is the fallback without it.
+# MONOLITH_LEGACY=1 forces the old menu.
+if [ -z "${MONOLITH_LEGACY:-}" ] && command -v monolith-tui >/dev/null 2>&1; then
+    exec monolith-tui "$@"
+fi
+
 set -e
 
 RED='\033[0;31m'

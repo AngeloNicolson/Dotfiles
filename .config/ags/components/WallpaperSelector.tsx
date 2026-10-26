@@ -6,17 +6,16 @@ import { execAsync } from "ags/process"
 import { createState } from "ags"
 import { px } from "../scale"
 import { hyprSetOption } from "../compositor"
-import ThemeSelector from "./ThemeSelector"
-import { toggleWallpapers } from "../state"
+import { createRoot } from "gnim"
+import { toggleWallpapers, favouriteWallpapers } from "../state"
+import { WALLPAPER_DIR, favouritePaths } from "./WallpaperLibrary"
 
-const WALLPAPER_DIR = GLib.get_home_dir() + "/.config/ags/wallpapers"
 const SWWW_DIR = GLib.get_home_dir() + "/.config/awww"
 const VIDEO_DIR = WALLPAPER_DIR
 const MOVIES_DIR = GLib.get_home_dir() + "/Personal/Videos"
 const THUMB_CACHE_DIR = GLib.get_home_dir() + "/.cache/ags/video-thumbs"
 const CURRENT_LIVE_FILE = "/tmp/mpvpaper-current"
 
-const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mkv", ".avi", ".mov"]
 
 function ensureThumbCache() {
@@ -25,30 +24,6 @@ function ensureThumbCache() {
   } catch {
     // Directory might already exist
   }
-}
-
-export function getStaticWallpapers(): string[] {
-  const wallpapers: string[] = []
-  const dirs = [WALLPAPER_DIR, SWWW_DIR]
-
-  for (const dir of dirs) {
-    try {
-      const gdir = GLib.Dir.open(dir, 0)
-      let name: string | null
-      while ((name = gdir.read_name()) !== null) {
-        const lower = name.toLowerCase()
-        if (IMAGE_EXTENSIONS.some(ext => lower.endsWith(ext))) {
-          wallpapers.push(`${dir}/${name}`)
-        }
-      }
-      gdir.close()
-      if (wallpapers.length > 0) break
-    } catch {
-      // Directory doesn't exist
-    }
-  }
-
-  return wallpapers.sort()
 }
 
 function getLiveWallpapers(): string[] {
@@ -401,131 +376,139 @@ export async function applyStaticWallpaper(path: string) {
   }).catch(() => {})
 }
 
-export default function WallpaperSelector() {
-  const [activeTab, setActiveTab] = createState<"wallpapers" | "movies">("wallpapers")
-  const [activeSubTab, setActiveSubTab] = createState<"static" | "live">("static")
-  const staticWallpapers = getStaticWallpapers()
-  const liveWallpapers = getLiveWallpapers()
-  const movieFolders = getMovieFolders()
+export async function applyLiveWallpaper(path: string) {
+  // Force kill any existing mpvpaper (avoid killing pomodoro mpv)
+  await execAsync(["pkill", "-9", "mpvpaper"]).catch(() => {})
+  await execAsync(["pkill", "-9", "-f", "mpv.*no-audio.*loop.*panscan"]).catch(() => {})
+  await new Promise(resolve => setTimeout(resolve, 100))
 
-  const applyLiveWallpaper = async (path: string) => {
-    // Force kill any existing mpvpaper (avoid killing pomodoro mpv)
-    await execAsync(["pkill", "-9", "mpvpaper"]).catch(() => {})
-    await execAsync(["pkill", "-9", "-f", "mpv.*no-audio.*loop.*panscan"]).catch(() => {})
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // Get the target monitor name — prefer the focused one, else the first.
-    let monitor = ""
-    try {
-      const result = await execAsync(["hyprctl", "monitors", "-j"])
-      const monitors = JSON.parse(result)
-      if (monitors.length > 0) {
-        monitor = (monitors.find((m: any) => m.focused) || monitors[0]).name
-      }
-    } catch {
-      // No monitor info — leave empty and let the caller fall back.
+  // Get the target monitor name — prefer the focused one, else the first.
+  let monitor = ""
+  try {
+    const result = await execAsync(["hyprctl", "monitors", "-j"])
+    const monitors = JSON.parse(result)
+    if (monitors.length > 0) {
+      monitor = (monitors.find((m: any) => m.focused) || monitors[0]).name
     }
+  } catch {
+    // No monitor info — leave empty and let the caller fall back.
+  }
 
-    // Check if swww is running
-    let swwwRunning = false
-    try {
-      await execAsync(["pgrep", "awww-daemon"])
-      swwwRunning = true
-    } catch {
-      swwwRunning = false
+  // Check if swww is running
+  let swwwRunning = false
+  try {
+    await execAsync(["pgrep", "awww-daemon"])
+    swwwRunning = true
+  } catch {
+    swwwRunning = false
+  }
+
+  // Set Hyprland background to black (fallback when swww dies)
+  await hyprSetOption("misc:background_color", "0x000000").catch(() => {})
+  await hyprSetOption("misc:disable_hyprland_logo", true).catch(() => {})
+  await hyprSetOption("misc:disable_splash_rendering", true).catch(() => {})
+  await hyprSetOption("misc:force_default_wallpaper", -1).catch(() => {})
+
+  if (swwwRunning) {
+    // Fade swww to black
+    await execAsync([
+      "awww", "clear", "000000",
+      "--transition-type", "fade",
+      "--transition-duration", "0.4",
+      "--transition-fps", "60"
+    ]).catch(() => {})
+
+    // Wait for fade to complete
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // Kill swww
+    await execAsync(["pkill", "-9", "awww-daemon"]).catch(() => {})
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+
+  // Check if this is a different wallpaper than currently playing
+  let currentPath = ""
+  try {
+    const contents = GLib.file_get_contents(CURRENT_LIVE_FILE)
+    if (contents[0]) {
+      currentPath = new TextDecoder().decode(contents[1]).trim()
     }
+  } catch {
+    // File doesn't exist, first time
+  }
 
-    // Set Hyprland background to black (fallback when swww dies)
-    await hyprSetOption("misc:background_color", "0x000000").catch(() => {})
-    await hyprSetOption("misc:disable_hyprland_logo", true).catch(() => {})
-    await hyprSetOption("misc:disable_splash_rendering", true).catch(() => {})
-    await hyprSetOption("misc:force_default_wallpaper", -1).catch(() => {})
+  const isNewWallpaper = currentPath !== path
 
-    if (swwwRunning) {
-      // Fade swww to black
-      await execAsync([
-        "awww", "clear", "000000",
-        "--transition-type", "fade",
-        "--transition-duration", "0.4",
-        "--transition-fps", "60"
-      ]).catch(() => {})
+  // Save current path
+  GLib.file_set_contents(CURRENT_LIVE_FILE, path)
 
-      // Wait for fade to complete
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Kill swww
-      await execAsync(["pkill", "-9", "awww-daemon"]).catch(() => {})
-      await new Promise(resolve => setTimeout(resolve, 50))
-    }
-
-    // Check if this is a different wallpaper than currently playing
-    let currentPath = ""
-    try {
-      const contents = GLib.file_get_contents(CURRENT_LIVE_FILE)
-      if (contents[0]) {
-        currentPath = new TextDecoder().decode(contents[1]).trim()
-      }
-    } catch {
-      // File doesn't exist, first time
-    }
-
-    const isNewWallpaper = currentPath !== path
-
-    // Save current path
-    GLib.file_set_contents(CURRENT_LIVE_FILE, path)
-
-    if (isNewWallpaper) {
-      // New wallpaper selection - use fade-in
-      const ipcSocket = "/tmp/mpvpaper-ipc"
-      execAsync(["rm", "-f", ipcSocket]).catch(() => {})
-      execAsync([
-        "mpvpaper", "-f", "-o", `hwdec=nvdec-copy no-audio loop panscan=1.0 stop-screensaver=no vf=fade=t=in:st=0:d=0.8 input-ipc-server=${ipcSocket}`,
-        monitor, path
-      ]).catch(() => {})
-
-      // Remove fade filter after it completes
-      setTimeout(() => {
-        execAsync(["bash", "-c", `echo '{ "command": ["set_property", "vf", ""] }' | socat - ${ipcSocket}`]).catch(() => {})
-      }, 1000)
-    } else {
-      // Same wallpaper (service restart) - no fade
-      execAsync([
-        "mpvpaper", "-f", "-o", "hwdec=nvdec-copy no-audio loop panscan=1.0 stop-screensaver=no",
-        monitor, path
-      ]).catch(() => {})
-    }
-
-    // Save current live wallpaper
-    execAsync(["rm", "-f", `${SWWW_DIR}/current-live.set`]).catch(() => {})
-    execAsync(["ln", "-sf", path, `${SWWW_DIR}/current-live.set`]).catch(() => {})
-
-    // Get thumbnail for notification
-    const thumbPath = getVideoThumbnailPath(path)
-    const notifyIcon = GLib.file_test(thumbPath, GLib.FileTest.EXISTS) ? thumbPath : "video-x-generic"
-
+  if (isNewWallpaper) {
+    // New wallpaper selection - use fade-in
+    const ipcSocket = "/tmp/mpvpaper-ipc"
+    execAsync(["rm", "-f", ipcSocket]).catch(() => {})
     execAsync([
-      "dunstify", "Live wallpaper set",
-      "-a", "Wallpaper", "-i", notifyIcon, "-r", "91190", "-t", "2000"
+      "mpvpaper", "-f", "-o", `hwdec=nvdec-copy no-audio loop panscan=1.0 stop-screensaver=no vf=fade=t=in:st=0:d=0.8 input-ipc-server=${ipcSocket}`,
+      monitor, path
+    ]).catch(() => {})
+
+    // Remove fade filter after it completes
+    setTimeout(() => {
+      execAsync(["bash", "-c", `echo '{ "command": ["set_property", "vf", ""] }' | socat - ${ipcSocket}`]).catch(() => {})
+    }, 1000)
+  } else {
+    // Same wallpaper (service restart) - no fade
+    execAsync([
+      "mpvpaper", "-f", "-o", "hwdec=nvdec-copy no-audio loop panscan=1.0 stop-screensaver=no",
+      monitor, path
     ]).catch(() => {})
   }
 
+  // Save current live wallpaper
+  execAsync(["rm", "-f", `${SWWW_DIR}/current-live.set`]).catch(() => {})
+  execAsync(["ln", "-sf", path, `${SWWW_DIR}/current-live.set`]).catch(() => {})
+
+  // Get thumbnail for notification
+  const thumbPath = getVideoThumbnailPath(path)
+  const notifyIcon = GLib.file_test(thumbPath, GLib.FileTest.EXISTS) ? thumbPath : "video-x-generic"
+
+  execAsync([
+    "dunstify", "Live wallpaper set",
+    "-a", "Wallpaper", "-i", notifyIcon, "-r", "91190", "-t", "2000"
+  ]).catch(() => {})
+}
+
+export default function WallpaperSelector() {
+  const [activeTab, setActiveTab] = createState<"wallpapers" | "movies">("wallpapers")
+  const [activeSubTab, setActiveSubTab] = createState<"static" | "live">("static")
+  const liveWallpapers = getLiveWallpapers()
+  const movieFolders = getMovieFolders()
+
   // --- Wallpaper sub-tab content ---
-  const staticList = (
-    <box vertical name="wallpaper-list">
-      {staticWallpapers.length === 0 ? (
-        <box name="wallpaper-empty" vertical>
-          <label name="status-icon" label="" />
-          <label name="status-label" label="No wallpapers found" />
-          <label name="status-sublabel" label={`Add images to ${WALLPAPER_DIR}`} />
-          <label name="status-sublabel" label={`or ${SWWW_DIR}`} />
-        </box>
-      ) : (
-        staticWallpapers.map((wp) => (
-          <StaticThumbnail path={wp} onSelect={() => applyStaticWallpaper(wp)} />
-        ))
-      )}
-    </box>
-  ) as Gtk.Widget
+  // Favourites only — the full library (thousands of images) lives in the
+  // carousel, where it can be filtered by category.
+  const staticList = (<box vertical name="wallpaper-list" />) as Gtk.Box
+  let staticDispose: (() => void) | null = null
+  const buildStaticList = () => {
+    staticDispose?.()
+    staticList.get_children().forEach((c) => c.destroy())
+    createRoot((dispose) => {
+      staticDispose = dispose
+      const favs = favouritePaths()
+      if (favs.length === 0) {
+        staticList.add(
+          <box name="wallpaper-empty" vertical>
+            <label name="status-icon" label="" />
+            <label name="status-label" label="No favourite wallpapers" />
+            <label name="status-sublabel" label="Open the carousel (SUPER+W) and press f to star" />
+          </box> as Gtk.Widget)
+      } else {
+        for (const wp of favs) staticList.add(<StaticThumbnail path={wp} onSelect={() => applyStaticWallpaper(wp)} /> as Gtk.Widget)
+      }
+    })
+    staticList.show_all()
+  }
+  buildStaticList()
+  favouriteWallpapers.subscribe(buildStaticList)
 
   const liveList = (
     <box vertical name="wallpaper-list">
@@ -578,7 +561,7 @@ export default function WallpaperSelector() {
           onClicked={() => { setActiveSubTab("static"); wpStack.set_visible_child_name("static") }}
           hexpand
         >
-          <label name="tab-label" label="STATIC" halign={Gtk.Align.CENTER} />
+          <label name="tab-label" label="FAVOURITES" halign={Gtk.Align.CENTER} />
         </button>
         <button
           name="wallpaper-sub-tab-btn"
@@ -638,7 +621,6 @@ export default function WallpaperSelector() {
           <label label="" />
         </button>
       </box>
-      <ThemeSelector />
       <box name="wallpaper-tab-bar">
         <button
           name="wallpaper-tab-btn"

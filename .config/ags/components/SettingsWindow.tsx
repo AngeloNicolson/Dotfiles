@@ -3,6 +3,7 @@
 //
 //   System     spinning wallpaper disc, OS/WM/kernel/uptime, live CPU/GPU/RAM graphs
 //   Audio      output devices, master volume, per-app volume, microphones
+//   Bar Studio bar style (sidebar / frame / shield) and its options
 //   Display    the display arranger (DisplayLayout, embedded), tiling layout, colour controls
 //   Network    Wi-Fi on/off, networks (connect / password / forget), wired state
 //   Bluetooth  the Bluetooth manager (embedded)
@@ -31,7 +32,9 @@ import { hyprSetOption } from "../compositor"
 import { DisplayLayout } from "./DisplayLayout"
 import DisplayEQ from "./DisplayEQ"
 import { BluetoothManager } from "./BluetoothWindow"
+import BarStudioPage from "./BarStudio"
 import { getHwSpeakers, sinkDesc, selectSink, getActiveSinkId } from "./AudioEQ"
+import { listThemes, currentTheme, switchTheme } from "./ThemeSelector"
 
 const FONT = "JetBrainsMono Nerd Font"
 const HOME = GLib.get_home_dir()
@@ -40,6 +43,8 @@ const PAGES = [
   { id: "system", icon: "\u{f013}", label: "System" },
   { id: "audio", icon: "\u{f057e}", label: "Audio" },
   { id: "display", icon: "\u{f0379}", label: "Display" },
+  { id: "bar", icon: "\u{f0569}", label: "Bar Studio" },
+  { id: "theme", icon: "\u{f03d8}", label: "Theme" },
   { id: "network", icon: "\u{f05a9}", label: "Network" },
   { id: "bluetooth", icon: "\u{f00af}", label: "Bluetooth" },
   { id: "storage", icon: "\u{f02ca}", label: "Storage" },
@@ -761,6 +766,33 @@ function ConfigsPage() {
   return { widget: (<box vertical name="st-page">{sectionLabel("CONFIG FILES")}{list}</box>) as Gtk.Widget, start: rebuild, stop: () => {} }
 }
 
+// Colour themes (~/.config/themes/*.json). Moved here from the wallpaper
+// carousel, which now uses its chip row for category filters.
+function ThemePage() {
+  const list = (<box vertical />) as Gtk.Box
+  const rebuild = rebuilder(list, () => {
+    const cur = currentTheme.get()
+    for (const t of listThemes()) {
+      const swatches = [t.colors.bg_light, t.colors.fg, t.colors.accent, t.colors.red, t.colors.green, t.colors.blue]
+        .map((c) => `<span foreground="${c}">●</span>`).join(" ")
+      list.add(
+        <button name="st-row-btn" class={t.name === cur ? "active" : ""} onClicked={() => switchTheme(t.name)}>
+          <box>
+            <label name="st-row-icon" label={t.name === cur ? "\u{f012c}" : " "} />
+            <label label={t.displayName} xalign={0} hexpand />
+            <label $={(self: Gtk.Label) => self.set_markup(swatches)} />
+          </box>
+        </button> as Gtk.Widget)
+    }
+  })
+  let unsub: (() => void) | null = null
+  return {
+    widget: (<box vertical name="st-page">{sectionLabel("COLOUR THEMES")}{list}</box>) as Gtk.Widget,
+    start: () => { rebuild(); unsub = currentTheme.subscribe(rebuild) },
+    stop: () => { unsub?.(); unsub = null },
+  }
+}
+
 // ── Window ───────────────────────────────────────────────────────────────────
 
 interface Page { widget: Gtk.Widget, start: () => void, stop: () => void, escape?: (k: number) => boolean }
@@ -771,6 +803,8 @@ function Settings() {
     system: SystemPage(),
     audio: AudioPage(),
     display: DisplayPage(),
+    bar: BarStudioPage(),
+    theme: ThemePage(),
     network: NetworkPage(),
     bluetooth: BluetoothPage(isOn("bluetooth")),
     storage: StoragePage(),

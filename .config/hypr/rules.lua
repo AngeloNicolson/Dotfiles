@@ -23,6 +23,8 @@ hl.workspace_rule({ workspace = "special:nvim",     gaps_in = 8,  gaps_out = 16 
 
 -- Route apps to special workspaces
 hl.window_rule({ match = { class = "firefox" }, workspace = "special:browser silent" })
+-- Zen maps its main window floating (1200x720) — force it to tile like Firefox.
+hl.window_rule({ match = { class = "^zen$" }, workspace = "special:browser silent", tile = true })
 
 -- qutebrowser. Note the class is "org.qutebrowser.qutebrowser" (native Wayland),
 -- NOT the bare "qutebrowser" it reported while it was still running on XWayland.
@@ -53,3 +55,9 @@ hl.layer_rule({ match = { namespace = "rofi" }, blur = true, ignore_alpha = 0.15
 
 -- AGS Settings window: frost the whole screen behind its dimmed backdrop.
 hl.layer_rule({ match = { namespace = "settings" }, blur = true, ignore_alpha = 0.2 })
+
+-- AGS wallpaper carousel (SUPER+W): the strips appear instantly (no_anim) over
+-- a separate frosted backdrop layer that fades in — blur included — over 1.7s.
+-- The carousel stretches fadeLayersIn for that one map (WallpaperCarousel.tsx).
+hl.layer_rule({ match = { namespace = "wallpapers" }, no_anim = true })
+hl.layer_rule({ match = { namespace = "wallpapers-backdrop" }, blur = true, ignore_alpha = 0.2, animation = "fade" })

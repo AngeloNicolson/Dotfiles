@@ -36,6 +36,9 @@ hl.config({
     },
     layout           = "dwindle",
     resize_on_border = true,
+    -- Default 15px reaches past the right screen edge's frame + gap and covers
+    -- the AGS edge-tab click strip; 4px keeps border-resizing but stops short.
+    extend_border_grab_area = 4,
   },
 
   decoration = {

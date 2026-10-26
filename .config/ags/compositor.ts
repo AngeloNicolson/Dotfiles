@@ -164,3 +164,49 @@ export async function hyprDispatch(legacy: string, lua: string): Promise<void> {
   if (await hyprConfigIsLua()) await execAsync(["hyprctl", "dispatch", lua])
   else await execAsync(["hyprctl", "dispatch", ...legacy.split(" ")])
 }
+
+// ── Workspaces ───────────────────────────────────────────────────────────────
+// Regular (non-special) workspace ids that currently exist, sorted, plus the
+// focused one. Empty / 1 on the GDK fallback.
+
+export function getWorkspaceIds(): number[] {
+  if (!hypr) return [1]
+  return hypr.get_workspaces().map(w => w.get_id()).filter(id => id > 0).sort((a, b) => a - b)
+}
+
+export function getFocusedWorkspaceId(): number {
+  return hypr?.get_focused_workspace()?.get_id() ?? 1
+}
+
+// Fires when workspaces are created/destroyed or focus moves between them.
+export function onWorkspacesChanged(cb: () => void): () => void {
+  if (!hypr) return () => {}
+  const ids = [
+    hypr.connect("notify::focused-workspace", () => cb()),
+    hypr.connect("workspace-added", () => cb()),
+    hypr.connect("workspace-removed", () => cb()),
+  ]
+  return () => ids.forEach(id => hypr!.disconnect(id))
+}
+
+export function focusWorkspace(id: number): void {
+  hyprDispatch(`workspace ${id}`, `hl.dsp.focus({ workspace = ${id} })`).catch(() => {})
+}
+
+// Workspace switch animation direction. animations.lua sets the default
+// (sideways); the bar style overrides it at runtime, so it's re-applied after
+// every config reload.
+export function setWorkspaceSlide(vertical: boolean): void {
+  if (!hypr) return
+  hyprConfigIsLua().then((lua) => {
+    const style = vertical ? "slidevert" : "slide"
+    const cmd = lua
+      ? ["hyprctl", "eval", `hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "workIn", style = "${style}" })`]
+      : ["hyprctl", "keyword", "animation", `workspaces,1,3,workIn,${style}`]
+    return execAsync(cmd)
+  }).catch(() => {})
+}
+
+export function onConfigReloaded(cb: () => void): void {
+  hypr?.connect("event", (_h: any, event: string) => { if (event === "configreloaded") cb() })
+}

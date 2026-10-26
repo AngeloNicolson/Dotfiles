@@ -3,6 +3,7 @@ import { Astal } from "ags/gtk3"
 import { createState } from "ags"
 import AstalHyprland from "gi://AstalHyprland"
 import GLib from "gi://GLib"
+import { barStyle } from "../state"
 
 // Brief HUD readout showing which workspace just came up. Listens to raw
 // Hyprland socket2 events so special-workspace toggles are caught too
@@ -40,6 +41,8 @@ function initListener() {
   hyprland.connect("event", (_h, event: string, args: string) => {
     if (event === "workspacev2") {
       // args: "ID,NAME"
+      // The SHIELD bar's compass already tracks regular workspaces.
+      if (barStyle.get() === "shield") return
       const name = args.split(",")[1] ?? ""
       if (name) flash(`WS ${name}`)
     } else if (event === "activespecial") {

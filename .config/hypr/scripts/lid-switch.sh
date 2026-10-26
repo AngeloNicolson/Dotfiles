@@ -15,17 +15,21 @@ EXTERNAL="$(mon_first_external)"
 STATE_FILE="${XDG_RUNTIME_DIR:-/tmp}/hypr-lid-moved-workspaces"
 
 if [ "$1" = "open" ]; then
-    # Re-enable the laptop panel at 0x0; push the external to its right.
-    hypr_monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
-    hypr_dispatch "dpms on $LAPTOP" "hl.dsp.dpms({ action = \"on\", monitor = $(hypr_lua_str "$LAPTOP") })"
     DISPLAYS_LUA="$HOME/.config/hypr/custom/displays.lua"
-    if [ -f "$DISPLAYS_LUA" ] && hypr_is_lua; then
-        # A layout saved by the AGS display arranger wins over the default below.
+    if [ -f "$DISPLAYS_LUA" ] && hypr_is_lua && grep -q "output = \"$LAPTOP\"" "$DISPLAYS_LUA"; then
+        # A layout saved by the AGS display arranger wins. Apply it directly —
+        # re-enabling the panel at 0x0 first would briefly overlap whatever
+        # external sits at 0x0 and trip Hyprland's "monitors overlap" warning.
         hypr_eval "dofile($(hypr_lua_str "$DISPLAYS_LUA"))"
-    elif [ -n "$EXTERNAL" ]; then
-        x="$(mon_logical_width "$LAPTOP")"
-        hypr_monitor "$EXTERNAL,preferred,${x}x0,1"
+    else
+        # Re-enable the laptop panel at 0x0; push the external to its right.
+        hypr_monitor "$LAPTOP,$LAPTOP_MODE,0x0,$LAPTOP_SCALE"
+        if [ -n "$EXTERNAL" ]; then
+            x="$(mon_logical_width "$LAPTOP")"
+            hypr_monitor "$EXTERNAL,preferred,${x}x0,1"
+        fi
     fi
+    hypr_dispatch "dpms on $LAPTOP" "hl.dsp.dpms({ action = \"on\", monitor = $(hypr_lua_str "$LAPTOP") })"
     # Move back exactly the workspaces we relocated when the lid closed.
     if [ -f "$STATE_FILE" ]; then
         while read -r ws; do

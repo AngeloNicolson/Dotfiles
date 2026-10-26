@@ -94,7 +94,7 @@ function themeHyprLua(t: Theme): string {
   if (L.opacity < 1) {
     lines.push(
       `_G.__theme_opacity = hl.window_rule({ name = "theme-opacity", match = { class = ".*" }, opacity = "${L.opacity} override" })`,
-      `_G.__theme_opacity_fs = hl.window_rule({ name = "theme-opacity-fullscreen", match = { class = ".*", fullscreen = true }, opacity = "1.0 override" })`,
+      `_G.__theme_opacity_fs = hl.window_rule({ name = "theme-opacity-fullscreen", match = { class = ".*", fullscreen_state_internal = 2 }, opacity = "1.0 override" })`,
     )
   }
   return lines.join("\n") + "\n"
@@ -3053,8 +3053,13 @@ const STATIC_CSS = `
     }
 
     /* ============ WALLPAPER CAROUSEL (WallpaperCarousel.tsx) ============ */
+    /* The carousel itself is transparent; the dim + blur lives on its own
+       layer (wallpapers-backdrop) which Hyprland fades in slowly. */
     #wc-overlay {
-      background: alpha(@bg_dark, 0.35);
+      background-color: transparent;
+    }
+    #wc-backdrop {
+      background-color: alpha(@bg_dark, 0.35);
     }
     #wc-title {
       font-size: 12px;
@@ -3064,25 +3069,40 @@ const STATIC_CSS = `
       margin-top: 4px;
       margin-bottom: 18px;
     }
-    #wc-theme {
+    #wc-chip {
       background: alpha(@bg, 0.75);
       border: 1px solid alpha(@fg_dim, 0.35);
       border-radius: 9999px;
       padding: 6px 14px;
       margin: 0 4px;
     }
-    #wc-theme:hover {
+    #wc-chip:hover {
       border-color: @fg_dim;
     }
-    #wc-theme.active {
+    #wc-chip.active {
       border-color: @fg_bright;
       background: alpha(@bg_light, 0.9);
     }
-    #wc-theme label {
+    #wc-chip label {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
       color: @fg;
+    }
+    #wc-chip #wc-chip-count {
+      font-weight: 400;
+      letter-spacing: 0;
+      color: @fg_dim;
+    }
+    #wc-subfilters {
+      margin-top: 8px;
+    }
+    #wc-subfilters #wc-chip {
+      padding: 4px 10px;
+    }
+    #wc-subfilters #wc-chip label {
+      font-size: 9px;
+      letter-spacing: 1px;
     }
     #wc-hint {
       font-size: 9px;
@@ -3611,6 +3631,306 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 600;
       letter-spacing: 2px;
+    }
+
+    /* === BAR STYLES: shared bar widgets (BarWidgets.tsx) === */
+    #bw-ws {
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 4px;
+      min-width: 0;
+      min-height: 0;
+    }
+    #bw-ws-pip {
+      min-width: 6px;
+      min-height: 6px;
+      border-radius: 1px;
+      background: alpha(@fg_dim, 0.35);
+    }
+    #bw-ws.occupied #bw-ws-pip {
+      background: alpha(@fg, 0.7);
+    }
+    #bw-ws.active #bw-ws-pip {
+      background: @accent;
+      min-width: 14px;
+    }
+    #frame-rail #bw-ws.active #bw-ws-pip {
+      min-width: 6px;
+      min-height: 14px;
+    }
+    #bw-glyph {
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 4px 6px;
+      min-width: 0;
+      min-height: 0;
+      color: @fg;
+      font-size: 14px;
+    }
+    #bw-glyph:hover {
+      color: @fg_bright;
+      background: alpha(@fg, 0.08);
+    }
+    #bw-glyph.dim {
+      color: alpha(@fg_dim, 0.6);
+    }
+    #bw-glyph.active {
+      color: @accent;
+    }
+    #bw-battery {
+      color: @fg;
+      font-size: 10px;
+      margin: 4px 6px;
+    }
+    #bw-battery.low {
+      color: @red;
+    }
+    #bw-battery-icon {
+      font-size: 14px;
+    }
+    #bw-clock-h, #bw-clock-m {
+      color: @fg_bright;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    #bw-clock-date {
+      color: @fg_dim;
+      font-size: 10px;
+      letter-spacing: 2px;
+      margin-left: 8px;
+    }
+
+    /* === FRAME style (FrameBar.tsx) === */
+    #frame-rail-box {
+      padding: 10px 0;
+    }
+    #frame-rail-logo {
+      color: @accent;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    #frame-rail #bw-workspaces, #frame-rail #bw-status {
+      margin: 6px 0;
+    }
+    #frame-rail #bw-clock {
+      margin-top: 8px;
+    }
+
+    /* === SHIELD style (ShieldBar.tsx) === */
+    #shield-bar-box {
+      padding: 0;
+    }
+    #halo-pill {
+      background: alpha(@bg_dark, 0.45);
+      border: 1px solid alpha(@fg, 0.06);
+      border-radius: 999px;
+      padding: 0 10px;
+      margin-top: 5px;
+      min-height: 22px;
+    }
+    #halo-pill.left {
+      margin-left: 10px;
+      padding-left: 8px;
+    }
+    #halo-pill.right {
+      margin-right: 10px;
+    }
+    #halo-pill.center {
+      padding: 0 14px;
+    }
+    #halo-pill #bw-glyph {
+      font-size: 11px;
+      padding: 0 4px;
+    }
+    #halo-pill #bw-battery, #halo-pill #bw-battery-icon {
+      font-size: 10px;
+    }
+    #halo-pill #bw-battery {
+      margin: 0 5px;
+    }
+    #halo-emblem {
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 0 6px 0 0;
+      min-height: 0;
+      color: @fg_bright;
+      font-size: 13px;
+    }
+    #halo-emblem:hover {
+      color: @accent;
+    }
+    #halo-clock #bw-clock-h, #halo-clock #bw-clock-m {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    #halo-clock #bw-clock-date {
+      font-size: 10px;
+    }
+    #halo-slash {
+      color: alpha(@fg_dim, 0.6);
+      font-size: 11px;
+      margin-left: 5px;
+    }
+    #shield-bar-box.reach #bw-clock-h,
+    #shield-bar-box.reach #bw-clock-m,
+    #shield-bar-box.reach #bw-glyph,
+    #shield-bar-box.reach #bw-battery,
+    #shield-bar-box.reach #halo-emblem,
+    #shield-bar-box.reach #halo-slash {
+      color: alpha(#a8e6ff, 0.85);
+    }
+    #shield-bar-box.reach #bw-clock-date {
+      color: alpha(#a8e6ff, 0.6);
+    }
+    #shield-bar-box.reach #bw-glyph:hover,
+    #shield-bar-box.reach #halo-emblem:hover {
+      color: #ffffff;
+      background: alpha(#5cc7ff, 0.15);
+    }
+    #shield-panel-box {
+      background: alpha(@bg_dark, 0.92);
+      border: 1px solid alpha(@fg_dim, 0.35);
+      border-top: none;
+      padding: 10px 14px 14px 14px;
+    }
+    #shield-tabs {
+      margin-bottom: 10px;
+    }
+    #shield-tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      box-shadow: none;
+      color: @fg_dim;
+      font-size: 10px;
+      letter-spacing: 3px;
+      padding: 4px;
+    }
+    #shield-tab.active {
+      color: @fg_bright;
+      border-bottom-color: @accent;
+    }
+    #shield-media-title {
+      color: @fg_bright;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    #shield-media-artist, #shield-empty {
+      color: @fg_dim;
+      font-size: 10px;
+      letter-spacing: 2px;
+      margin: 2px 0 8px 0;
+    }
+    #shield-btn {
+      background: alpha(@fg, 0.04);
+      border: 1px solid alpha(@fg_dim, 0.25);
+      border-radius: 2px;
+      box-shadow: none;
+      color: @fg;
+      font-size: 16px;
+      padding: 4px 14px;
+      margin: 0 4px;
+    }
+    #shield-btn:hover {
+      border-color: @fg_bright;
+      color: @fg_bright;
+    }
+    #shield-row {
+      margin: 4px 0;
+    }
+    #shield-row-label {
+      color: @fg_dim;
+      font-size: 10px;
+      letter-spacing: 3px;
+    }
+    #shield-calendar {
+      color: @fg;
+      background: transparent;
+      font-size: 11px;
+    }
+    #shield-calendar:selected {
+      background: @accent;
+      color: @bg;
+    }
+
+    /* === Edge tab (EdgeTab.tsx) === */
+    #edge-handle {
+      background: @bg_dark;
+      border-radius: 12px 0 0 12px;
+      padding: 8px 4px;
+    }
+    #edge-btn {
+      background: none;
+      border: none;
+      box-shadow: none;
+      border-radius: 8px;
+      min-width: 0;
+      min-height: 0;
+      padding: 7px 8px;
+      margin: 2px 0;
+      color: @fg_dim;
+      font-size: 15px;
+    }
+    #edge-btn:hover {
+      color: @fg_bright;
+      background: alpha(@fg, 0.08);
+    }
+    #edge-btn.active {
+      color: @bg;
+      background: @accent;
+    }
+    #sidebar-bg.edge-panel {
+      /* no border: the handle and its fillets join the panel seamlessly */
+      border: none;
+    }
+
+    /* === Settings → Bar Studio (BarStudio.tsx) === */
+    #bs-row {
+      background: alpha(@fg, 0.03);
+      border: 1px solid alpha(@fg_dim, 0.15);
+      border-radius: 2px;
+      padding: 12px 14px;
+      margin-bottom: 6px;
+    }
+    #bs-row-title {
+      color: @fg_bright;
+      font-size: 12px;
+    }
+    #bs-row-desc {
+      color: @fg_dim;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+    #bs-value {
+      color: @fg;
+      font-size: 11px;
+      margin-right: 10px;
+    }
+    #bs-step-btn, #bs-chip, #bs-reset {
+      background: alpha(@fg, 0.03);
+      border: 1px solid alpha(@fg_dim, 0.3);
+      border-radius: 2px;
+      box-shadow: none;
+      color: @fg;
+      font-size: 10px;
+      letter-spacing: 2px;
+      padding: 4px 10px;
+      margin-left: 4px;
+      min-height: 0;
+    }
+    #bs-step-btn:hover, #bs-chip:hover, #bs-reset:hover {
+      border-color: @fg_bright;
+    }
+    #bs-chip.active {
+      background: @fg_bright;
+      color: @bg;
+      border-color: @fg_bright;
+    }
+    #bs-reset {
+      margin: 8px 0 0 0;
     }
   `
 

@@ -25,7 +25,7 @@ bind(mainMod, "L", dsp.focus({ direction = "r" }))
 bind(mainMod, "K", dsp.focus({ direction = "u" }))
 bind(mainMod, "J", dsp.focus({ direction = "d" }))
 
-for _, ws in ipairs({ 1, 2, 3, 4, 5, 7 }) do
+for _, ws in ipairs({ 1, 2, 3, 4, 5, 6, 7 }) do
   bind(mainMod, tostring(ws), dsp.focus({ workspace = ws }))
 end
 
@@ -46,7 +46,7 @@ bind(mainMod .. " + SHIFT", "L", dsp.window.move({ direction = "r" }))
 bind(mainMod .. " + SHIFT", "K", dsp.window.move({ direction = "u" }))
 bind(mainMod .. " + SHIFT", "J", dsp.window.move({ direction = "d" }))
 
-for _, ws in ipairs({ 1, 2, 3, 4, 5, 7 }) do
+for _, ws in ipairs({ 1, 2, 3, 4, 5, 6, 7 }) do
   bind(mainMod .. " + SHIFT", tostring(ws), dsp.window.move({ workspace = ws, follow = false }))
 end
 
@@ -94,6 +94,7 @@ bind(mainMod,             "space", dsp.exec_cmd("~/.config/hypr/scripts/launcher
 bind(mainMod,             "A",   dsp.exec_cmd("ags request toggle-destination"))  -- Destiny-style Destination menu
 bind(mainMod .. " + SHIFT", "A",   dsp.exec_cmd("ags request toggle-galaxy"))       -- Galaxy overlay
 bind(mainMod,             "slash", dsp.exec_cmd("~/.config/hypr/scripts/keybinds-menu.sh"))  -- keybind cheat sheet
+bind(mainMod,             "P",   dsp.exec_cmd("ags request edge-toggle"))  -- planner/pomodoro edge panel (focused screen)
 
 -- Screenshot
 bind(mainMod,             "I", dsp.exec_cmd("~/.config/hypr/scripts/screenshot.sh s"))  -- drag to snip / click window
@@ -101,19 +102,17 @@ bind(mainMod .. " + CTRL",  "I", dsp.exec_cmd("~/.config/hypr/scripts/screenshot
 bind(mainMod .. " + SHIFT", "I", dsp.exec_cmd("~/.config/hypr/scripts/screenshot.sh m"))  -- print focused monitor
 bind("",                  "print", dsp.exec_cmd("~/.config/hypr/scripts/screenshot.sh p")) -- print all monitors
 
--- Color picker
-bind(mainMod, "P", dsp.exec_cmd("wl-color-picker"))
 
 
 -- ── App Launching (RIGHT ALT / MOD5) ────────────────────────────────────────
 
 bind("MOD5", "Return", dsp.exec_cmd("foot"))
 bind("MOD5", "F",      dsp.exec_cmd("firefox"))
--- Right-Alt+B — qutebrowser on the browser overlay. rules.lua routes the window
--- to special:browser; qb-overlay starts it only if it isn't already running
--- (it's single-instance, so a bare relaunch would just add a tab) and then
--- reveals the overlay. SUPER+B remains the plain show/hide toggle.
-bind("MOD5", "B",      dsp.exec_cmd("$HOME/.local/bin/qb-overlay"))
+-- Right-Alt+B — Zen on the browser overlay. rules.lua routes the window to
+-- special:browser; zen-overlay starts it only if it isn't already running and
+-- then reveals the overlay. SUPER+B remains the plain show/hide toggle.
+-- (qutebrowser is still reachable through the Right-Alt+W profile chord.)
+bind("MOD5", "B",      dsp.exec_cmd("$HOME/.local/bin/zen-overlay"))
 bind("MOD5", "E",      dsp.exec_cmd("nemo"))
 bind("MOD5", "A",      dsp.exec_cmd("$HOME/.local/bin/armorpaint"))
 

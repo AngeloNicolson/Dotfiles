@@ -76,6 +76,17 @@ export function toggleWallpapers() {
   setWallpapersVisible(!wallpapersVisible.get())
 }
 
+// Starred wallpapers, stored relative to the wallpaper dir so they survive a
+// home-dir rename. Shown first in the carousel and in the CORE page list.
+export const [favouriteWallpapers, setFavouriteWallpapersState] = createState<string[]>(
+  Array.isArray(uiState.favouriteWallpapers) ? uiState.favouriteWallpapers : [],
+)
+export function setFavouriteWallpapers(list: string[]) {
+  uiState.favouriteWallpapers = list
+  setFavouriteWallpapersState(list)
+  saveUiState()
+}
+
 // Display arranger overlay visibility state
 export const [displaysVisible, setDisplaysVisible] = createState(false)
 
@@ -101,6 +112,59 @@ export function setSidebarPinned(pinned: boolean) {
   uiState.sidebarPinned = pinned
   saveUiState()
 }
+
+// ── Bar style (Settings → Bar Studio) ───────────────────────────────────────
+// frame:   Sumi-style band round the desktop + left rail (no page sidebar)
+// shield:  Halo-themed top bar: three pills, workspace compass in the centre
+export type BarStyle = "frame" | "shield"
+export const BAR_STYLES: BarStyle[] = ["frame", "shield"]
+
+export interface FrameConfig { thickness: number, radius: number, opacity: number, rail: number }
+export interface ShieldConfig { color: "theme" | "reach" }
+const FRAME_DEFAULTS: FrameConfig = { thickness: 6, radius: 14, opacity: 0.92, rail: 44 }
+const SHIELD_DEFAULTS: ShieldConfig = { color: "reach" }
+
+const [barStyle, setBarStyleState] = createState<BarStyle>(
+  BAR_STYLES.includes(uiState.barStyle) ? uiState.barStyle : "shield"
+)
+const [frameConfig, setFrameConfigState] = createState<FrameConfig>({ ...FRAME_DEFAULTS, ...uiState.frame })
+const [shieldConfig, setShieldConfigState] = createState<ShieldConfig>({ ...SHIELD_DEFAULTS, ...uiState.shield })
+export { barStyle, frameConfig, shieldConfig, FRAME_DEFAULTS, SHIELD_DEFAULTS }
+
+export function setBarStyle(style: BarStyle) {
+  if (!BAR_STYLES.includes(style)) return
+  uiState.barStyle = style
+  saveUiState()
+  setBarStyleState(style)
+}
+
+export function setFrameConfig(patch: Partial<FrameConfig>) {
+  const next = { ...frameConfig.get(), ...patch }
+  uiState.frame = next
+  saveUiState()
+  setFrameConfigState(next)
+}
+
+export function setShieldConfig(patch: Partial<ShieldConfig>) {
+  const next = { ...shieldConfig.get(), ...patch }
+  uiState.shield = next
+  saveUiState()
+  setShieldConfigState(next)
+}
+
+// Edge tab (EdgeTab.tsx): which page is slid out of the right edge, or null —
+// per monitor NAME, so opening a page on one screen leaves the others tucked.
+const edgePageStates: Map<string, ReturnType<typeof createState<string | null>>> = new Map()
+export function getEdgePageState(monitorName: string) {
+  if (!edgePageStates.has(monitorName)) {
+    edgePageStates.set(monitorName, createState<string | null>(null))
+  }
+  return edgePageStates.get(monitorName)!
+}
+
+// Shield morph panel (ShieldBar.tsx): which surface is grown out, or null.
+export type ShieldPanel = "media" | "calendar" | "controls" | null
+export const [shieldPanel, setShieldPanel] = createState<ShieldPanel>(null)
 
 // Focused page — when set, bar always opens to this page. Defaults to HOME;
 // the user's FOCUS choice is remembered across reboots.

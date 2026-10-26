@@ -9,7 +9,7 @@ import Settings from "./Settings"
 import Pomodoro, { secondsRemaining, phase } from "./Pomodoro"
 
 // Page id -> component. Page order/labels live in pages.ts.
-function buildPage(id: string): Gtk.Widget {
+export function buildPage(id: string): Gtk.Widget {
   switch (id) {
     case "home": {
       const homeScroll = new Gtk.ScrolledWindow({

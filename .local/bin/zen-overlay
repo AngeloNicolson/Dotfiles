@@ -1,0 +1,28 @@
+#!/bin/sh
+# Open Zen on Hyprland's special:browser overlay — the Zen twin of
+# qb-overlay (see there for the reasoning behind each step).
+#
+# rules.lua routes class "zen" to special:browser with "silent". Start
+# Zen only if it isn't running (a relaunch would open yet another window),
+# wait for its window to land on the overlay, then reveal the overlay if it
+# isn't already up.
+
+if ! pgrep -x zen-bin >/dev/null 2>&1; then
+    # setsid so the browser outlives this script.
+    setsid zen-browser >/dev/null 2>&1 < /dev/null &
+
+    # Toggling before the window lands reveals an empty special workspace,
+    # which Hyprland immediately auto-closes. ~10s ceiling.
+    i=0
+    while [ "$i" -lt 50 ]; do
+        hyprctl clients -j 2>/dev/null \
+            | jq -e 'any(.[]; .class == "zen" and .workspace.name == "special:browser")' \
+                 >/dev/null 2>&1 && break
+        i=$((i + 1))
+        sleep 0.2
+    done
+fi
+
+hyprctl monitors -j 2>/dev/null \
+    | jq -e 'any(.[]; .specialWorkspace.name == "special:browser")' >/dev/null 2>&1 \
+    || hyprctl dispatch 'hl.dsp.workspace.toggle_special("browser")'

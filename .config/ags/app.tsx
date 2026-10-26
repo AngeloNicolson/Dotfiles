@@ -1,13 +1,18 @@
 import app from "ags/gtk3/app"
 import { createState } from "ags"
+import { createRoot } from "gnim"
 import {
-  toggleBar, cyclePage, cyclePageBack, removeSidebarStack,
+  toggleBar, cyclePage, cyclePageBack,
   toggleDestination, toggleGalaxy, togglePeriodicTable, toggleDisplays, toggleBluetoothWindow, toggleWallpapers, toggleSettings, getSidebarStacks,
+  barStyle, setBarStyle, BAR_STYLES, frameConfig, type BarStyle,
+  shieldPanel, setShieldPanel, getEdgePageState,
 } from "./state"
 import { initTheme, applyTheme, reapplyCss } from "./theme"
-import { recomputeScale, uFor, withU, trackWindowScale, refreshWindowScales } from "./scale"
+import { recomputeScale, uFor, withU, trackWindowScale, refreshWindowScales, px } from "./scale"
 import * as compositor from "./compositor"
-import Bar from "./components/Bar"
+import FrameBar from "./components/FrameBar"
+import ShieldBar from "./components/ShieldBar"
+import EdgeTab, { EDGE_PAGES, DEFAULT_EDGE_PAGE } from "./components/EdgeTab"
 import DestinationWindow from "./components/DestinationWindow"
 import GalaxyWindow from "./components/GalaxyWindow"
 import PeriodicTableWindow from "./components/PeriodicTableWindow"
@@ -61,6 +66,40 @@ const commands: Record<string, (args: string[]) => string> = {
     toggleSettings(page)
     return page ? `settings: ${page}` : "settings toggled"
   },
+  "bar-style": ([style]) => {
+    if (!style) return `bar style: ${barStyle.get()} (options: ${BAR_STYLES.join(", ")})`
+    if (!BAR_STYLES.includes(style as BarStyle)) return `unknown style: ${style} (options: ${BAR_STYLES.join(", ")})`
+    setBarStyle(style as BarStyle)
+    return `bar style set to ${style}`
+  },
+  "shield-panel": ([panel]) => {
+    const panels = ["media", "calendar", "controls"]
+    if (panel && !panels.includes(panel)) return `usage: shield-panel [${panels.join("|")}]`
+    const next = panel ?? "media"
+    setShieldPanel(shieldPanel.get() === next ? null : next as any)
+    return `shield panel: ${shieldPanel.get() ?? "closed"}`
+  },
+  "edge-page": ([page]) => {
+    const mon = compositor.getFocusedMonitorName()
+    if (!mon) return "no focused monitor"
+    const [, setEdgePage] = getEdgePageState(mon)
+    if (!page) { setEdgePage(null); return "edge page closed" }
+    if (!EDGE_PAGES.includes(page)) return `usage: edge-page [${EDGE_PAGES.join("|")}]`
+    setEdgePage(page)
+    return `edge page: ${page}`
+  },
+  "edge-toggle": ([page]) => {
+    const mon = compositor.getFocusedMonitorName()
+    if (!mon) return "no focused monitor"
+    if (page && !EDGE_PAGES.includes(page)) return `usage: edge-toggle [${EDGE_PAGES.join("|")}]`
+    const [edgePage, setEdgePage] = getEdgePageState(mon)
+    // No page: toggle the panel itself — close it if out, else open the default.
+    const next = page
+      ? (edgePage.get() === page ? null : page)
+      : (edgePage.get() ? null : DEFAULT_EDGE_PAGE)
+    setEdgePage(next)
+    return next ? `edge page: ${next}` : "edge page closed"
+  },
   "debug-stacks": () =>
     `Registered stacks: ${JSON.stringify(Array.from(getSidebarStacks().keys()))}`,
   "theme": ([themeName]) => {
@@ -102,64 +141,61 @@ app.start({
       refreshWindowScales()
     }
 
-    // Track bars by monitor name (stable identifier)
-    const bars: Map<string, any> = new Map()
+    // Per monitor (by stable name): the bar style's windows (frame band + rail,
+    // or the shield bar), shown on every monitor.
+    const bars: Map<string, any[]> = new Map()
+    let disposeBars: (() => void) | null = null
 
-    // Sync bars with current monitors
+    // Sync bars with current monitors and the chosen bar style
     const syncBars = () => {
       // Destroy all existing bars and recreate them
-      // GDK monitor indices can shift when monitors are added/removed
-      bars.forEach((bar, name) => {
-        bar.destroy()
-        removeSidebarStack(name)
-      })
+      // GDK monitor indices can shift when monitors are added/removed.
+      // Release bindings first, while their widgets still exist.
+      disposeBars?.()
+      disposeBars = null
+      bars.forEach((wins) => wins.forEach((w) => w.destroy()))
       bars.clear()
 
-      // Create bars for all current monitors
-      compositor.getMonitors().forEach((mon) => {
+      const style = barStyle.get()
+      // Create bars for all current monitors, in a fresh scope so their
+      // bindings are released on the next rebuild.
+      createRoot((dispose) => { disposeBars = dispose; compositor.getMonitors().forEach((mon) => {
         const gdkIndex = compositor.gdkIndexFor(mon)
-        console.log(`Creating bar for monitor: ${mon.name} (gdk index: ${gdkIndex})`)
+        console.log(`Creating ${style} bar for monitor: ${mon.name} (gdk index: ${gdkIndex})`)
         // Built with this monitor's factor (JS px values) and tagged so the
         // stylesheet's per-size copy applies to it.
-        const bar = withU(uFor(mon), () => Bar(gdkIndex, mon.name))
-        trackWindowScale(bar)
-        bars.set(mon.name, bar)
-      })
+        // Plus the edge tab (pomodoro/planner pop-out) on every monitor; under
+        // FRAME it grows out of the band's inner edge.
+        const wins = withU(uFor(mon), () => [
+          ...(style === "frame" ? FrameBar(gdkIndex) : ShieldBar(gdkIndex)),
+          ...EdgeTab(gdkIndex, mon.name, style === "frame" ? px(frameConfig.get().thickness) : 0),
+        ])
+        wins.forEach((w) => trackWindowScale(w))
+        bars.set(mon.name, wins)
+      }) })
 
       console.log(`Active bars: ${Array.from(bars.keys()).join(", ")}`)
     }
 
-    // Update which bar is visible based on focus
-    const updateBarVisibility = () => {
-      // Single monitor - just show it
-      if (bars.size <= 1) {
-        bars.forEach(bar => bar.visible = true)
-        return
-      }
+    // FRAME's compass runs vertically, so workspaces slide up/down there;
+    // SHIELD's runs sideways.
+    const applySlide = () => compositor.setWorkspaceSlide(barStyle.get() === "frame")
+    compositor.onConfigReloaded(applySlide)
 
-      const focusedName = compositor.getFocusedMonitorName()
-      if (!focusedName) {
-        bars.forEach(bar => bar.visible = true)
-        return
-      }
-
-      bars.forEach((bar, name) => {
-        bar.visible = name === focusedName
-      })
-    }
+    // Bar Studio changes land live.
+    barStyle.subscribe(() => { syncBars(); applySlide() })
+    frameConfig.subscribe(() => {
+      if (barStyle.get() === "frame") syncBars()
+    })
 
     compositor.onMonitorsChanged(() => {
       console.log("Monitor layout changed")
       syncBars()
-      updateBarVisibility()
       updateScale()
       updateOverlayMonitor()
     })
 
-    compositor.onFocusChanged(() => {
-      updateBarVisibility()
-      updateOverlayMonitor()
-    })
+    compositor.onFocusChanged(() => updateOverlayMonitor())
 
     // Initial setup
     // Recompute U from the now-ready focused monitor before anything is built.
@@ -169,7 +205,7 @@ app.start({
     // the whole UI would render at full baseline size (too large on smaller screens).
     updateScale()
     syncBars()
-    updateBarVisibility()
+    applySlide()
     updateOverlayMonitor()
 
     // Overlay windows follow the focused monitor (reactive index) instead of

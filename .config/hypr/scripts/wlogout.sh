@@ -83,7 +83,8 @@ if ! command -v wlogout >/dev/null 2>&1; then
     notify-send -a "Power menu" -u critical "wlogout isn't installed" "Install it with: yay -S wlogout" 2>/dev/null
     exit 1
 fi
-pgrep -x wlogout >/dev/null && exit 0
+# Toggle: the same bind (mod+`) closes the menu if it is already open.
+pkill -x wlogout && exit 0
 exec wlogout -b "$PER_ROW" -c "$COL_SPACING" -r "$ROW_SPACING" \
     -L "$L" -R "$R" -T "$T" -B "$B" \
     -l "$LAYOUT" -C "$CSS"
