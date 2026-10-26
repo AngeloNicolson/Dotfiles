@@ -8,6 +8,8 @@ import {
   shieldPanel, setShieldPanel, getEdgePageState,
 } from "./state"
 import { initTheme, applyTheme, reapplyCss } from "./theme"
+import { execAsync } from "ags/process"
+import GLib from "gi://GLib"
 import { recomputeScale, uFor, withU, trackWindowScale, refreshWindowScales, px } from "./scale"
 import * as compositor from "./compositor"
 import FrameBar from "./components/FrameBar"
@@ -104,7 +106,11 @@ const commands: Record<string, (args: string[]) => string> = {
     `Registered stacks: ${JSON.stringify(Array.from(getSidebarStacks().keys()))}`,
   "theme": ([themeName]) => {
     if (!themeName) return "usage: theme <name>"
+    // Same two steps as the Settings picker: in-process writers, then the
+    // script for what they don't cover (dunst + app reload hooks).
     applyTheme(themeName)
+      .then(() => execAsync([GLib.get_home_dir() + "/.config/themes/apply-theme.sh", themeName]))
+      .catch((e) => console.error(`theme ${themeName}: ${e}`))
     return `theme set to ${themeName}`
   },
   "help": () => `commands: ${Object.keys(commands).sort().join(", ")}`,
