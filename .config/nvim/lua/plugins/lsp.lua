@@ -51,8 +51,10 @@ return {
 				map("<leader>ld", tb("lsp_type_definitions"), "Type [D]efinition")
 				map("<leader>ls", tb("lsp_document_symbols"), "[D]ocument [S]ymbols")
 				map("<leader>lS", tb("lsp_dynamic_workspace_symbols"), "[W]orkspace [S]ymbols")
-				-- Signature help on demand (noice no longer auto-opens it)
-				map("<C-k>", vim.lsp.buf.signature_help, "Signature help", { "i", "n" })
+				-- Signature help on demand (noice no longer auto-opens it). Insert-mode
+				-- only on <C-k>: in normal mode <C-k>/<C-j> belong to harpoon.
+				map("<C-k>", vim.lsp.buf.signature_help, "Signature help", "i")
+				map("<leader>lk", vim.lsp.buf.signature_help, "Signature help")
 				map("<leader>lr", vim.lsp.buf.rename, "[R]ename")
 				map("<leader>la", vim.lsp.buf.code_action, "Code [A]ction", { "n", "v" })
 				map("K", vim.lsp.buf.hover, "Hover Documentation")
