@@ -28,9 +28,10 @@ return {
 					optional = { max_tokens = 96, top_p = 0.9 },
 				},
 			},
-			-- ghost text on by default for the languages the engine is written in
+			-- On demand only: nothing appears until <C-]> / <A-]> asks for it.
+			-- (`:Minuet virtualtext enable` or <leader>aV turns auto mode on per buffer.)
 			virtualtext = {
-				auto_trigger_ft = { "c", "cpp", "cuda", "glsl", "lua", "python", "clojure" },
+				auto_trigger_ft = {},
 				show_on_completion_menu = true, -- clangd keeps the cmp menu open a lot; still show ghost text
 				keymap = {
 					-- Alt keys: nothing collides with cmp's <Tab>/<CR>/<C-n>/<C-p>
@@ -44,26 +45,15 @@ return {
 			},
 			cmp = { enable_auto_complete = false }, -- cmp source is manual: <A-y>
 		})
-		-- The plugin only arms auto-trigger from a FileType autocmd it registers in
-		-- setup(); buffers opened before this lazy load (the file nvim started
-		-- with) never see that event, so arm them here.
-		local cfg = require("minuet").config.virtualtext
-		for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-			if vim.api.nvim_buf_is_loaded(buf)
-				and vim.tbl_contains(cfg.auto_trigger_ft, vim.bo[buf].filetype)
-				and not vim.tbl_contains(cfg.auto_trigger_ignore_ft or {}, vim.bo[buf].filetype) then
-				vim.b[buf].minuet_virtual_text_auto_trigger = true
-			end
-		end
-
 		-- Keep the FIM model resident. Ollama unloads after 5 min idle and the
 		-- OpenAI-style endpoint ignores keep_alive, so poke the native API (no
 		-- prompt = load only) when entering insert mode, at most every 20 min.
+		local WARM_FT = { "c", "cpp", "cuda", "glsl", "lua", "python", "clojure" }
 		local last_warm = 0
 		vim.api.nvim_create_autocmd("InsertEnter", {
 			group = vim.api.nvim_create_augroup("minuet-keep-warm", { clear = true }),
 			callback = function()
-				if not vim.tbl_contains(cfg.auto_trigger_ft, vim.bo.filetype) then return end
+				if not vim.tbl_contains(WARM_FT, vim.bo.filetype) then return end
 				local now = os.time()
 				if now - last_warm < 1200 then return end
 				last_warm = now
