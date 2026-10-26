@@ -1,24 +1,14 @@
 return {
-
 	-- Markdown Preview
 	{
 		"iamcco/markdown-preview.nvim",
 		build = "cd app && npm install",
-		setup = function()
+		init = function()
 			vim.g.mkdp_filetypes = { "markdown" }
 		end,
 		ft = { "markdown" },
 	},
 
-	-- File Browser
-	{
-		"nvim-telescope/telescope-file-browser.nvim",
-		dependencies = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim" },
-	},
-	{
-		"editorconfig/editorconfig-vim",
-		event = { "BufReadPre", "BufNewFile" },
-	},
 	{
 		"folke/which-key.nvim",
 		event = "VeryLazy",
@@ -28,9 +18,7 @@ return {
 		end,
 		opts = {
 			preset = "modern",
-			icons = {
-				separator = "→",
-			},
+			icons = { separator = "→" },
 		},
 		config = function(_, opts)
 			local wk = require("which-key")

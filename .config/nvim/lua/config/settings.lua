@@ -39,5 +39,3 @@ vim.opt.isfname:append("@-@")
 -- Performance tuning
 vim.opt.updatetime = 50
 
--- vim.g settings (global settings)
-vim.g.mapleader = " "

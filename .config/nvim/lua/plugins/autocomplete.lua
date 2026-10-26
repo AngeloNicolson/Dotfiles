@@ -1,5 +1,6 @@
 return { -- Autocompletion
 	"hrsh7th/nvim-cmp",
+	event = { "InsertEnter", "CmdlineEnter" },
 	dependencies = {
 		-- Snippet Engine & its associated nvim-cmp source
 		{
@@ -153,15 +154,16 @@ return { -- Autocompletion
 				end, { "i", "s" }),
 			}),
 			sources = {
-				{
-					name = "lazydev",
-					-- set group index to 0 to skip loading LuaLS completions as lazydev recommends it
-					group_index = 0,
-				},
 				{ name = "nvim_lsp" },
 				{ name = "luasnip" },
 				{ name = "buffer" },
 				{ name = "path" },
+				-- Minuet FIM ghost text also shows up here as a (slow) source; see plugins/minuet.lua
+				{ name = "minuet" },
+			},
+			performance = {
+				-- LLM sources answer slower than LSP; let minuet finish instead of dropping it
+				fetching_timeout = 2000,
 			},
 			-- Applying formatting to the auto completion window
 			formatting = {
@@ -173,6 +175,7 @@ return { -- Autocompletion
 						luasnip = "[Snippet]",
 						buffer = "[Buffer]",
 						path = "[Path]",
+						minuet = "[AI]",
 					})[entry.source.name]
 					return vim_item
 				end,

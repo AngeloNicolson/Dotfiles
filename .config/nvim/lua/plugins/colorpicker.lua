@@ -2,6 +2,12 @@ return {
 	{
 		"uga-rosa/ccc.nvim",
 		-- Prefix ownership: <leader>w (Windows/appearance utility)
+		event = { "BufReadPost", "BufNewFile" }, -- inline colour highlighter wants real buffers
+		cmd = { "CccPick", "CccHighlighterToggle", "CccHighlighterEnable", "CccConvert" },
+		keys = {
+			{ "<leader>wp", "<cmd>CccPick<cr>", desc = "Window color picker" },
+			{ "<leader>wh", "<cmd>CccHighlighterToggle<cr>", desc = "Window color highlight" },
+		},
 		config = function()
 			local ccc = require("ccc")
 			ccc.setup({
@@ -27,12 +33,6 @@ return {
 				-- Highlight formats
 				highlight_mode = "bg", -- or "fg", "virtual"
 			})
-
-			-- Keybind: <leader>wp to open color picker
-			vim.keymap.set("n", "<leader>wp", "<cmd>CccPick<cr>", { desc = "Window color picker" })
-
-			-- Keybind: <leader>wh to toggle color highlighting
-			vim.keymap.set("n", "<leader>wh", "<cmd>CccHighlighterToggle<cr>", { desc = "Window color highlight" })
 		end,
 	},
 }

@@ -2,6 +2,13 @@ return {
 	"nvim-pack/nvim-spectre",
 	-- Prefix ownership: <leader>s (Search)
 	dependencies = { "nvim-lua/plenary.nvim" },
+	cmd = "Spectre",
+	keys = {
+		{ "<leader>sr", function() require("spectre").toggle() end, desc = "Search replace panel" },
+		{ "<leader>sw", function() require("spectre").open_visual({ select_word = true }) end, desc = "Search word" },
+		{ "<leader>sw", function() require("spectre").open_visual() end, mode = "v", desc = "Search current word" },
+		{ "<leader>sp", function() require("spectre").open_file_search({ select_word = true }) end, desc = "Search current file" },
+	},
 	config = function()
 		require("spectre").setup({
 			color_devicons = true,
@@ -134,21 +141,5 @@ return {
 				},
 			},
 		})
-
-		-- Keybindings
-		vim.keymap.set("n", "<leader>sr", '<cmd>lua require("spectre").toggle()<CR>', { desc = "Search replace panel" })
-		vim.keymap.set(
-			"n",
-			"<leader>sw",
-			'<cmd>lua require("spectre").open_visual({select_word=true})<CR>',
-			{ desc = "Search word" }
-		)
-		vim.keymap.set("v", "<leader>sw", '<esc><cmd>lua require("spectre").open_visual()<CR>', { desc = "Search current word" })
-		vim.keymap.set(
-			"n",
-			"<leader>sp",
-			'<cmd>lua require("spectre").open_file_search({select_word=true})<CR>',
-			{ desc = "Search current file" }
-		)
 	end,
 }

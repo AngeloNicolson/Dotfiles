@@ -20,4 +20,6 @@ vim.opt.rtp:prepend(lazypath)
 -- This is also a good place to setup other settings (vim.opt)
 
 -- Setup lazy.nvim
-require("lazy").setup("plugins")
+require("lazy").setup("plugins", {
+	rocks = { enabled = false }, -- nothing here needs luarocks; silences :checkhealth lazy
+})

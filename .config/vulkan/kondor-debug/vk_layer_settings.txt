@@ -1,0 +1,40 @@
+# Khronos validation layer settings for debugging Kondor.
+# Used by the Neovim Overseer template `vulkan_validate`
+# (VK_LAYER_SETTINGS_PATH=~/.config/vulkan/kondor-debug, VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation).
+# Manual use:
+#   VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation VK_LAYER_SETTINGS_PATH=~/.config/vulkan/kondor-debug ./build/Debug/kondor
+# Keys come from /usr/share/vulkan/explicit_layer.d/VkLayer_khronos_validation.json (layer 1.4.x).
+
+# Core checks stay on (default) ...
+khronos_validation.validate_core = true
+khronos_validation.check_shaders = true
+khronos_validation.thread_safety = true
+khronos_validation.object_lifetime = true
+khronos_validation.stateless_param = true
+khronos_validation.unique_handles = true
+
+# ... plus the expensive ones for a debug session:
+# GPU-assisted validation (out-of-bounds descriptor/buffer access on the GPU)
+khronos_validation.gpuav_enable = true
+khronos_validation.gpuav_shader_instrumentation = true
+khronos_validation.gpuav_descriptor_checks = true
+khronos_validation.gpuav_buffers_validation = true
+# Synchronization validation (missing barriers / hazards)
+khronos_validation.validate_sync = true
+khronos_validation.syncval_submit_time_validation = true
+# Debug printf from shaders (GL_EXT_debug_printf / debugPrintfEXT)
+khronos_validation.printf_enable = true
+khronos_validation.printf_to_stdout = true
+khronos_validation.printf_verbose = false
+khronos_validation.printf_buffer_size = 1024
+# Best-practices (vendor-neutral + NVIDIA since this box runs on NVIDIA)
+khronos_validation.validate_best_practices = true
+khronos_validation.validate_best_practices_nvidia = true
+
+# Report everything but info spam to stdout so Overseer's errorformat can pick
+# up "VUID-..." lines; also mirror into a log file next to the binary.
+khronos_validation.debug_action = VK_DBG_LAYER_ACTION_LOG_MSG
+khronos_validation.report_flags = error,warn,perf
+khronos_validation.log_filename = stdout
+khronos_validation.enable_message_limit = true
+khronos_validation.duplicate_message_limit = 10

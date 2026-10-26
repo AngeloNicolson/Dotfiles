@@ -1,6 +1,13 @@
 return {
 	"rgroli/other.nvim",
 	-- Prefix ownership: <leader>o (Open/Tasks)
+	cmd = { "Other", "OtherSplit", "OtherVSplit", "OtherClear" },
+	keys = {
+		{ "<leader>oo", "<cmd>Other<cr>", desc = "Open related file" },
+		{ "<leader>oh", "<cmd>OtherSplit<cr>", desc = "Open related file (split)" },
+		{ "<leader>ov", "<cmd>OtherVSplit<cr>", desc = "Open related file (vsplit)" },
+		{ "<leader>oc", "<cmd>OtherClear<cr>", desc = "Clear other.nvim cache" },
+	},
 	config = function()
 		require("other-nvim").setup({
 			mappings = {
@@ -60,11 +67,5 @@ return {
 				minHeight = 2,
 			},
 		})
-
-		-- Keybindings
-		vim.keymap.set("n", "<leader>oo", "<cmd>Other<cr>", { desc = "Open related file" })
-		vim.keymap.set("n", "<leader>oh", "<cmd>OtherSplit<cr>", { desc = "Open related file (split)" })
-		vim.keymap.set("n", "<leader>ov", "<cmd>OtherVSplit<cr>", { desc = "Open related file (vsplit)" })
-		vim.keymap.set("n", "<leader>oc", "<cmd>OtherClear<cr>", { desc = "Clear other.nvim cache" })
 	end,
 }

@@ -56,18 +56,14 @@ vim.keymap.set("n", "<leader>bx", function()
 	vim.keymap.set("n", "q", "<cmd>bd!<CR>", { buffer = true, desc = "Close build output" })
 end, { desc = "Build/run current C/C++ file" })
 
--- Map <leader>l to act as <C-w>
-vim.keymap.set("n", "<leader>w", "<C-w>")
-
+-- <leader>w is the Windows/appearance group (ccc colour picker, undotree);
+-- native <C-w> stays the window-command prefix.
 
 vim.keymap.set("n", "<leader>hk", "<cmd>Telescope keymaps<CR>", { desc = "Help keymaps" })
 vim.keymap.set("n", "<leader>hc", "<cmd>Telescope commands<CR>", { desc = "Help commands" })
 vim.keymap.set("n", "<leader>hh", "<cmd>Telescope help_tags<CR>", { desc = "Help tags" })
 vim.keymap.set("n", "<leader>he", "<cmd>Noice errors<CR>", { desc = "Help error history" })
 vim.keymap.set("n", "<leader>hm", "<cmd>Noice history<CR>", { desc = "Help message history" })
-vim.keymap.set("n", "<leader>hb", function()
-	require("which-key").show({ global = false })
-end, { desc = "Help buffer keymaps" })
+-- <leader>hb (buffer keymaps) lives in plugins/init.lua with which-key.
 
-vim.keymap.set("n", "<leader>am", "<cmd>AIModels<CR>", { desc = "AI model select" })
-vim.keymap.set("n", "<leader>a?", "<cmd>AIModels<CR>", { desc = "AI model select" })
+vim.keymap.set("n", "<leader>am", "<cmd>AIModels<CR>", { desc = "AI model select (CodeCompanion)" })

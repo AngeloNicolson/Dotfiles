@@ -94,15 +94,4 @@ return {
 			end, { desc = "Format and save buffer" })
 		end,
 	},
-	{
-		"nvimtools/none-ls.nvim",
-		dependencies = {
-			"nvimtools/none-ls-extras.nvim",
-		},
-		config = function()
-			require("null-ls").setup({
-				sources = {},
-			})
-		end,
-	},
 }

@@ -5,6 +5,7 @@ return {
 	-- Fidget for inline notifications
 	{
 		"j-hui/fidget.nvim",
+		event = "LspAttach",
 		config = function()
 			require("fidget").setup({
 				notification = {
@@ -21,6 +22,8 @@ return {
 	-- Noice for enhanced UI
 	{
 		"folke/noice.nvim",
+		event = "VeryLazy",
+		dependencies = { "MunifTanjim/nui.nvim", "rcarriga/nvim-notify" },
 		config = function()
 			require("noice").setup({
 				cmdline = {

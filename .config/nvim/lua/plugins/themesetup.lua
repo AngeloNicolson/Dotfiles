@@ -51,6 +51,7 @@ return {
 			-- Hand-made schemes; anything not listed → palette-driven "system".
 			local colorscheme_map = {
 				famicom = "famicom",
+				halo = "halo",
 				["e-ink"] = "monochrome",
 				miasma = "miasma",
 			}

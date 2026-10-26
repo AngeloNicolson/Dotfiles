@@ -1,239 +1,200 @@
 return {
-  "neovim/nvim-lspconfig",
-  dependencies = {
-    "williamboman/mason.nvim",
-    "williamboman/mason-lspconfig.nvim",
-    "WhoIsSethDaniel/mason-tool-installer.nvim",
-  },
-  config = function()
-    -- Enable diagnostic display
-    vim.diagnostic.config({
-      virtual_text = {
-        prefix = '●',
-        source = 'always',
-        spacing = 4,
-      },
-      signs = {
-        active = true,
-        values = {
-          { name = "DiagnosticSignError", text = "" },
-          { name = "DiagnosticSignWarn", text = "" },
-          { name = "DiagnosticSignInfo", text = "" },
-          { name = "DiagnosticSignHint", text = "" },
-        },
-      },
-      update_in_insert = false,
-      underline = true,
-      severity_sort = true,
-      float = {
-        focusable = false,
-        style = "minimal",
-        border = "rounded",
-        source = "always",
-        header = "",
-        prefix = "",
-      },
-    })
+	"neovim/nvim-lspconfig",
+	event = { "BufReadPre", "BufNewFile" },
+	dependencies = {
+		"williamboman/mason.nvim",
+		"williamboman/mason-lspconfig.nvim",
+		"WhoIsSethDaniel/mason-tool-installer.nvim",
+		"hrsh7th/cmp-nvim-lsp",
+	},
+	config = function()
+		-- Diagnostics -----------------------------------------------------------
+		vim.diagnostic.config({
+			virtual_text = { prefix = "●", source = true, spacing = 4 },
+			signs = {
+				text = {
+					[vim.diagnostic.severity.ERROR] = "",
+					[vim.diagnostic.severity.WARN] = "",
+					[vim.diagnostic.severity.INFO] = "",
+					[vim.diagnostic.severity.HINT] = "",
+				},
+			},
+			update_in_insert = false,
+			underline = true,
+			severity_sort = true,
+			float = { focusable = false, style = "minimal", border = "rounded", source = true, header = "", prefix = "" },
+		})
 
-    -- Define diagnostic signs
-    vim.fn.sign_define("DiagnosticSignError", { text = "", texthl = "DiagnosticSignError" })
-    vim.fn.sign_define("DiagnosticSignWarn", { text = "", texthl = "DiagnosticSignWarn" })
-    vim.fn.sign_define("DiagnosticSignInfo", { text = "", texthl = "DiagnosticSignInfo" })
-    vim.fn.sign_define("DiagnosticSignHint", { text = "", texthl = "DiagnosticSignHint" })
+		-- Keymaps + per-buffer behaviour -----------------------------------------
+		vim.api.nvim_create_autocmd("LspAttach", {
+			group = vim.api.nvim_create_augroup("lsp-attach", { clear = true }),
+			callback = function(event)
+				local client = vim.lsp.get_client_by_id(event.data.client_id)
+				if not client then
+					return
+				end
+				-- Formatting is conform's job (clang-format/stylua/...), never the server's.
+				client.server_capabilities.documentFormattingProvider = false
+				client.server_capabilities.documentRangeFormattingProvider = false
 
-    -- Common on_attach function
-    local function on_attach(client, bufnr)
-      client.server_capabilities.documentFormattingProvider = false
-      client.server_capabilities.documentRangeFormattingProvider = false
-    end
+				local map = function(keys, func, desc, mode)
+					vim.keymap.set(mode or "n", keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
+				end
+				local tb = function(fn)
+					return function()
+						require("telescope.builtin")[fn]()
+					end
+				end
+				map("gd", tb("lsp_definitions"), "[G]oto [D]efinition")
+				map("gr", tb("lsp_references"), "[G]oto [R]eferences")
+				map("gI", tb("lsp_implementations"), "[G]oto [I]mplementation")
+				map("<leader>ld", tb("lsp_type_definitions"), "Type [D]efinition")
+				map("<leader>ls", tb("lsp_document_symbols"), "[D]ocument [S]ymbols")
+				map("<leader>lS", tb("lsp_dynamic_workspace_symbols"), "[W]orkspace [S]ymbols")
+				map("<leader>lr", vim.lsp.buf.rename, "[R]ename")
+				map("<leader>la", vim.lsp.buf.code_action, "Code [A]ction", { "n", "v" })
+				map("K", vim.lsp.buf.hover, "Hover Documentation")
+				map("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration")
+				map("<leader>lwa", vim.lsp.buf.add_workspace_folder, "[W]orkspace [A]dd Folder")
+				map("<leader>lwr", vim.lsp.buf.remove_workspace_folder, "[W]orkspace [R]emove Folder")
+				map("<leader>lwl", function()
+					print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
+				end, "[W]orkspace [L]ist Folders")
 
-    -- LSP keymappings
-    vim.api.nvim_create_autocmd("LspAttach", {
-      group = vim.api.nvim_create_augroup("lsp-attach", { clear = true }),
-      callback = function(event)
-        local map = function(keys, func, desc)
-          vim.keymap.set("n", keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
-        end
+				if client:supports_method("textDocument/inlayHint") then
+					vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
+					map("<leader>li", function()
+						local on = not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf })
+						vim.lsp.inlay_hint.enable(on, { bufnr = event.buf })
+						vim.notify("Inlay hints " .. (on and "on" or "off"), vim.log.levels.INFO)
+					end, "Toggle [I]nlay hints")
+				end
 
-        map("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
-        map("gr", require("telescope.builtin").lsp_references, "[G]oto [R]eferences")
-        map("gI", require("telescope.builtin").lsp_implementations, "[G]oto [I]mplementation")
-        map("<leader>ld", require("telescope.builtin").lsp_type_definitions, "Type [D]efinition")
-        map("<leader>ls", require("telescope.builtin").lsp_document_symbols, "[D]ocument [S]ymbols")
-        map("<leader>lS", require("telescope.builtin").lsp_dynamic_workspace_symbols, "[W]orkspace [S]ymbols")
-        map("<leader>lr", vim.lsp.buf.rename, "[R]ename")
-        map("<leader>la", vim.lsp.buf.code_action, "Code [A]ction")
-        map("K", vim.lsp.buf.hover, "Hover Documentation")
-        map("gD", vim.lsp.buf.declaration, "[G]oto [D]eclaration")
-        map("<leader>lwa", vim.lsp.buf.add_workspace_folder, "[W]orkspace [A]dd Folder")
-        map("<leader>lwr", vim.lsp.buf.remove_workspace_folder, "[W]orkspace [R]emove Folder")
-        map("<leader>lwl", function()
-          print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-        end, "[W]orkspace [L]ist Folders")
+				if client:supports_method("textDocument/documentHighlight") then
+					local grp = vim.api.nvim_create_augroup("lsp-highlight-" .. event.buf, { clear = true })
+					vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+						group = grp,
+						buffer = event.buf,
+						callback = vim.lsp.buf.document_highlight,
+					})
+					vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+						group = grp,
+						buffer = event.buf,
+						callback = vim.lsp.buf.clear_references,
+					})
+				end
+			end,
+		})
 
-        local client = vim.lsp.get_client_by_id(event.data.client_id)
-        if client and client.server_capabilities.documentHighlightProvider then
-          vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
-            buffer = event.buf,
-            callback = vim.lsp.buf.document_highlight,
-          })
-          vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-            buffer = event.buf,
-            callback = vim.lsp.buf.clear_references,
-          })
-        end
-      end,
-    })
+		-- Server configs (vim.lsp.config merges over nvim-lspconfig's lsp/*.lua) ---
+		local capabilities = vim.tbl_deep_extend(
+			"force",
+			vim.lsp.protocol.make_client_capabilities(),
+			require("cmp_nvim_lsp").default_capabilities()
+		)
+		vim.lsp.config("*", { capabilities = capabilities })
 
-    local capabilities = vim.lsp.protocol.make_client_capabilities()
-    capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
+		local servers = {
+			clangd = {
+				cmd = {
+					"clangd",
+					"--background-index",
+					"--clang-tidy",
+					"--header-insertion=iwyu",
+					"--completion-style=detailed",
+					"--function-arg-placeholders",
+					"--query-driver=/usr/bin/g++,/usr/bin/clang++,/opt/cuda/bin/nvcc",
+				},
+				filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
+				root_markers = { "compile_commands.json", ".clangd", "CMakePresets.json", "CMakeLists.txt", ".git" },
+				capabilities = { offsetEncoding = { "utf-16" } },
+				init_options = { usePlaceholders = true, completeUnimported = true, clangdFileStatus = true },
+			},
+			glsl_analyzer = {
+				filetypes = { "glsl", "vert", "frag", "geom", "comp", "tesc", "tese" },
+				root_markers = { "compile_commands.json", "CMakePresets.json", "CMakeLists.txt", ".git" },
+			},
+			lua_ls = {
+				settings = {
+					Lua = {
+						runtime = { version = "LuaJIT" },
+						workspace = { checkThirdParty = false, library = { vim.env.VIMRUNTIME } },
+						completion = { callSnippet = "Replace" },
+						telemetry = { enable = false },
+						diagnostics = { disable = { "missing-fields" } },
+						hint = { enable = true },
+					},
+				},
+			},
+			pylsp = {
+				settings = {
+					pylsp = {
+						plugins = {
+							pyflakes = { enabled = false },
+							pycodestyle = { enabled = false },
+							autopep8 = { enabled = false },
+							yapf = { enabled = false },
+							mccabe = { enabled = false },
+							pylsp_mypy = { enabled = false },
+							pylsp_black = { enabled = false },
+							pylsp_isort = { enabled = false },
+						},
+					},
+				},
+			},
+			jdtls = { settings = { java = { format = { enabled = false } } } },
+			clojure_lsp = {},
+			rust_analyzer = {},
+			ts_ls = {
+				filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+				root_markers = { "package.json", "tsconfig.json", ".git" },
+				workspace_required = true, -- was single_file_support = false
+				settings = {
+					typescript = {
+						inlayHints = {
+							includeInlayParameterNameHints = "all",
+							includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+							includeInlayFunctionParameterTypeHints = true,
+							includeInlayVariableTypeHints = true,
+							includeInlayPropertyDeclarationTypeHints = true,
+							includeInlayFunctionLikeReturnTypeHints = true,
+							includeInlayEnumMemberValueHints = true,
+						},
+					},
+					javascript = {
+						inlayHints = {
+							includeInlayParameterNameHints = "all",
+							includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+							includeInlayFunctionParameterTypeHints = true,
+							includeInlayVariableTypeHints = true,
+							includeInlayPropertyDeclarationTypeHints = true,
+							includeInlayFunctionLikeReturnTypeHints = true,
+							includeInlayEnumMemberValueHints = true,
+						},
+					},
+				},
+			},
+			bashls = {},
+			dockerls = {},
+			docker_compose_language_service = {},
+			jsonls = {},
+			sqlls = {},
+			terraformls = {},
+			yamlls = {},
+		}
 
-    -- Language server configurations
-    local lspconfig = require("lspconfig")
-    local util = lspconfig.util
+		for name, cfg in pairs(servers) do
+			vim.lsp.config(name, cfg)
+		end
 
-    local servers = {
-      clangd = {
-        capabilities = { offsetEncoding = { "utf-16" } },
-        on_attach = on_attach,
-        root_dir = util.root_pattern(
-          "compile_commands.json",
-          "compile_flags.txt",
-          ".clangd",
-          ".clang-format",
-          ".editorconfig",
-          "CMakePresets.json",
-          "CMakeLists.txt",
-          ".git"
-        ),
-        cmd = {
-          "clangd",
-          "--background-index",
-          "--clang-tidy",
-          "--header-insertion=iwyu",
-          "--completion-style=detailed",
-          "--function-arg-placeholders",
-          "--fallback-style=llvm",
-        },
-        init_options = {
-          usePlaceholders = true,
-          completeUnimported = true,
-          clangdFileStatus = true,
-        },
-      },
-      glsl_analyzer = {
-        on_attach = on_attach,
-        filetypes = { "glsl", "vert", "frag", "geom", "comp", "tesc", "tese" },
-        root_dir = util.root_pattern(
-          "compile_commands.json",
-          ".clang-format",
-          ".editorconfig",
-          "CMakePresets.json",
-          "CMakeLists.txt",
-          ".git"
-        ),
-      },
-      lua_ls = {
-        on_attach = on_attach,
-        settings = {
-          Lua = {
-            runtime = { version = "LuaJIT" },
-            workspace = {
-              checkThirdParty = false,
-              library = { vim.env.VIMRUNTIME },
-            },
-            completion = { callSnippet = "Replace" },
-            telemetry = { enable = false },
-            diagnostics = { disable = { "missing-fields" } },
-          },
-        },
-      },
-      pylsp = {
-        on_attach = on_attach,
-        settings = {
-          pylsp = {
-            plugins = {
-              pyflakes = { enabled = false },
-              pycodestyle = { enabled = false },
-              autopep8 = { enabled = false },
-              yapf = { enabled = false },
-              mccabe = { enabled = false },
-              pylsp_mypy = { enabled = false },
-              pylsp_black = { enabled = false },
-              pylsp_isort = { enabled = false },
-            },
-          },
-        },
-      },
-      jdtls = {
-        on_attach = on_attach,
-        settings = {
-          java = {
-            format = { enabled = false },
-          },
-        },
-      },
-      clojure_lsp = { on_attach = on_attach },
-      rust_analyzer = { on_attach = on_attach },
-      ts_ls = {
-        on_attach = on_attach,
-        filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
-        root_dir = util.root_pattern("package.json", "tsconfig.json", ".editorconfig", ".git"),
-        single_file_support = false,
-        settings = {
-          typescript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "all",
-              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
-            },
-          },
-          javascript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "all",
-              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
-            },
-          },
-        },
-      },
-      bashls = { on_attach = on_attach },
-      dockerls = { on_attach = on_attach },
-      docker_compose_language_service = { on_attach = on_attach },
-      jsonls = { on_attach = on_attach },
-      sqlls = { on_attach = on_attach },
-      terraformls = { on_attach = on_attach },
-      yamlls = { on_attach = on_attach },
-    }
-
-    -- Setup Mason
-    require("mason").setup()
-
-    require("mason-tool-installer").setup({
-      ensure_installed = {
-      "stylua",
-      "eslint_d",
-      },
-    })
-
-    -- Setup Mason-LSPconfig
-    require("mason-lspconfig").setup({
-      ensure_installed = vim.tbl_keys(servers or {}),
-      handlers = {
-        function(server_name)
-          local server = servers[server_name] or {}
-          server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
-          require("lspconfig")[server_name].setup(server)
-        end,
-      },
-    })
-  end,
+		-- Mason only installs; enabling is ours (automatic_enable would also call
+		-- vim.lsp.enable, which is harmless since vim.lsp.config above is what it reads).
+		require("mason").setup()
+		require("mason-tool-installer").setup({ ensure_installed = { "stylua", "eslint_d" } })
+		require("mason-lspconfig").setup({
+			ensure_installed = vim.tbl_keys(servers),
+			automatic_enable = false,
+		})
+		vim.lsp.enable(vim.tbl_keys(servers))
+	end,
 }

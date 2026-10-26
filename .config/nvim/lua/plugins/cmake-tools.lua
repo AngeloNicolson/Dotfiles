@@ -1,23 +1,23 @@
 return {
 	"Civitasv/cmake-tools.nvim",
-	-- Prefix ownership: <leader>bc (Build -> CMake)
-	dependencies = { "nvim-lua/plenary.nvim" },
-	ft = { "c", "cpp", "objc", "objcpp", "cuda" },
+	-- Prefix ownership: <leader>bc (Build -> CMake). Builds and runs go through
+	-- Overseer; debugging through nvim-dap (codelldb).
+	dependencies = { "nvim-lua/plenary.nvim", "stevearc/overseer.nvim" },
+	ft = { "c", "cpp", "objc", "objcpp", "cuda", "cmake" },
 	opts = {
 		cmake_command = "cmake",
 		ctest_command = "ctest",
-		cmake_use_preset = true,
+		cmake_use_preset = true, -- Kondor ships CMakePresets.json (Debug/Release/ASan)
 		cmake_regenerate_on_save = true,
 		cmake_build_directory = "build/${variant:buildType}",
 		cmake_generate_options = { "-DCMAKE_EXPORT_COMPILE_COMMANDS=1" },
 		cmake_compile_commands_options = {
 			action = "soft_link",
-			target = vim.loop.cwd,
+			target = vim.uv.cwd,
 		},
 		cmake_build_options = {},
-		cmake_console_size = 10,
-		cmake_console_position = "belowright",
-		cmake_show_console = "always",
+		cmake_executor = { name = "overseer" },
+		cmake_runner = { name = "overseer" },
 		cmake_dap_configuration = {
 			name = "cpp",
 			type = "codelldb",
@@ -47,9 +47,11 @@ return {
 		vim.keymap.set("n", "<leader>bcd", "<cmd>CMakeDebug<cr>", { desc = "CMake debug" })
 		vim.keymap.set("n", "<leader>bct", "<cmd>CMakeRunTest<cr>", { desc = "CMake test picker" })
 		vim.keymap.set("n", "<leader>bcy", "<cmd>CMakeSelectBuildType<cr>", { desc = "CMake build type" })
+		vim.keymap.set("n", "<leader>bcp", "<cmd>CMakeSelectConfigurePreset<cr>", { desc = "CMake configure preset" })
 		vim.keymap.set("n", "<leader>bcT", "<cmd>CMakeSelectBuildTarget<cr>", { desc = "CMake build target" })
 		vim.keymap.set("n", "<leader>bcl", "<cmd>CMakeSelectLaunchTarget<cr>", { desc = "CMake launch target" })
-		vim.keymap.set("n", "<leader>bco", "<cmd>CMakeOpen<cr>", { desc = "CMake open console" })
-		vim.keymap.set("n", "<leader>bcc", "<cmd>CMakeClose<cr>", { desc = "CMake close console" })
+		vim.keymap.set("n", "<leader>bco", "<cmd>CMakeOpen<cr>", { desc = "CMake open output (Overseer)" })
+		vim.keymap.set("n", "<leader>bcc", "<cmd>CMakeClose<cr>", { desc = "CMake close output" })
+		vim.keymap.set("n", "<leader>bcx", "<cmd>CMakeStop<cr>", { desc = "CMake stop" })
 	end,
 }

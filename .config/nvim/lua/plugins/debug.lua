@@ -1,37 +1,77 @@
 return {
-	-- nvim-dap: Debug Adapter Protocol client
+	-- nvim-dap: Debug Adapter Protocol client. codelldb for C/C++ (Mason),
+	-- cuda-gdb (DAP mode) for CUDA kernels. Loaded on first debug key/command.
 	{
 		"mfussenegger/nvim-dap",
 		-- Prefix ownership: <leader>d (Debug)
+		cmd = { "DapContinue", "DapToggleBreakpoint", "DapNew", "DapTerminate", "DapShowLog" },
+		keys = {
+			{ "<F5>", function()
+				local dap = require("dap")
+				if dap.session() then
+					dap.continue()
+				else
+					dap.run(dap.configurations[vim.bo.filetype == "cuda" and "cuda" or "cpp"][1])
+				end
+			end, desc = "Debug: Start/Continue" },
+			{ "<F17>", function() require("dap").terminate() end, desc = "Debug: Stop (Shift+F5)" },
+			{ "<F29>", function() require("dap").restart() end, desc = "Debug: Restart (Ctrl+F5)" },
+			{ "<F10>", function() require("dap").step_over() end, desc = "Debug: Step Over" },
+			{ "<F11>", function() require("dap").step_into() end, desc = "Debug: Step Into" },
+			{ "<F23>", function() require("dap").step_out() end, desc = "Debug: Step Out (Shift+F11)" },
+			{ "<leader>dc", function() require("dap").continue() end, desc = "Debug: Continue / pick config" },
+			{ "<leader>dg", function()
+				local dap = require("dap")
+				for _, c in ipairs(dap.configurations.cpp) do
+					if c.type == "cuda_gdb" then
+						return dap.run(c)
+					end
+				end
+			end, desc = "Debug: Launch under cuda-gdb" },
+			{ "<leader>dn", function() require("dap").step_over() end, desc = "Debug: Step Over" },
+			{ "<leader>di", function() require("dap").step_into() end, desc = "Debug: Step Into" },
+			{ "<leader>do", function() require("dap").step_out() end, desc = "Debug: Step Out" },
+			{ "<leader>dq", function() require("dap").terminate() end, desc = "Debug: Quit/Stop" },
+			{ "<leader>dr", function() require("dap").restart() end, desc = "Debug: Restart" },
+			{ "<leader>db", function() require("dap").toggle_breakpoint() end, desc = "Debug: Toggle Breakpoint" },
+			{ "<leader>dB", function() require("dap").set_breakpoint(vim.fn.input("Condition: ")) end, desc = "Debug: Conditional Breakpoint" },
+			{ "<leader>dl", function() require("dap").set_breakpoint(nil, nil, vim.fn.input("Log message: ")) end, desc = "Debug: Logpoint" },
+			{ "<leader>dx", function() require("dap").clear_breakpoints() end, desc = "Debug: Clear All Breakpoints" },
+			{ "<leader>dC", function() require("dap").run_to_cursor() end, desc = "Debug: Run to Cursor" },
+			{ "<leader>dR", function() require("dap").repl.toggle() end, desc = "Debug: Toggle REPL" },
+			{ "<leader>dk", function() require("dap").up() end, desc = "Debug: Go Up Stack Frame" },
+			{ "<leader>dj", function() require("dap").down() end, desc = "Debug: Go Down Stack Frame" },
+			{ "<leader>du", function() require("dapui").toggle() end, desc = "Debug: Toggle UI" },
+			{ "<leader>de", function() require("dapui").eval() end, desc = "Debug: Evaluate", mode = { "n", "v" } },
+			{ "<leader>df", function() require("dapui").float_element("scopes", { enter = true }) end, desc = "Debug: Float Variables" },
+			{ "<leader>dw", function() require("dapui").float_element("watches", { enter = true }) end, desc = "Debug: Float Watches" },
+			{ "<leader>da", function()
+				local word = vim.fn.expand("<cword>")
+				require("dapui").elements.watches.add(word)
+				vim.notify("Added watch: " .. word)
+			end, desc = "Debug: Add Watch (word under cursor)" },
+		},
 		dependencies = {
-			-- UI for nvim-dap
-			{
-				"rcarriga/nvim-dap-ui",
-				dependencies = { "nvim-neotest/nvim-nio" },
-			},
-
-			-- Mason integration for DAP
+			{ "rcarriga/nvim-dap-ui", dependencies = { "nvim-neotest/nvim-nio" } },
 			"jay-babu/mason-nvim-dap.nvim",
-
-			-- Virtual text for debugging
 			"theHamsta/nvim-dap-virtual-text",
 		},
+		init = function()
+			vim.filetype.add({ extension = { cu = "cuda", cuh = "cuda" } })
+		end,
 		config = function()
 			local dap = require("dap")
 			local dapui = require("dapui")
+			local target = require("config.target")
 
-			-- Setup mason-nvim-dap
+			-- install only; no `handlers` so mason-nvim-dap does not auto-define
+			-- adapters for every Mason debugger (debugpy would get an empty command)
 			require("mason-nvim-dap").setup({
 				automatic_installation = false,
-				ensure_installed = {
-					"codelldb", -- C/C++/Rust debugger
-				},
-				handlers = {},
+				ensure_installed = { "codelldb" },
 			})
 
-			-- =============================================
-			-- C++ / CODELLDB ADAPTER CONFIG
-			-- =============================================
+			-- Adapters ---------------------------------------------------------------
 			dap.adapters.codelldb = {
 				type = "server",
 				port = "${port}",
@@ -40,107 +80,44 @@ return {
 					args = { "--port", "${port}" },
 				},
 			}
+			-- cuda-gdb speaks DAP natively (`cuda-gdb -i dap`), verified on this box.
+			dap.adapters.cuda_gdb = {
+				type = "executable",
+				command = "/opt/cuda/bin/cuda-gdb",
+				args = { "-i", "dap" },
+			}
 
-			-- C++ launch configurations
+			-- Configurations ----------------------------------------------------------
+			local cuda_launch = {
+				name = "CUDA (cuda-gdb)",
+				type = "cuda_gdb",
+				request = "launch",
+				program = target.resolve_sync,
+				cwd = "${workspaceFolder}",
+				stopAtBeginningOfMainSubprogram = false,
+				args = {},
+			}
 			dap.configurations.cpp = {
 				{
-					name = "Launch executable",
+					name = "Launch (cmake target / build/Debug)",
 					type = "codelldb",
 					request = "launch",
-					program = function()
-						local function is_executable(path)
-							return vim.fn.filereadable(path) == 1 and vim.fn.executable(path) == 1
-						end
-
-						local function add_candidate(candidates, seen, path)
-							if path ~= "" and is_executable(path) and not seen[path] then
-								table.insert(candidates, path)
-								seen[path] = true
-							end
-						end
-
-						local source_file = vim.fn.expand("%:p")
-						if source_file:match("^dap%-src://") or source_file == "" then
-							for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-								local name = vim.api.nvim_buf_get_name(buf)
-								if name:match("%.c$") or name:match("%.cpp$") or name:match("%.cc$") or name:match("%.cxx$") then
-									source_file = name
-									break
-								end
-							end
-						end
-
-						local current_executable = vim.fn.fnamemodify(source_file, ":r")
-						if is_executable(current_executable) then
-							return current_executable
-						end
-
-						local cwd = vim.fn.getcwd()
-						local cwd_name = vim.fn.fnamemodify(cwd, ":t")
-						local current_dir = vim.fn.fnamemodify(source_file, ":h")
-						local candidates = {}
-						local seen = {}
-
-						-- Check common build directories
-						local build_dirs = {
-							cwd_name,
-							"build/" .. cwd_name,
-							"build/kondor",
-							"build/debug/kondor",
-							"build/Debug/kondor",
-							"cmake-build-debug/kondor",
-						}
-						for _, path in ipairs(build_dirs) do
-							local full_path = cwd .. "/" .. path
-							if is_executable(full_path) then
-								return full_path
-							end
-						end
-
-						for _, dir in ipairs({ current_dir, cwd, cwd .. "/build", cwd .. "/build/debug", cwd .. "/build/Debug" }) do
-							for _, path in ipairs(vim.fn.glob(dir .. "/*", false, true)) do
-								add_candidate(candidates, seen, path)
-							end
-						end
-
-						if #candidates > 0 then
-							local choices = { "Select executable:" }
-							for _, path in ipairs(candidates) do
-								table.insert(choices, vim.fn.fnamemodify(path, ":~:."))
-							end
-							table.insert(choices, "Enter path manually")
-
-							local choice = vim.fn.inputlist(choices)
-							if choice >= 1 and choice <= #candidates then
-								return candidates[choice]
-							end
-						end
-
-						vim.notify("No executable found. Build with debug symbols first.", vim.log.levels.WARN)
-						return vim.fn.input("Executable: ", current_executable, "file")
-					end,
+					program = target.resolve_sync,
 					cwd = "${workspaceFolder}",
 					stopOnEntry = false,
 					args = {},
-					-- Game dev: run from project root for asset paths
-					runInTerminal = false,
-					-- Source map for better debugging
-					sourceMap = {
-						["${workspaceFolder}"] = "${workspaceFolder}",
-					},
+					runInTerminal = false, -- run from project root for asset paths
+					sourceMap = { ["${workspaceFolder}"] = "${workspaceFolder}" },
 				},
 				{
 					name = "Launch with args",
 					type = "codelldb",
 					request = "launch",
-					program = function()
-						return vim.fn.input("Executable: ", vim.fn.getcwd() .. "/build/kondor", "file")
-					end,
+					program = target.resolve_sync,
 					cwd = "${workspaceFolder}",
 					stopOnEntry = false,
 					args = function()
-						local args_string = vim.fn.input("Arguments: ")
-						return vim.split(args_string, " ")
+						return vim.split(vim.fn.input("Arguments: "), " ", { trimempty = true })
 					end,
 				},
 				{
@@ -150,80 +127,42 @@ return {
 					pid = require("dap.utils").pick_process,
 					cwd = "${workspaceFolder}",
 				},
+				cuda_launch,
 			}
-			-- Use same config for C
 			dap.configurations.c = dap.configurations.cpp
+			dap.configurations.cuda = {
+				cuda_launch,
+				{
+					name = "CUDA attach (cuda-gdb)",
+					type = "cuda_gdb",
+					request = "attach",
+					pid = require("dap.utils").pick_process,
+					cwd = "${workspaceFolder}",
+				},
+			}
 
-			-- =============================================
-			-- GAME DEV OPTIMIZED UI LAYOUT
-			-- =============================================
+			-- UI ------------------------------------------------------------------
 			dapui.setup({
 				icons = { expanded = "▾", collapsed = "▸", current_frame = "→" },
-				mappings = {
-					expand = { "<CR>", "<2-LeftMouse>" },
-					open = "o",
-					remove = "d",
-					edit = "e",
-					repl = "r",
-					toggle = "t",
-				},
+				mappings = { expand = { "<CR>", "<2-LeftMouse>" }, open = "o", remove = "d", edit = "e", repl = "r", toggle = "t" },
 				layouts = {
 					{
-						elements = {
-							{ id = "scopes", size = 0.45 },
-							{ id = "watches", size = 0.35 },
-							{ id = "breakpoints", size = 0.20 },
-						},
+						elements = { { id = "scopes", size = 0.45 }, { id = "watches", size = 0.35 }, { id = "breakpoints", size = 0.20 } },
 						size = 50,
 						position = "left",
 					},
-					{
-						elements = {
-							{ id = "stacks", size = 1.0 },
-						},
-						size = 45,
-						position = "right",
-					},
-					{
-						elements = {
-							{ id = "repl", size = 0.5 },
-							{ id = "console", size = 0.5 },
-						},
-						size = 12,
-						position = "bottom",
-					},
+					{ elements = { { id = "stacks", size = 1.0 } }, size = 45, position = "right" },
+					{ elements = { { id = "repl", size = 0.5 }, { id = "console", size = 0.5 } }, size = 12, position = "bottom" },
 				},
 				controls = {
 					enabled = true,
 					element = "repl",
-					icons = {
-						pause = "⏸",
-						play = "▶",
-						step_into = "↓",
-						step_over = "→",
-						step_out = "↑",
-						step_back = "←",
-						run_last = "⟳",
-						terminate = "■",
-						disconnect = "⏏",
-					},
+					icons = { pause = "⏸", play = "▶", step_into = "↓", step_over = "→", step_out = "↑", step_back = "←", run_last = "⟳", terminate = "■", disconnect = "⏏" },
 				},
-				floating = {
-					max_height = 0.6,
-					max_width = 0.6,
-					border = "rounded",
-					mappings = {
-						close = { "q", "<Esc>" },
-					},
-				},
-				render = {
-					indent = 2,
-					-- Show types - helpful for game dev (vec3, mat4, etc)
-					max_type_length = 30,
-				},
+				floating = { max_height = 0.6, max_width = 0.6, border = "rounded", mappings = { close = { "q", "<Esc>" } } },
+				render = { indent = 2, max_type_length = 30 }, -- show types (vec3, mat4, ...)
 			})
 
-			-- Setup virtual text (shows values inline)
 			require("nvim-dap-virtual-text").setup({
 				enabled = true,
 				enabled_commands = true,
@@ -233,8 +172,7 @@ return {
 				commented = false,
 				only_first_definition = true,
 				all_references = false,
-				display_callback = function(variable, _buf, _stackframe, _node)
-					-- Truncate long values (common with game vectors)
+				display_callback = function(variable)
 					local value = variable.value
 					if #value > 50 then
 						value = value:sub(1, 47) .. "..."
@@ -243,104 +181,21 @@ return {
 				end,
 			})
 
-			-- Auto-open/close dap-ui
-			dap.listeners.after.event_initialized["dapui_config"] = function()
-				dapui.open()
-			end
-			dap.listeners.before.event_terminated["dapui_config"] = function()
-				dapui.close()
-			end
-			dap.listeners.before.event_exited["dapui_config"] = function()
-				dapui.close()
-			end
+			dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
+			dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
+			dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
 
-			-- =============================================
-			-- GAME DEV KEYBINDS (all under <leader>d)
-			-- =============================================
-
-			-- Core debugging (always use cpp config, even from neo-tree etc)
-			vim.keymap.set("n", "<F5>", function()
-				if dap.session() then
-					dap.continue()
-				else
-					dap.run(dap.configurations.cpp[1])
-				end
-			end, { desc = "Debug: Start/Continue" })
-			vim.keymap.set("n", "<F17>", dap.terminate, { desc = "Debug: Stop (Shift+F5)" }) -- Shift+F5
-			vim.keymap.set("n", "<F29>", dap.restart, { desc = "Debug: Restart (Ctrl+F5)" }) -- Ctrl+F5
-
-			-- Stepping
-			vim.keymap.set("n", "<F10>", dap.step_over, { desc = "Debug: Step Over" })
-			vim.keymap.set("n", "<F11>", dap.step_into, { desc = "Debug: Step Into" })
-			vim.keymap.set("n", "<F23>", dap.step_out, { desc = "Debug: Step Out (Shift+F11)" }) -- Shift+F11
-
-			-- Leader-based keybinds (more discoverable)
-			vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "Debug: Continue" })
-			vim.keymap.set("n", "<leader>dn", dap.step_over, { desc = "Debug: Step Over" })
-			vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Debug: Step Into" })
-			vim.keymap.set("n", "<leader>do", dap.step_out, { desc = "Debug: Step Out" })
-			vim.keymap.set("n", "<leader>dq", dap.terminate, { desc = "Debug: Quit/Stop" })
-			vim.keymap.set("n", "<leader>dr", dap.restart, { desc = "Debug: Restart" })
-
-			-- Breakpoints
-			vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Debug: Toggle Breakpoint" })
-			vim.keymap.set("n", "<leader>dB", function()
-				dap.set_breakpoint(vim.fn.input("Condition: "))
-			end, { desc = "Debug: Conditional Breakpoint" })
-			vim.keymap.set("n", "<leader>dl", function()
-				dap.set_breakpoint(nil, nil, vim.fn.input("Log message: "))
-			end, { desc = "Debug: Logpoint" })
-			vim.keymap.set("n", "<leader>dx", dap.clear_breakpoints, { desc = "Debug: Clear All Breakpoints" })
-
-			-- UI controls
-			vim.keymap.set("n", "<leader>du", dapui.toggle, { desc = "Debug: Toggle UI" })
-			vim.keymap.set("n", "<leader>de", dapui.eval, { desc = "Debug: Evaluate Expression" })
-			vim.keymap.set("v", "<leader>de", dapui.eval, { desc = "Debug: Evaluate Selection" })
-			vim.keymap.set("n", "<leader>df", function()
-				dapui.float_element("scopes", { enter = true })
-			end, { desc = "Debug: Float Variables" })
-			vim.keymap.set("n", "<leader>dw", function()
-				dapui.float_element("watches", { enter = true })
-			end, { desc = "Debug: Float Watches" })
-
-			-- Run to cursor (super useful for game loops)
-			vim.keymap.set("n", "<leader>dC", dap.run_to_cursor, { desc = "Debug: Run to Cursor" })
-
-			-- REPL
-			vim.keymap.set("n", "<leader>dR", dap.repl.toggle, { desc = "Debug: Toggle REPL" })
-
-			-- Quick add watch (useful for tracking game state)
-			vim.keymap.set("n", "<leader>da", function()
-				local word = vim.fn.expand("<cword>")
-				require("dapui").elements.watches.add(word)
-				print("Added watch: " .. word)
-			end, { desc = "Debug: Add Watch (word under cursor)" })
-
-			-- Frame navigation
-			vim.keymap.set("n", "<leader>dk", dap.up, { desc = "Debug: Go Up Stack Frame" })
-			vim.keymap.set("n", "<leader>dj", dap.down, { desc = "Debug: Go Down Stack Frame" })
-
-			-- =============================================
-			-- BREAKPOINT SIGNS (make them visible)
-			-- =============================================
-			vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "DapBreakpoint", linehl = "", numhl = "" })
-			vim.fn.sign_define(
-				"DapBreakpointCondition",
-				{ text = "◆", texthl = "DapBreakpointCondition", linehl = "", numhl = "" }
-			)
-			vim.fn.sign_define("DapLogPoint", { text = "◇", texthl = "DapLogPoint", linehl = "", numhl = "" })
-			vim.fn.sign_define("DapStopped", { text = "→", texthl = "DapStopped", linehl = "DapStoppedLine", numhl = "" })
-			vim.fn.sign_define(
-				"DapBreakpointRejected",
-				{ text = "○", texthl = "DapBreakpointRejected", linehl = "", numhl = "" }
-			)
-
-			-- Highlight for current line when stopped
-			vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "#e06c75" }) -- Red
-			vim.api.nvim_set_hl(0, "DapBreakpointCondition", { fg = "#e5c07b" }) -- Yellow
-			vim.api.nvim_set_hl(0, "DapLogPoint", { fg = "#61afef" }) -- Blue
-			vim.api.nvim_set_hl(0, "DapStopped", { fg = "#98c379" }) -- Green
-			vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#2e4d3d" }) -- Subtle green background
+			-- Signs ----------------------------------------------------------------
+			vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "DapBreakpoint" })
+			vim.fn.sign_define("DapBreakpointCondition", { text = "◆", texthl = "DapBreakpointCondition" })
+			vim.fn.sign_define("DapLogPoint", { text = "◇", texthl = "DapLogPoint" })
+			vim.fn.sign_define("DapStopped", { text = "→", texthl = "DapStopped", linehl = "DapStoppedLine" })
+			vim.fn.sign_define("DapBreakpointRejected", { text = "○", texthl = "DapBreakpointRejected" })
+			vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "#e06c75" })
+			vim.api.nvim_set_hl(0, "DapBreakpointCondition", { fg = "#e5c07b" })
+			vim.api.nvim_set_hl(0, "DapLogPoint", { fg = "#61afef" })
+			vim.api.nvim_set_hl(0, "DapStopped", { fg = "#98c379" })
+			vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#2e4d3d" })
 		end,
 	},
 }

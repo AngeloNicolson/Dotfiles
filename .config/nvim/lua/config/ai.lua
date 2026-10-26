@@ -67,24 +67,19 @@ local function list_models()
 	return models
 end
 
-local function apply_avante_model(model)
-	local ok_config, avante_config = pcall(require, "avante.config")
-	if not ok_config then
+-- CodeCompanion resolves the ollama adapter's model lazily (schema.model.default
+-- is a function, see plugins/codecompanion.lua), so new chats pick the selected
+-- model up on their own; an already-open chat keeps the model it started with.
+local function apply_codecompanion_model(model)
+	local ok, cc = pcall(require, "codecompanion")
+	if not ok then
 		return
 	end
-
-	avante_config.override({
-		providers = {
-			ollama = vim.tbl_deep_extend("force", avante_config.get_provider_config("ollama"), {
-				model = model,
-			}),
-		},
-	})
-	avante_config.save_last_model(model, "ollama")
-
-	local ok_providers, avante_providers = pcall(require, "avante.providers")
-	if ok_providers and avante_providers.ollama then
-		avante_providers.ollama.model = model
+	local ok_chat, chat = pcall(function()
+		return cc.last_chat()
+	end)
+	if ok_chat and chat and chat.adapter and chat.adapter.name == "ollama" then
+		pcall(require("codecompanion.adapters").set_model, { adapter = chat.adapter, model = model })
 	end
 end
 
@@ -115,7 +110,7 @@ function M.set_current_model(model)
 	end
 
 	current_model = model
-	apply_avante_model(model)
+	apply_codecompanion_model(model)
 	vim.notify("AI model: " .. model, vim.log.levels.INFO)
 	return true
 end

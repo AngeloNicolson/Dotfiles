@@ -4,6 +4,7 @@ return {
 		-- Prefix ownership: <leader>fj (Files -> Jump), plus <C-e>/<C-j>/<C-k>
 		branch = "harpoon2",
 		dependencies = { "nvim-lua/plenary.nvim" },
+		keys = { "<leader>fja", "<leader>fjm", "<C-e>", "<C-k>", "<C-j>" },
 		config = function()
 			local harpoon = require("harpoon")
 			harpoon:setup()
