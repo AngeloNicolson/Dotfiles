@@ -72,6 +72,11 @@ return {
 			end,
 		})
 
+		-- Second manual trigger that is a plain control byte, for terminals or
+		-- layers where Alt is awkward. Same action as <A-]>.
+		vim.keymap.set("i", "<C-]>", function() require("minuet.virtualtext").action.next() end,
+			{ desc = "AI ghost text: request / next suggestion" })
+
 		-- Manual cmp trigger for the minuet source (see plugins/autocomplete.lua sources)
 		local ok, cmp = pcall(require, "cmp")
 		if ok then

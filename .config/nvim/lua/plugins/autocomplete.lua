@@ -135,7 +135,11 @@ return { -- Autocompletion
 				--    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
 				-- Select next/previous item with Tab / Shift + Tab
 				["<Tab>"] = cmp.mapping(function(fallback)
-					if cmp.visible() then
+					-- AI ghost text wins when it's on screen (Copilot convention)
+					local okm, mvt = pcall(require, "minuet.virtualtext")
+					if okm and mvt.action.is_visible() then
+						mvt.action.accept()
+					elseif cmp.visible() then
 						cmp.select_next_item()
 					elseif luasnip.expand_or_locally_jumpable() then
 						luasnip.expand_or_jump()
