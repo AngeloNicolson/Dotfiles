@@ -32,7 +32,7 @@ return {
 			-- per buffer, <C-]> / <A-]> asks for one explicitly.
 			virtualtext = {
 				auto_trigger_ft = { "c", "cpp", "cuda", "glsl", "lua", "python", "clojure" },
-				show_on_completion_menu = true, -- clangd keeps the cmp menu open a lot; still show ghost text
+				show_on_completion_menu = false, -- one thing at a time: menu open = no ghost text
 				keymap = {
 					-- Alt keys: nothing collides with cmp's <Tab>/<CR>/<C-n>/<C-p>
 					accept = "<A-a>",
