@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Themed, dim per-key lighting for the Omen Max 16 keyboard.
 
-    keyboard-lights.py <theme> [--brightness 0.3]   # colours from ~/.config/themes/<theme>.json
+    keyboard-lights.py <theme> [--style drpepper|theme] [--brightness 0.3]
     keyboard-lights.py --off
 
 Runs on omen-rgb's own interpreter (uv tool venv) so the SDK is importable:
@@ -12,8 +12,23 @@ import argparse, json, os, sys
 
 THEME_DIR = os.path.expanduser("~/.config/themes")
 
-# Groups: (keys, palette colour, relative level). Everything else gets BASE.
-BASE = ("accent", 0.35)
+# Styles. "drpepper" (default): everything a deep candy Dr Pepper red, j/k in
+# the theme accent so the vim nav keys stand out. "theme": the palette layout.
+# A colour is either a theme palette key or a literal #rrggbb.
+DEFAULT_STYLE = "drpepper"
+DRPEPPER_RED = "#A0162F"
+STYLES = {
+    "drpepper": {
+        "base": (DRPEPPER_RED, 0.8),
+        "groups": [
+            (["j", "k"], "accent", 1.0),
+        ],
+    },
+    "theme": {
+        "base": ("accent", 0.35),
+        "groups": None,  # filled from GROUPS below
+    },
+}
 GROUPS = [
     (["w", "a", "s", "d", "left", "up", "down", "right"], "accent", 1.0),
     (["enter", "space", "backspace", "tab", "num_enter"], "accent", 0.65),
@@ -24,6 +39,10 @@ GROUPS = [
       "num_0", "num_1", "num_2", "num_3", "num_4", "num_5", "num_6", "num_7", "num_8", "num_9"], "blue", 0.55),
     (["omen", "copilot", "settings", "calculator"], "magenta", 0.45),
 ]
+STYLES["theme"]["groups"] = GROUPS
+
+def resolve(colors, name):
+    return hex_rgb(name) if name.startswith("#") else hex_rgb(colors[name])
 
 def hex_rgb(h):
     h = h.lstrip("#")
@@ -37,6 +56,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("theme", nargs="?")
     ap.add_argument("--brightness", type=float, default=None, help="0..1 overall level (default: theme's look.keyboardBrightness or 0.3)")
+    ap.add_argument("--style", choices=sorted(STYLES), default=DEFAULT_STYLE)
     ap.add_argument("--off", action="store_true")
     args = ap.parse_args()
 
@@ -56,18 +76,19 @@ def main():
         colors = theme["colors"]
         level = args.brightness if args.brightness is not None else float(theme.get("look", {}).get("keyboardBrightness", 0.3))
 
-        base = scale(hex_rgb(colors[BASE[0]]), BASE[1] * level)
+        style = STYLES[args.style]
+        base = scale(resolve(colors, style["base"][0]), style["base"][1] * level)
         kb.set_all(*base)
         missing = []
-        for keys, name, rel in GROUPS:
-            rgb = scale(hex_rgb(colors[name]), rel * level)
+        for keys, name, rel in style["groups"]:
+            rgb = scale(resolve(colors, name), rel * level)
             for k in keys:
                 try:
                     kb.set_key_color(k, *rgb)
                 except Exception:
                     missing.append(k)
         kb.apply()
-        print(f"keyboard: {args.theme} at {level:.2f} (base {base}, wasd/arrows {scale(hex_rgb(colors['accent']), level)})")
+        print(f"keyboard: {args.style} style, {args.theme} palette at {level:.2f} (base {base})")
         if missing:
             print("  unknown keys skipped: " + " ".join(missing))
     finally:
