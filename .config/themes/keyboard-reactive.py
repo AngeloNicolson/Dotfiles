@@ -135,9 +135,8 @@ class Lights:
         for key, rgb in self.frame.items():
             self.kb.set_key_color(key, *(mix((0, 0, 0), rgb, HINT_DIM) if hint is not None else rgb))
         if hint is not None:
-            # bound keys in the bright version of the board colour (not the
-            # highlight colour, so they read apart from the fixed anchor keys)
-            hint_rgb = flash_of(self.base)
+            # bound keys turn the theme's highlight colour (gold on Halo)
+            hint_rgb = self.hi
             for key in self.binds.get(hint, ()):
                 try: self.kb.set_key_color(key, *hint_rgb)
                 except Exception: pass
