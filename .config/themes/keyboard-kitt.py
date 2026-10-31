@@ -25,7 +25,14 @@ def main():
 
     from omen_rgb import OmenKeyboard
 
-    kb = OmenKeyboard()
+    kb = None
+    for _ in range(30):   # the reactive daemon releases the keyboard within ~0.5 s
+        try:
+            kb = OmenKeyboard(); break
+        except Exception:
+            time.sleep(0.25)
+    if kb is None:
+        sys.exit("kitt: keyboard busy (reactive daemon did not release it)")
     lay = kb.layout
     x0, y0, w, h = lay.bounds
     # x position (0..1) of every LED, from its key's rectangle centre

@@ -127,7 +127,27 @@ class Lights:
             pid = int(open(KITT_PID).read().strip()); os.kill(pid, 0); return True
         except Exception: return False
 
+    # The USB interface is exclusive: while the K.I.T.T. scanner runs we must
+    # let go of the keyboard entirely, and take it back (re-applying the layout)
+    # once the scanner has exited.
+    def yield_to_kitt(self):
+        if self.kitt_running():
+            if self.kb is not None:
+                try: self.kb.close()
+                except Exception: pass
+                self.kb = None
+            return True
+        if self.kb is None:
+            try:
+                from omen_rgb import OmenKeyboard
+                self.kb = OmenKeyboard()
+                self.fades.clear(); self.render(force=True)
+            except Exception:
+                return True   # scanner still releasing; try again next loop
+        return False
+
     def render(self, force=False):
+        if self.kb is None: return
         if self.kitt_running() and not force: return
         now = time.monotonic()
         hint = self.mods if (self.mods & HINT_MODS) else None
@@ -171,6 +191,7 @@ class Lights:
         return bool(self.fades) or (self.mods & HINT_MODS) or self.hint_shown is not None
 
     def close(self):
+        if self.kb is None: return
         try:
             KL.apply_frame(self.kb, self.frame, self.base)
         finally:
@@ -197,6 +218,7 @@ def main():
     stop = {"now": False}
     def on_sig(*_): stop["now"] = True
     signal.signal(signal.SIGINT, on_sig); signal.signal(signal.SIGTERM, on_sig)
+    signal.signal(signal.SIGUSR1, lambda *_: lights.reload_theme(force=True))   # "re-apply the theme"
 
     if args.demo:
         try:
@@ -231,6 +253,7 @@ def main():
                                 lights.on_key(name, ev.value)
                     except OSError:
                         devs = []
+            if lights.yield_to_kitt(): continue
             if lights.reload_theme(): continue
             if lights.busy(): lights.render()
     finally:

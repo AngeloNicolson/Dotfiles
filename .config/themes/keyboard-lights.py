@@ -117,7 +117,19 @@ def main():
     except ImportError:
         sys.exit("omen_rgb not importable: run with ~/.local/share/uv/tools/omen-rgb/bin/python")
 
-    kb = OmenKeyboard()
+    try:
+        kb = OmenKeyboard()
+    except Exception as e:
+        # The reactive daemon holds the USB interface. It re-reads the theme on
+        # SIGUSR1 and re-applies the layout itself, so hand the job to it.
+        import subprocess
+        active = subprocess.run(["systemctl", "--user", "is-active", "keyboard-reactive.service"],
+                                capture_output=True, text=True).stdout.strip() == "active"
+        if active and not args.off:
+            subprocess.run(["systemctl", "--user", "kill", "-s", "USR1", "keyboard-reactive.service"], check=False)
+            print(f"keyboard: {args.theme or 'current'} applied via keyboard-reactive.service")
+            return
+        sys.exit(f"keyboard: cannot open the keyboard ({e})")
     try:
         if args.off:
             kb.set_all(0, 0, 0); kb.apply(); return
