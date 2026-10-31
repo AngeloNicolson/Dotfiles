@@ -13,8 +13,9 @@ import argparse, json, os, sys
 THEME_DIR = os.path.expanduser("~/.config/themes")
 
 # Styles. "theme" (default): the palette layout below, dim. "drpepper": everything
-# a deep candy Dr Pepper red with f/j/caps in the theme accent. A theme chooses
-# with look.keyboardStyle; 43pr uses drpepper.
+# a deep candy Dr Pepper red with f/j/caps in the theme accent. "translucent":
+# the whole board in the accent, evenly (Halo = X25 translucent green). A theme
+# chooses with look.keyboardStyle; 43pr uses drpepper, halo translucent.
 # A colour is either a theme palette key or a literal #rrggbb.
 DEFAULT_STYLE = "theme"  # a theme can pick another via look.keyboardStyle (43pr: drpepper)
 DRPEPPER_RED = "#C01010"  # no blue: a maroon with blue in it reads pink on these LEDs when dimmed
@@ -28,6 +29,14 @@ STYLES = {
     "theme": {
         "base": ("accent", 0.35),
         "groups": None,  # filled from GROUPS below
+    },
+    # The X25 console look: every key the translucent OG green, lit evenly, with
+    # the home-row bumps and caps lock in the lighter jewel highlight.
+    "translucent": {
+        "base": ("accent", 1.0),
+        "groups": [
+            (["f", "j", "caps_lock"], "green_bright", 1.0),
+        ],
     },
 }
 GROUPS = [

@@ -46,10 +46,14 @@ def main():
         tj = json.load(open(os.path.expanduser(f"~/.config/themes/{theme}.json")))
     except Exception:
         tj = {}
-    if tj.get("look", {}).get("keyboardStyle") == "drpepper":
+    style = tj.get("look", {}).get("keyboardStyle")
+    colors = tj.get("colors", {})
+    if style == "drpepper":
         head_hex = "#FF0C0C"; base_hex = "#C01010"; base_rel = 0.8
+    elif style == "translucent":
+        head_hex = colors.get("green_bright", colors.get("accent", "#FF0C0C")); base_hex = colors.get("accent", head_hex); base_rel = 0.6
     else:
-        head_hex = tj.get("colors", {}).get("accent", "#FF0C0C"); base_hex = head_hex; base_rel = 0.35
+        head_hex = colors.get("accent", "#FF0C0C"); base_hex = head_hex; base_rel = 0.35
     base = tuple(int(c * base_rel * args.brightness) for c in hex_rgb(base_hex))
     head = hex_rgb(head_hex)
 

@@ -50,6 +50,7 @@
       "range": 8,
       "renderPower": 3
     },
-    "keyboardBrightness": 0.5
+    "keyboardBrightness": 0.6,
+    "keyboardStyle": "translucent"
   }
 }
