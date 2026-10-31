@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
-# Toggle the K.I.T.T. keyboard scanner. Running -> stop it (the static layout
-# comes back); not running -> start it detached. Extra args go to the script.
+# K.I.T.T. keyboard scanner.  kitt [toggle|start|stop] [script args]
+#   toggle (default): start if not running, else stop
+#   start / stop:     idempotent, for scripts (lock.sh runs it while locked)
+# Stopping restores the static layout (keyboard-kitt.py does that on exit).
 PY="$HOME/.local/share/uv/tools/omen-rgb/bin/python"
 SCRIPT="$HOME/.config/themes/keyboard-kitt.py"
 PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/kitt.pid"
-if [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-  kill "$(cat "$PIDFILE")" && rm -f "$PIDFILE" && echo "kitt: stopped"
-else
+running() { [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
+start() {
+  running && { echo "kitt: already running"; return 0; }
+  [[ -x "$PY" && -f "$SCRIPT" ]] || { echo "kitt: omen-rgb not installed"; return 1; }
   rm -f "$PIDFILE"
   setsid "$PY" "$SCRIPT" "$@" >/tmp/kitt.log 2>&1 < /dev/null &
   echo $! > "$PIDFILE"
-  echo "kitt: started (pid $(cat "$PIDFILE"), log /tmp/kitt.log)"
-fi
+  echo "kitt: started (pid $(cat "$PIDFILE"))"
+}
+stop() {
+  running || { rm -f "$PIDFILE"; echo "kitt: not running"; return 0; }
+  kill "$(cat "$PIDFILE")" && rm -f "$PIDFILE" && echo "kitt: stopped"
+}
+case "${1:-toggle}" in
+  start)  shift; start "$@" ;;
+  stop)   stop ;;
+  toggle) shift; if running; then stop; else start "$@"; fi ;;
+  *)      start "$@" ;;   # bare script args = start with them
+esac

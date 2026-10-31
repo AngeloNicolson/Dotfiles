@@ -53,27 +53,42 @@ def main():
     signal.signal(signal.SIGINT, on_sig); signal.signal(signal.SIGTERM, on_sig)
 
     t0 = time.monotonic()
+    failures = 0
     try:
         while not stop["now"]:
-            t = (time.monotonic() - t0) / args.period
-            phase = t % 2.0                      # 0..1 going right, 1..2 coming back
-            pos = phase if phase < 1.0 else 2.0 - phase
-            pos = 0.5 - 0.5 * math.cos(pos * math.pi)   # ease at the ends, like the car
-            direction = 1 if phase < 1.0 else -1
-            for led, x in led_x.items():
-                d = (pos - x) * direction         # >0: behind the head (tail), <0: ahead
-                if 0 <= d <= args.width:
-                    f = (1 - d / args.width) ** 2
-                elif -0.02 <= d < 0:
-                    f = 1.0
-                else:
-                    f = 0.0
-                r = int(base[0] + (head[0] - base[0]) * f)
-                g = int(base[1] + (head[1] - base[1]) * f)
-                b = int(base[2] + (head[2] - base[2]) * f)
-                kb.set_led_color(led, r, g, b)
-            kb.apply(persist=False)
-            time.sleep(1 / 30)
+          try:
+              t = (time.monotonic() - t0) / args.period
+              phase = t % 2.0                      # 0..1 going right, 1..2 coming back
+              pos = phase if phase < 1.0 else 2.0 - phase
+              pos = 0.5 - 0.5 * math.cos(pos * math.pi)   # ease at the ends, like the car
+              direction = 1 if phase < 1.0 else -1
+              for led, x in led_x.items():
+                  d = (pos - x) * direction         # >0: behind the head (tail), <0: ahead
+                  if 0 <= d <= args.width:
+                      f = (1 - d / args.width) ** 2
+                  elif -0.02 <= d < 0:
+                      f = 1.0
+                  else:
+                      f = 0.0
+                  r = int(base[0] + (head[0] - base[0]) * f)
+                  g = int(base[1] + (head[1] - base[1]) * f)
+                  b = int(base[2] + (head[2] - base[2]) * f)
+                  kb.set_led_color(led, r, g, b)
+              kb.apply(persist=False)
+              failures = 0
+              time.sleep(1 / 30)
+          except Exception as e:
+            # The USB controller drops across suspend/resume; reopen a few times.
+            failures += 1
+            if failures > 10:
+                print(f"kitt: giving up after repeated errors: {e}", file=sys.stderr); break
+            time.sleep(1.0)
+            try:
+                kb.close()
+            except Exception: pass
+            try:
+                kb = OmenKeyboard()
+            except Exception: pass
     finally:
         kb.close()
         py = sys.executable
