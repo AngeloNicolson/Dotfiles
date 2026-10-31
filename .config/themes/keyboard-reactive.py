@@ -107,6 +107,12 @@ class Lights:
         except OSError: m = 0
         if not force and m == self.theme_mtime: return False
         self.theme_mtime = m
+        # Re-read keyboard-lights.py too, so edited styles/groups apply without a restart
+        try:
+            spec.loader.exec_module(KL)
+            if self.kb is not None: self.pt = KL.Painter(self.kb)
+        except Exception as e:
+            print(f"reactive: reload keyboard-lights.py: {e}", file=sys.stderr)
         try: name = open(CURRENT).read().strip()
         except OSError: name = "mech"
         try:
