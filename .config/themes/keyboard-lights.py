@@ -35,7 +35,7 @@ STYLES = {
     "translucent": {
         "base": ("kb", 1.0),
         "groups": [
-            (["f", "j", "caps_lock"], "kb_hi", 1.0),
+            (["f", "j", "caps_lock", "enter", "l_win"], "kb_hi", 1.0),
         ],
     },
 }
