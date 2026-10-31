@@ -50,6 +50,7 @@ COMPONENTS=(
     "clojure|n|Clojure toolchain: JDK, clojure, babashka, clojure-lsp"
     "gpu-debug|n|GPU & JVM debugging: Nsight Compute/Systems, perf+hotspot, heaptrack, async-profiler, tracy, visualvm"
     "tablet|n|OpenTabletDriver: Wacom tablet support"
+    "keyboard-rgb|n|Omen Max 16 keyboard RGB: omen-rgb tool (uv), udev rule, reactive lighting + lock-screen scanner"
     "nvidia|n|NVIDIA: VA-API driver (libva-nvidia-driver)"
     "firefox|n|Firefox: browser + custom CSS / Sidebery theme"
     "zen|y|Zen Browser: Firefox-based browser with vertical tabs + workspaces (AUR)"
@@ -76,7 +77,7 @@ load_choices() {
         done < "$CHOICES_FILE"
     fi
     for id in $(comp_ids); do
-        local envvar="OPT_${id^^}"
+        local envvar="OPT_${id^^}"; envvar="${envvar//-/_}"   # gpu-debug -> OPT_GPU_DEBUG
         [[ -n "${!envvar:-}" ]] && CHOICE[$id]="${!envvar}"
     done
 }
@@ -653,6 +654,42 @@ mod_ollama() {
     success "Model installed"
 }
 
+mod_keyboard_rgb() {
+    header "Keyboard RGB (Omen Max 16)"
+
+    # Only the HP Gaming Keyboard II (USB 0d62:54bf) is supported; skip elsewhere.
+    if ! grep -qs "0d62" /sys/bus/usb/devices/*/idVendor 2>/dev/null; then
+        skip "No HP Gaming Keyboard II (0d62:54bf) on this machine"
+        return 0
+    fi
+    if ! command -v uv &>/dev/null; then
+        warn "uv not installed — run packages module first"
+        return 0
+    fi
+
+    local src="$HOME/projects/personal/omen-rgb-linux-src"
+    if [[ ! -d "$src/.git" ]]; then
+        info "Cloning arfelious/omen-rgb-linux..."
+        run git clone -q --depth 1 https://github.com/arfelious/omen-rgb-linux "$src" || { warn "clone failed"; return 0; }
+    fi
+    info "Installing omen-rgb (uv tool) + evdev for the reactive daemon..."
+    run uv tool install --quiet "$src"
+    run uv pip install --quiet --python "$HOME/.local/share/uv/tools/omen-rgb/bin/python" evdev
+    success "omen-rgb installed"
+
+    # Root side: USB + hidraw + input access for the login session.
+    local rule="$DOTFILES_DIR/system/etc/udev/rules.d/70-omen-rgb.rules"
+    if ! cmp -s "$rule" /etc/udev/rules.d/70-omen-rgb.rules; then
+        info "Installing udev rule (sudo)..."
+        run sudo install -m644 "$rule" /etc/udev/rules.d/70-omen-rgb.rules
+        run sudo udevadm control --reload
+        run sudo udevadm trigger --subsystem-match=usb --subsystem-match=hidraw --subsystem-match=input
+    fi
+    success "udev rule in place"
+    # keyboard-reactive.service is enabled by the services module; the first
+    # theme application (theme module) lights the board.
+}
+
 mod_nvim() {
     header "Neovim plugins"
 
@@ -810,6 +847,12 @@ mod_doctor() {
     for bin in Hyprland hyprctl foot fish ags gjs jq brightnessctl grim slurp wl-copy awww ffmpeg fc-list gsettings dunst rofi wlogout socat bluetoothctl; do
         if command -v "$bin" &>/dev/null; then d_ok "$bin"; else d_bad "$bin missing"; fi
     done
+    if chosen keyboard-rgb; then
+        info "Keyboard RGB"
+        command -v omen-rgb &>/dev/null && d_ok "omen-rgb" || d_bad "omen-rgb missing (keyboard-rgb module)"
+        grep -qs 'SUBSYSTEM=="input"' /etc/udev/rules.d/70-omen-rgb.rules && d_ok "udev rule (usb+hidraw+input)" || d_bad "udev rule missing or old: /etc/udev/rules.d/70-omen-rgb.rules"
+        [[ "$(systemctl --user is-active keyboard-reactive.service 2>/dev/null)" == active ]] && d_ok "keyboard-reactive.service active" || d_warn "keyboard-reactive.service not active"
+    fi
     for bin in npm git; do
         command -v "$bin" &>/dev/null && d_ok "$bin" || d_warn "$bin missing (optional but used)"
     done
@@ -997,6 +1040,7 @@ run_module() {
         theme)     mod_theme ;;
         firefox)   mod_firefox ;;
         ollama)    mod_ollama ;;
+        keyboard-rgb) mod_keyboard_rgb ;;
         tablet)    header "Tablet"; skip "Handled by symlinked configs (OpenTabletDriver)" ;;
         nvim)      mod_nvim ;;
         tmux)      mod_tmux ;;
@@ -1067,6 +1111,7 @@ if [[ $# -eq 0 ]]; then
     chosen firefox && OPTIONAL_MODULES+=(firefox)
     chosen ollama  && OPTIONAL_MODULES+=(ollama)
     chosen tablet  && OPTIONAL_MODULES+=(tablet)
+    chosen keyboard-rgb && OPTIONAL_MODULES+=(keyboard-rgb)
 
     ALL_MODULES=("${CORE_MODULES[@]}" "${OPTIONAL_MODULES[@]}" doctor)
     TOTAL_MODULES=${#ALL_MODULES[@]}

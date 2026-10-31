@@ -40,19 +40,26 @@ No reload needed; the next unlock uses it. Revert with `sudo pacman -S hyprlock`
 
 ## Keyboard RGB (Omen Max 16, HP Gaming Keyboard II 0d62:54bf)
 
-The per-key controller is a USB HID device, not an hp-wmi LED, so the tool is
-arfelious/omen-rgb-linux (clone at `~/projects/personal/omen-rgb-linux-src`).
-Its bundled hidapi is the libusb build, so the udev rule must open the USB
-device node, not just hidraw.
+Handled by `./install.sh` with the `keyboard-rgb` component: clones
+arfelious/omen-rgb-linux to `~/projects/personal/omen-rgb-linux-src`, installs it
+with `uv tool install` (+ evdev), installs the udev rule below (sudo), and the
+services module enables `keyboard-reactive.service`. By hand:
 
 ```sh
-cd ~/projects/personal/omen-rgb-linux-src && uv tool install .
+cd ~/projects/personal/omen-rgb-linux-src && uv tool install . \
+  && uv pip install --python ~/.local/share/uv/tools/omen-rgb/bin/python evdev
 sudo install -m644 system/etc/udev/rules.d/70-omen-rgb.rules /etc/udev/rules.d/
-sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb --subsystem-match=hidraw
-omen-rgb static '#6FBE44'        # omen-rgb effect list for the MCU's own animations
+sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb --subsystem-match=hidraw --subsystem-match=input
+systemctl --user enable --now keyboard-reactive.service
 ```
 
-Every theme switch then sets the keyboard to the theme accent (apply-theme.sh).
-The bottom light bar needs the patched hp-wmi driver from omen-fan-control plus
-acpi_call; not set up.
+The rule grants the login session the USB device node (omen-rgb's bundled
+hidapi is the libusb build), the hidraw nodes, and the keyboard's input event
+nodes (the reactive daemon reads key presses over evdev).
 
+What runs: every theme switch applies the theme's layout (`keyboard-lights.py`,
+look.keyboardStyle/Color/Highlight/Brightness in the theme JSON; the keyboard
+stores it in flash so it survives reboots); `keyboard-reactive.service` flashes
+pressed keys and shows Super keybind hints; `kitt` toggles the K.I.T.T. scanner
+and lock.sh runs it while locked. The bottom light bar needs the patched hp-wmi
+driver from omen-fan-control plus acpi_call; not set up.
