@@ -25,7 +25,7 @@ KITT_PID = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "kitt.pid")
 MODE_FILE = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "nvim-mode")
 HYPR_SOCK = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "hypr",
                          os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""), ".socket2.sock")
-MODE_KEYS = ("esc", "caps_lock")
+MODE_KEYS = ("esc",)   # caps is remapped to Esc and stays an anchor; only Esc shows the mode
 KEYBOARD_NAMES = ("HP HP Gaming Keyboard II", "HP HP Gaming Keyboard II Keyboard")
 
 FADE_S = 0.6          # press -> back to base
