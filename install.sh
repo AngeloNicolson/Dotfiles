@@ -6,8 +6,9 @@
 #   --yes / -y   = non-interactive (optional components default to "no" unless
 #                  OPT_NVIDIA=y etc. are set in the environment)
 #   doctor       = check this machine against what the config expects
+#   update       = git pull, then re-run only the modules whose inputs changed
 # Modules: packages symlinks scripts templates dirs services omen ags theme nvim
-#          tmux shell wallpapers hostconfig firefox ollama doctor lock
+#          tmux shell wallpapers hostconfig update firefox ollama doctor lock
 
 set +e
 
@@ -344,6 +345,21 @@ ensure_symlink() {
     success "Linked: $(basename "$link")"
 }
 
+# ─── template_drift ────────────────────────────────────────────────────────
+# Per-machine files are copied from a .example once and never touched again.
+# When the template later changes in git (a pull brought a new option), say so
+# instead of silently leaving the copy behind; the owner merges by hand.
+
+template_drift() {
+    local example="$1" conf="$2" ex_ts conf_ts
+    ex_ts="$(git -C "$DOTFILES_DIR" log -1 --format=%ct -- "$example" 2>/dev/null)"
+    conf_ts="$(stat -c %Y "$conf" 2>/dev/null)"
+    [[ -n "$ex_ts" && -n "$conf_ts" ]] || return 0
+    if (( ex_ts > conf_ts )); then
+        warn "$(basename "$example") changed after $(basename "$conf") was made from it (kept as is) — review: diff $conf $example"
+    fi
+}
+
 # ─── Modules ───────────────────────────────────────────────────────────────
 
 mod_packages() {
@@ -546,6 +562,7 @@ mod_templates() {
         local name="$(basename "$conf")"
         if [[ -f "$conf" ]]; then
             skip "$name"
+            template_drift "$example" "$conf"
         else
             run cp "$example" "$conf"
             success "Created: $name"
@@ -564,6 +581,7 @@ mod_templates() {
         [[ -f "$example" ]] || continue
         if [[ -f "$pair" ]]; then
             skip "$(basename "$(dirname "$pair")")/$(basename "$pair")"
+            template_drift "$example" "$pair"
         elif [[ "$DRY_RUN" == "1" ]]; then
             echo -e "  ${DIM}(dry-run) create $pair from template${NC}"
         else
@@ -895,6 +913,147 @@ mod_hostconfig() {
     bash "$gen" && success "monitors.lua / LAPTOP_SCALE generated from connected displays"
 }
 
+# A fresh clone checks out the remote's default branch (origin/HEAD, main by
+# convention). When this machine works on another branch, everything not on
+# the default branch is invisible to a new machine even though it is pushed.
+# Prints "<default-branch> <commits it is behind HEAD>", or nothing when HEAD
+# tracks the default branch itself (or there is no remote default to compare).
+default_branch_lag() {
+    local def up
+    def="$(git -C "$DOTFILES_DIR" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)"
+    git -C "$DOTFILES_DIR" rev-parse -q --verify "$def^{commit}" >/dev/null 2>&1 || return 0
+    up="$(git -C "$DOTFILES_DIR" rev-parse --abbrev-ref '@{u}' 2>/dev/null)"
+    [[ "$up" == "$def" ]] && return 0
+    echo "$def $(git -C "$DOTFILES_DIR" rev-list --count "$def..HEAD" 2>/dev/null || echo 0)"
+}
+
+# ─── Update ───────────────────────────────────────────────────────────────
+# Every config dir is a symlink into this clone and every per-machine file
+# (hypr/custom/*.lua, foot/host.ini, fish/system-local.fish, swappy/config,
+# install.conf) is gitignored, so `git pull` IS the file update: it can only
+# touch tracked files and can never overwrite a per-machine one. What a pull
+# does not do is the follow-up — new npm deps, new .example templates, new
+# units, system/ files, the stale AGS bundle, the running shell. That is this
+# module: pull, then re-run only the modules whose inputs changed, then reload
+# the live session.
+
+mod_update() {
+    header "Update"
+
+    if ! command -v git &>/dev/null || [[ ! -d "$DOTFILES_DIR/.git" ]]; then
+        error "$DOTFILES_DIR is not a git clone — nothing to pull (clone the repo, then ./install.sh)"
+        return 1
+    fi
+    local -a g=(git -C "$DOTFILES_DIR")
+
+    # Local edits to tracked files would be clobbered or conflict — refuse.
+    local dirty
+    dirty="$("${g[@]}" status --porcelain --untracked-files=no 2>/dev/null)"
+    if [[ -n "$dirty" ]]; then
+        error "Tracked files edited on this machine — not pulling over them:"
+        sed 's/^/       /' <<<"$dirty"
+        info "Commit and push them (so other machines get them), or drop them: git -C $DOTFILES_DIR stash"
+        return 1
+    fi
+
+    local upstream before after ahead behind
+    upstream="$("${g[@]}" rev-parse --abbrev-ref '@{u}' 2>/dev/null)"
+    if [[ -z "$upstream" ]]; then
+        error "No upstream branch (detached HEAD?) — run: git -C $DOTFILES_DIR checkout main"
+        return 1
+    fi
+    before="$("${g[@]}" rev-parse HEAD)"
+    info "Fetching $upstream..."
+    if ! "${g[@]}" fetch -q; then
+        error "fetch failed (offline? ssh key?) — nothing changed"
+        return 1
+    fi
+    ahead="$("${g[@]}" rev-list --count "$upstream..HEAD")"
+    behind="$("${g[@]}" rev-list --count "HEAD..$upstream")"
+    if (( ahead > 0 )); then
+        warn "$ahead local commit(s) not on $upstream — a machine cloning the repo gets the old config until: git -C $DOTFILES_DIR push"
+    fi
+    local def lag
+    read -r def lag < <(default_branch_lag)
+    if [[ -n "$def" ]] && (( lag > 0 )); then
+        warn "$def (what a fresh clone checks out) is $lag commit(s) behind this branch — new machines get the old config until: git -C $DOTFILES_DIR push origin HEAD:${def#origin/}"
+    fi
+    if (( behind == 0 )); then
+        skip "up to date with $upstream ($("${g[@]}" log -1 --format='%h %s'))"
+        return 0
+    fi
+
+    info "$behind new commit(s):"
+    "${g[@]}" log --format='%h %s' "HEAD..$upstream" | head -n 20 | while IFS= read -r line; do echo -e "     ${DIM}$line${NC}"; done
+    (( behind > 20 )) && echo -e "     ${DIM}…${NC}"
+    "${g[@]}" diff --shortstat "HEAD..$upstream" | sed 's/^/    /'
+    if [[ "$DRY_RUN" == "1" ]]; then
+        echo -e "  ${DIM}(dry-run) git pull --ff-only, then:${NC}"
+        update_followups "HEAD" "$upstream"
+        return 0
+    fi
+    if ! "${g[@]}" pull -q --ff-only; then
+        error "pull --ff-only failed — local and remote history diverged; sort it out by hand: git -C $DOTFILES_DIR status"
+        return 1
+    fi
+    after="$("${g[@]}" rev-parse HEAD)"
+    success "Updated ${before:0:7} → ${after:0:7}"
+
+    # The pull may have replaced this very script — hand over to the new one
+    # for the follow-ups rather than finishing on stale code.
+    if "${g[@]}" diff --name-only "$before" "$after" | grep -qx 'install.sh'; then
+        info "install.sh itself changed — continuing with the new version"
+        exec bash "$DOTFILES_DIR/install.sh" ${ASSUME_YES:+--yes} "--followups=$before..$after"
+    fi
+    update_followups "$before" "$after"
+}
+
+# Re-run the modules whose inputs changed between two commits (git diff
+# --name-only), then reload what is running so the update shows without a
+# logout. Modules that only act on first install (shell, tmux, wallpapers,
+# hostconfig, theme) are left alone: they would reset per-machine choices.
+update_followups() {
+    local changed
+    changed="$(git -C "$DOTFILES_DIR" diff --name-only "$1" "$2")"
+    touched() { grep -qE "$1" <<<"$changed"; }
+
+    local -a mods=()
+    touched '^packages/'                                         && mods+=(packages)
+    touched '^install\.sh$|^\.local/bin/|^\.config/[^/]+/?$'    && mods+=(symlinks)
+    touched '^install\.sh$|\.(sh|py)$'                           && mods+=(scripts)
+    touched '^install\.sh$|\.example$'                           && mods+=(templates)
+    touched '^install\.sh$'                                      && mods+=(dirs)
+    touched '^install\.sh$|^\.config/systemd/'                   && mods+=(services)
+    is_omen && touched '^system/'                                && mods+=(omen)
+    touched '^\.config/ags/'                                     && mods+=(ags)
+    chosen neovim && touched '^\.config/nvim/lazy-lock\.json$'   && mods+=(nvim)
+    chosen firefox && touched '^\.mozilla/'                      && mods+=(firefox)
+    mods+=(doctor)
+
+    info "Changed: $(wc -l <<<"$changed") file(s) → modules: ${mods[*]}"
+    TOTAL_MODULES=$(( TOTAL_MODULES + ${#mods[@]} ))
+    local m
+    for m in "${mods[@]}"; do run_module "$m"; done
+
+    # Live session. The theme re-applies itself on AGS start (themes/.current),
+    # so a restart is enough; nothing here changes which theme is on.
+    if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] && command -v hyprctl &>/dev/null; then
+        echo ""
+        if touched '^\.config/hypr/'; then
+            run hyprctl reload >/dev/null && success "Hyprland config reloaded"
+        fi
+        if touched '^\.config/ags/' && command -v ags &>/dev/null && ags request help &>/dev/null; then
+            run ags quit
+            [[ "$DRY_RUN" == "1" ]] || sleep 1
+            run setsid -f bash -c "ags run '$HOME/.config/ags/app.tsx' >/dev/null 2>&1" \
+                && success "AGS restarted on the new bundle"
+        fi
+    elif touched '^\.config/(hypr|ags)/'; then
+        info "Not inside a Hyprland session — the new config applies at the next login"
+    fi
+    return 0
+}
+
 # ─── Doctor ───────────────────────────────────────────────────────────────
 # Read-only. Exit 1 if anything the config depends on is missing/outdated.
 
@@ -1015,6 +1174,30 @@ mod_doctor() {
     fi
     if command -v foot &>/dev/null; then
         if foot --check-config &>/dev/null; then d_ok "foot --check-config"; else d_bad "foot --check-config failed: $(foot --check-config 2>&1 | head -n1)"; fi
+    fi
+
+    info "Clone"
+    if [[ -d "$DOTFILES_DIR/.git" ]] && command -v git &>/dev/null; then
+        local up ahead behind dirty
+        up="$(git -C "$DOTFILES_DIR" rev-parse --abbrev-ref '@{u}' 2>/dev/null)"
+        if [[ -n "$up" ]]; then
+            ahead="$(git -C "$DOTFILES_DIR" rev-list --count "$up..HEAD" 2>/dev/null || echo 0)"
+            behind="$(git -C "$DOTFILES_DIR" rev-list --count "HEAD..$up" 2>/dev/null || echo 0)"
+            (( ahead == 0 )) && d_ok "nothing unpushed" || d_warn "$ahead commit(s) not pushed to $up — a new machine cloning the repo gets the old config: git -C $DOTFILES_DIR push"
+            local def lag
+            read -r def lag < <(default_branch_lag)
+            if [[ -n "$def" ]]; then
+                (( lag == 0 )) && d_ok "$def (what a fresh clone checks out) has everything on this branch" \
+                    || d_warn "$def (what a fresh clone checks out) is $lag commit(s) behind this branch ($up) — new machines get the old config: git -C $DOTFILES_DIR push origin HEAD:${def#origin/}"
+            fi
+            (( behind == 0 )) && d_ok "up to date with $up (as of the last fetch)" || d_warn "$behind commit(s) behind $up — run: ./install.sh update"
+            dirty="$(git -C "$DOTFILES_DIR" status --porcelain --untracked-files=no 2>/dev/null | wc -l)"
+            (( dirty == 0 )) && d_ok "no uncommitted edits to tracked files" || d_warn "$dirty tracked file(s) edited but not committed — this machine only; blocks ./install.sh update"
+        else
+            d_warn "no upstream branch — ./install.sh update cannot pull"
+        fi
+    else
+        d_warn "not a git clone — no update path (git clone the repo instead of copying it)"
     fi
 
     info "Symlinks"
@@ -1145,6 +1328,7 @@ run_module() {
         shell)     mod_shell ;;
         wallpapers) mod_wallpapers ;;
         hostconfig) mod_hostconfig ;;
+        update)    mod_update ;;
         doctor)    mod_doctor ;;
         lock)      mod_lock ;;
         *)         error "Unknown module: $mod"; return 1 ;;
@@ -1186,7 +1370,8 @@ for arg in "$@"; do
     case "$arg" in
         --dry-run)     DRY_RUN=1 ;;
         --yes|-y)      ASSUME_YES=1 ;;
-        -h|--help)     sed -n '2,10p' "$0"; exit 0 ;;
+        --followups=*) FOLLOWUPS="${arg#*=}" ;;   # internal: update re-execs into the pulled script
+        -h|--help)     sed -n '2,11p' "$0"; exit 0 ;;
         --*)           echo "Unknown flag: $arg"; exit 2 ;;
         *)             ARGS+=("$arg") ;;
     esac
@@ -1197,6 +1382,13 @@ set -- "${ARGS[@]}"
 detect_distro
 load_choices
 EXPLICIT_MODULES=("$@")
+
+if [[ -n "${FOLLOWUPS:-}" ]]; then
+    TOTAL_MODULES=0
+    update_followups "${FOLLOWUPS%..*}" "${FOLLOWUPS#*..}"
+    echo ""
+    exit "${DOCTOR_STATUS:-0}"
+fi
 
 if [[ $# -eq 0 ]]; then
     banner

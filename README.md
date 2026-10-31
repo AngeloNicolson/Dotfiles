@@ -97,6 +97,7 @@ locker, and `hypridle` only starts if installed.
 | `tmux` | Clones tpm and installs tmux plugins |
 | `shell` | `chsh` to fish (skips when already set / no TTY) |
 | `hostconfig` | Runs `gen-host-config.sh` (monitors + scale) when inside a Hyprland session |
+| `update` | `git pull --ff-only` (refuses over uncommitted edits to tracked files), then re-runs only the modules whose inputs changed, reloads Hyprland / restarts AGS when inside a session, and ends with the doctor |
 | `doctor` | Read-only audit: binaries, min versions, fonts, themes, templates, config parse, symlinks (exit 1 on problems) |
 | `firefox` | Symlinks chrome/ + user.js into Firefox profile |
 | `ollama` | Enables service, pulls AI model |
@@ -110,9 +111,37 @@ locker, and `hypridle` only starts if installed.
 ./install.sh packages ags    # Multiple modules
 ./install.sh --dry-run       # Show what a full install would do
 ./install.sh doctor          # Is this machine missing anything the config needs?
+./install.sh update          # Pull the latest commits and apply what changed
 ```
 
 The installer is idempotent — safe to re-run at any time.
+
+### Updating an installed machine
+
+```bash
+~/dotfiles/install.sh update
+```
+
+Every config directory under `~/.config` is a symlink into the clone, so the
+files themselves are updated by `git pull` — there is nothing to scan or copy.
+The per-machine files (`hypr/custom/*.lua`, `foot/host.ini`,
+`fish/system-local.fish`, `swappy/config`, `install.conf`) are gitignored, so a
+pull can never touch them. `update` adds what a pull alone does not do:
+
+- re-runs only the modules whose inputs changed (`packages/` → packages,
+  `.config/ags/` → ags with `npm install` + bundle clear, `system/` → omen,
+  `.example` files → templates, units → services, …), then the doctor;
+- inside a session, `hyprctl reload` when `hypr/` changed and an AGS restart
+  when `ags/` changed (the theme re-applies itself from `themes/.current`);
+- warns when a `.example` template changed after your copy was made from it,
+  with the `diff` to run — the copy is never overwritten;
+- refuses to pull over uncommitted edits to tracked files, and warns when this
+  clone has commits that were never pushed.
+
+That last point is the usual reason a new machine comes up with an old UI: the
+machine the config was edited on never ran `git push`. `./install.sh doctor`
+reports unpushed commits on the machine you edit on, and commits behind the
+remote on the ones that need an update.
 
 ### New machine checklist
 
