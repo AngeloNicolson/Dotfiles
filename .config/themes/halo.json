@@ -50,9 +50,9 @@
       "range": 8,
       "renderPower": 3
     },
-    "keyboardBrightness": 0.85,
+    "keyboardBrightness": 0.8,
     "keyboardStyle": "translucent",
-    "keyboardColor": "#30D620",
-    "keyboardHighlight": "#B4FF5A"
+    "keyboardColor": "#149C28",
+    "keyboardHighlight": "#3FD45C"
   }
 }
