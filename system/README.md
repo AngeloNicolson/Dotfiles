@@ -37,3 +37,22 @@ sudo install -m644 system/etc/pam.d/hyprlock /etc/pam.d/hyprlock
 
 No reload needed; the next unlock uses it. Revert with `sudo pacman -S hyprlock`
 (it owns the original file) or restore the one-liner by hand.
+
+## Keyboard RGB (Omen Max 16, HP Gaming Keyboard II 0d62:54bf)
+
+The per-key controller is a USB HID device, not an hp-wmi LED, so the tool is
+arfelious/omen-rgb-linux (clone at `~/projects/personal/omen-rgb-linux-src`).
+Its bundled hidapi is the libusb build, so the udev rule must open the USB
+device node, not just hidraw.
+
+```sh
+cd ~/projects/personal/omen-rgb-linux-src && uv tool install .
+sudo install -m644 system/etc/udev/rules.d/70-omen-rgb.rules /etc/udev/rules.d/
+sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb --subsystem-match=hidraw
+omen-rgb static '#6FBE44'        # omen-rgb effect list for the MCU's own animations
+```
+
+Every theme switch then sets the keyboard to the theme accent (apply-theme.sh).
+The bottom light bar needs the patched hp-wmi driver from omen-fan-control plus
+acpi_call; not set up.
+

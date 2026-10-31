@@ -63,4 +63,13 @@ for app in ncmpcpp grimoire candor; do
   pkill -WINCH -x "$app" 2>/dev/null
 done
 
+# --- Keyboard backlight follows the accent (omen-rgb; see system/README.md) ---
+# Skipped when the tool is not installed; a failure (udev rule missing,
+# keyboard busy) is reported and never blocks the theme switch.
+if command -v omen-rgb >/dev/null 2>&1; then
+  echo "  Keyboard backlight -> $ACCENT"
+  timeout 10 omen-rgb static "$ACCENT" >/dev/null 2>&1 \
+    || echo "    omen-rgb failed (udev rule not installed, or keyboard busy)"
+fi
+
 echo "Theme applied: $THEME_NAME"

@@ -1,0 +1,5 @@
+# HP Gaming Keyboard II (Omen Max 16 per-key RGB controller, 0d62:54bf): let the
+# logged-in user drive it without sudo. omen-rgb's bundled hidapi is the libusb
+# build, so it opens the USB device node, not hidraw; both are covered.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0d62", ATTR{idProduct}=="54bf", MODE="0660", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="0d62", ATTRS{idProduct}=="54bf", MODE="0660", TAG+="uaccess"
