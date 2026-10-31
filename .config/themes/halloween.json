@@ -1,0 +1,58 @@
+{
+  "name": "halloween",
+  "displayName": "HALLOWEEN",
+  "_source": "Pumpkin orange on near-black with the slime green that was too lurid for Halo; witch purple and bone white for the rest.",
+  "colors": {
+    "bg": "#0A0608",
+    "bg_dark": "#060304",
+    "bg_light": "#15090D",
+    "bg_lighter": "#24101A",
+    "fg": "#F2E6D8",
+    "fg_dim": "#B59B8C",
+    "fg_bright": "#FFF4E6",
+    "accent": "#FF7A1A",
+    "red": "#E8402A",
+    "red_bright": "#FF6B4A",
+    "green": "#30D620",
+    "green_bright": "#7CFF4A",
+    "yellow": "#FFB400",
+    "yellow_bright": "#FFD35C",
+    "blue": "#7B61FF",
+    "blue_bright": "#A48CFF",
+    "magenta": "#B829D8",
+    "magenta_bright": "#D96BF0",
+    "cyan": "#39D9C2",
+    "cyan_bright": "#7FF0E0",
+    "gray": "#5A4A52"
+  },
+  "gtk": {
+    "theme": "Adwaita",
+    "iconTheme": "Papirus-Dark",
+    "cursorTheme": "Adwaita",
+    "colorScheme": "prefer-dark"
+  },
+  "hyprland": {
+    "borderRadius": 6,
+    "gapsIn": 4,
+    "gapsOut": 8,
+    "borderSize": 2
+  },
+  "look": {
+    "opacity": 0.9,
+    "terminalAlpha": 0.95,
+    "dimInactive": 0,
+    "blur": {
+      "size": 6,
+      "passes": 2,
+      "vibrancy": 0.2
+    },
+    "shadow": {
+      "range": 8,
+      "renderPower": 3
+    },
+    "keyboardBrightness": 0.5,
+    "keyboardStyle": "translucent",
+    "keyboardColor": "#30D620",
+    "keyboardHighlight": "#FF7A1A"
+  }
+}

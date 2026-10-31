@@ -5,6 +5,9 @@
     (the theme's highlight keys — f/j/caps/enter/super on Halo — stay solid)
   * holding Super (or AltGr) shows only the keys with a Hyprland binding for
     the modifiers currently held, in the theme's highlight colour; the rest dim
+  * state on the keys: the active Hyprland workspace's number key lights in the
+    highlight colour; Esc and Caps show vim's mode (insert = bright board colour,
+    visual = blue, replace = red, command = cyan) while nvim has focus
   * follows theme switches (~/.config/themes/.current), stays out of the way
     while the K.I.T.T. scanner runs (kitt pidfile), and restores the layout on exit
 
@@ -19,6 +22,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 THEME_DIR = os.path.expanduser("~/.config/themes")
 CURRENT = os.path.join(THEME_DIR, ".current")
 KITT_PID = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "kitt.pid")
+MODE_FILE = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "nvim-mode")
+HYPR_SOCK = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "hypr",
+                         os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""), ".socket2.sock")
+MODE_KEYS = ("esc", "caps_lock")
 KEYBOARD_NAMES = ("HP HP Gaming Keyboard II", "HP HP Gaming Keyboard II Keyboard")
 
 FADE_S = 0.6          # press -> back to base
@@ -99,6 +106,11 @@ class Lights:
         self.frame = {}; self.base = (0, 0, 0); self.hi = (255, 255, 255)
         self.fades = {}            # key -> press time
         self.mods = 0; self.hint_shown = None
+        self.workspace = None; self.vim_mode = ""; self.mode_mtime = 0; self.dirty = False
+        try:
+            self.workspace = int(json.loads(subprocess.run(["hyprctl", "activeworkspace", "-j"],
+                                 capture_output=True, text=True, timeout=3).stdout)["name"])
+        except Exception: pass
         self.binds = load_binds(); self.binds_at = time.monotonic()
         self.reload_theme(force=True)
 
@@ -120,6 +132,13 @@ class Lights:
             t = json.load(open(os.path.join(THEME_DIR, name + ".json")))
             kc = KL.keyboard_colors(t)
             self.hi = KL.scale(KL.hex_rgb(kc["kb_hi"]), level)
+            self.mode_colors = {
+                "i": flash_of(self.base),
+                "v": KL.scale(KL.hex_rgb(t["colors"]["blue_bright"]), max(level, 0.6)),
+                "R": KL.scale(KL.hex_rgb(t["colors"]["red_bright"]), max(level, 0.6)),
+                "c": KL.scale(KL.hex_rgb(t["colors"]["cyan_bright"]), max(level, 0.6)),
+                "t": KL.scale(KL.hex_rgb(t["colors"]["magenta_bright"]), max(level, 0.6)),
+            }
             self.theme = name
         except Exception as e:
             print(f"reactive: theme {name}: {e}", file=sys.stderr)
@@ -162,7 +181,19 @@ class Lights:
         for key, rgb in self.frame.items():
             try: self.pt.key(key, mix((0, 0, 0), rgb, HINT_DIM) if hint is not None else rgb)
             except Exception: pass
-        if hint is not None:
+        if hint is None:
+            # state overlays: active workspace number, vim mode on Esc/Caps
+            if self.workspace is not None:
+                try: self.pt.key(str(self.workspace), self.hi)
+                except Exception: pass
+            m = self.vim_mode[:1] if self.vim_mode else ""
+            m = "v" if m in ("v", "V", "\x16") else m
+            rgb = self.mode_colors.get(m) if m else None
+            if rgb:
+                for key in MODE_KEYS:
+                    try: self.pt.key(key, rgb)
+                    except Exception: pass
+        else:
             # bound keys turn the theme's highlight colour (gold on Halo)
             hint_rgb = self.hi
             for key in self.binds.get(hint, ()):
@@ -181,7 +212,27 @@ class Lights:
             except Exception: pass
         for key in done: self.fades.pop(key, None)
         self.kb.apply(persist=False)
-        self.hint_shown = hint
+        self.hint_shown = hint; self.dirty = False
+
+    def poll_state(self):
+        """vim mode file + Hyprland workspace events; returns True when something changed."""
+        changed = False
+        try: m = os.stat(MODE_FILE).st_mtime
+        except OSError: m = 0
+        if m != self.mode_mtime:
+            self.mode_mtime = m
+            try: mode = open(MODE_FILE).read().strip()
+            except OSError: mode = ""
+            if mode != self.vim_mode: self.vim_mode = mode; changed = True
+        if changed: self.dirty = True
+        return changed
+
+    def on_hypr_event(self, line):
+        if line.startswith("workspace>>") or line.startswith("workspacev2>>"):
+            name = line.split(">>", 1)[1].split(",")[-1].strip()
+            try: ws = int(name)
+            except ValueError: ws = None
+            if ws != self.workspace: self.workspace = ws; self.dirty = True
 
     def on_key(self, code_name, value):
         bit = MOD_OF.get(code_name, 0)
@@ -196,7 +247,7 @@ class Lights:
                 self.binds = load_binds(); self.binds_at = time.monotonic()
 
     def busy(self):
-        return bool(self.fades) or (self.mods & HINT_MODS) or self.hint_shown is not None
+        return bool(self.fades) or (self.mods & HINT_MODS) or self.hint_shown is not None or self.dirty
 
     def close(self):
         if self.kb is None: return
@@ -241,16 +292,36 @@ def main():
             lights.close()
         return
 
-    import evdev
+    import evdev, socket
     devs = []
     last_scan = 0
+    hypr = None; hypr_buf = b""; last_hypr = 0
     try:
         while not stop["now"]:
             if not devs and time.monotonic() - last_scan > 10:
                 devs = open_inputs(); last_scan = time.monotonic()
                 if not devs: print("reactive: no readable keyboard input device (udev rule installed?)", file=sys.stderr)
-            timeout = (1 / FPS) if lights.busy() else 0.5
-            r, _, _ = select.select([d.fd for d in devs], [], [], timeout)
+            if hypr is None and time.monotonic() - last_hypr > 10:
+                last_hypr = time.monotonic()
+                try:
+                    hypr = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); hypr.connect(HYPR_SOCK); hypr.setblocking(False)
+                except OSError:
+                    hypr = None
+            timeout = (1 / FPS) if lights.busy() else 0.25
+            fds = [d.fd for d in devs] + ([hypr] if hypr else [])
+            r, _, _ = select.select(fds, [], [], timeout)
+            if hypr and hypr in r:
+                try:
+                    data = hypr.recv(4096)
+                    if not data: hypr.close(); hypr = None
+                    else:
+                        hypr_buf += data
+                        while b"\n" in hypr_buf:
+                            line, hypr_buf = hypr_buf.split(b"\n", 1)
+                            lights.on_hypr_event(line.decode(errors="replace"))
+                except OSError:
+                    hypr = None
+            lights.poll_state()
             for d in devs:
                 if d.fd in r:
                     try:

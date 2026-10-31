@@ -2,6 +2,7 @@ require("config.settings")
 require("config.ai").setup()
 require("config.keymaps")
 require("config.remaps")
+require("config.keyboard-mode")
 require("config.lazy")
 
 -- vim.nnoremap <silent> <leader>c} V}:call nerdcommenter#Comment('x', 'toggle')<CR>
