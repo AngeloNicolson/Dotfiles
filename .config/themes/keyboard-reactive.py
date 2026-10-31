@@ -2,6 +2,7 @@
 """Reactive keyboard lighting for the Omen Max 16, on top of the theme layout.
 
   * a pressed key flashes to full intensity of its own hue and fades back over ~0.6 s
+    (the theme's highlight keys — f/j/caps/enter/super on Halo — stay solid)
   * holding Super (or AltGr) shows only the keys with a Hyprland binding for
     the modifiers currently held, in the theme's highlight colour; the rest dim
   * follows theme switches (~/.config/themes/.current), stays out of the way
@@ -134,12 +135,15 @@ class Lights:
         for key, rgb in self.frame.items():
             self.kb.set_key_color(key, *(mix((0, 0, 0), rgb, HINT_DIM) if hint is not None else rgb))
         if hint is not None:
+            # bound keys in the bright version of the board colour (not the
+            # highlight colour, so they read apart from the fixed anchor keys)
+            hint_rgb = flash_of(self.base)
             for key in self.binds.get(hint, ()):
-                try: self.kb.set_key_color(key, *self.hi)
+                try: self.kb.set_key_color(key, *hint_rgb)
                 except Exception: pass
             for code, bit in MOD_OF.items():
                 if hint & bit and EV2KEY.get(code):
-                    try: self.kb.set_key_color(EV2KEY[code], *self.hi)
+                    try: self.kb.set_key_color(EV2KEY[code], *hint_rgb)
                     except Exception: pass
         done = []
         for key, t0 in self.fades.items():
@@ -159,7 +163,8 @@ class Lights:
             elif value == 0: self.mods &= ~bit
         if value == 1:
             key = EV2KEY.get(code_name)
-            if key: self.fades[key] = time.monotonic()
+            if key and key not in self.frame:   # highlight keys stay solid
+                self.fades[key] = time.monotonic()
             if self.mods & HINT_MODS and time.monotonic() - self.binds_at > 30:
                 self.binds = load_binds(); self.binds_at = time.monotonic()
 
