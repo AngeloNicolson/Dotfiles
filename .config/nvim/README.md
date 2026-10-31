@@ -161,9 +161,9 @@ usage (clangd); `<leader>lgd` Doxygen comment.
 
 The scheme follows `~/.config/themes/.current` (written by AGS) and reloads
 live. Hand-made schemes: `halo` (`colors/halo.lua`, Halo / Xbox green: lime
-functions, Cortana-blue types, visor-gold strings, Xbox-green keywords),
-`famicom`, `mech`; `e-ink` → monochrome, `miasma` → miasma; every other theme
-is built from its JSON palette by `colors/system.lua`. `:ReloadSystemTheme`
+functions, Cortana-blue types, visor-gold strings, Xbox-green keywords) and
+`mech`; every other theme (kit, indy, halloween) is built from its JSON
+palette by `colors/system.lua`. `:ReloadSystemTheme`
 forces a reload.
 
 `~/.config/themes/halo.json` is the matching system theme (AGS, Hyprland, foot,

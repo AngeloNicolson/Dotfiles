@@ -3,6 +3,7 @@ Description=Reactive keyboard lighting (press fade + Super keybind hints) for th
 # omen-rgb must be installed (uv tool) and the 70-omen-rgb udev rule in place.
 ConditionPathExists=%h/.local/share/uv/tools/omen-rgb/bin/python
 After=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
 ExecStart=%h/.local/share/uv/tools/omen-rgb/bin/python %h/.config/themes/keyboard-reactive.py
@@ -10,4 +11,4 @@ Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

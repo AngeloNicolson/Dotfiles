@@ -10,7 +10,7 @@ Personal configuration files for a Wayland desktop built on Hyprland, AGS, Neovi
 - **Fish + Starship** - Shell and prompt
 - **Foot** - Terminal emulator
 - **Tmux** - Terminal multiplexer with powerline
-- **Theme System** - Unified colors across all apps (Mech, Famicom, E-Ink, Indy, Miasma, 43PR)
+- **Theme System** - Unified colors across all apps (Mech, Halo, K.I.T, Indy, Halloween)
 - **Firefox** - Custom CSS with auto-hiding navbar and Sidebery integration
 - **Ollama** - Local AI/LLM server integrated with Neovim
 
@@ -25,13 +25,18 @@ cd ~/dotfiles
 (`--depth 1` is fine — wallpapers are not in git; the `wallpapers` module pulls
 them from the `wallpapers-v1` release.)
 
-The installer detects your distro, shows what is always installed, asks a yes/no
-question per optional component (lock screen, idle dimming, themed look, Neovim,
-tmux, media, wallpaper pack, NVIDIA, Firefox, …), then handles everything.
-Answers are saved to a gitignored `install.conf` and honoured by every later run
-(`packages`, `doctor`, `wallpapers`); edit or delete it to be asked again.
+The installer detects your distro, shows what is always installed, asks first
+which machine this is (HP Omen Max 16? — auto-detected from DMI/USB, Enter
+accepts), then a yes/no question per optional component (lock screen, idle
+dimming, themed look, Neovim, tmux, media, wallpaper pack, NVIDIA, Firefox, …),
+then handles everything. A machine profile is not optional: saying yes makes its
+hardware pieces required (installed, and the doctor fails without them); saying
+no drops them entirely. Answers are saved to a gitignored `install.conf` and
+honoured by every later run (`packages`, `doctor`, `wallpapers`); edit or delete
+it to be asked again.
 Flags: `--dry-run` prints every change without touching the system, `--yes` runs
-non-interactively (components from `OPT_<NAME>=y|n` env → `install.conf` → defaults),
+non-interactively (machine + components from `OPT_<NAME>=y|n` env → `install.conf`
+→ auto-detect / defaults),
 and `./install.sh doctor` audits a machine against what the config expects *for
 the components you chose* — e.g. no lock screen selected, no complaint that
 hyprlock is missing.
@@ -46,6 +51,11 @@ hyprlock is missing.
 
   Always installed (required by the config):
     Hyprland, AGS shell, foot + fish, fonts, PipeWire, wallpaper daemon, ...
+
+  Machine (hardware-specific pieces; required on a match, skipped otherwise)
+
+    detected: OMEN MAX Gaming Laptop 16-ah0xxx
+    Is this an HP Omen Max 16? Adds (required): per-key keyboard RGB stack, ... [Y/n]
 
   Optional components (Enter keeps the default shown; saved to install.conf)
 
@@ -62,7 +72,9 @@ hyprlock is missing.
 
 Each component maps to `packages/<distro>/<id>.txt` (the required set is
 `core.txt`) and may switch installer modules on or off (`neovim` → plugin
-restore, `tmux` → tpm, `firefox` → profile CSS, …). Things the config calls
+restore, `tmux` → tpm, `firefox` → profile CSS, …). The machine profile works the
+same way (`packages/arch/omen-max-16.txt` + the `omen` module, which also stages
+the root-side files under `system/`; see `system/README.md`). Things the config calls
 that belong to an optional component degrade when it is off: the lid-close and
 power-key bindings go through `scripts/lock.sh`, which is a no-op without a
 locker, and `hypridle` only starts if installed.
@@ -76,7 +88,8 @@ locker, and `hypridle` only starts if installed.
 | `scripts` | Makes all scripts executable |
 | `templates` | Copies `.example` templates for machine-specific configs |
 | `dirs` | Creates supplementary dirs (PipeWire, shaders) |
-| `services` | Enables the user units listed in `install.sh` (`bluetooth-autoconnect.service`, `monolith-reindex.timer`) — not every unit in the repo |
+| `services` | Enables the user units listed in `install.sh` (`bluetooth-autoconnect.service`, `monolith-reindex.timer`, plus `keyboard-reactive.service` on an Omen Max 16) — not every unit in the repo |
+| `omen` | HP Omen Max 16 only (machine profile): omen-rgb tool, udev rules (RGB access, keyboard autosuspend off), EC keyboard-backlight switch (script + boot service + resume hook + acpi_call autoload) |
 | `ags` | Runs `npm install`, clears compiled bundle |
 | `theme` | Applies the default theme (mech) via `ags request theme` when AGS is running, plus dunst via `apply-theme.sh` |
 | `wallpapers` | Downloads wallpapers from the `wallpapers-v1` GitHub release (skips existing); generates a default if none |
@@ -115,6 +128,8 @@ The installer is idempotent — safe to re-run at any time.
    `LAPTOP_SCALE` in `custom/env.lua`. Use `--dry-run` to preview, `--force` to
    regenerate, `--scale 1.5` to pin the laptop panel.
 3. `./install.sh doctor` — fix anything it lists.
+4. Omen Max 16: reboot once if the installer said so (acpi_call loads at boot; until
+   then the keyboard backlight needs Fn+F4 after boot or lid-open).
 
 ### Per-machine files (gitignored, created from `.example` templates)
 
@@ -209,9 +224,10 @@ Foot, GTK, Hyprland (gaps/borders/blur/opacity via `hypr/custom/theme.lua`),
 Firefox, dunst and Neovim:
 
 - **Mech** — warm dark theme (gruvbox-inspired)
-- **Famicom** — cream light theme (retro)
-- **E-Ink** — pure monochrome
-- **Indy**, **Miasma**, **43PR** — see each JSON's `_source` note
+- **Halo** — Halo / Xbox green
+- **K.I.T** — monochrome (from 43PR, see the JSON's `_source` note)
+- **Indy** — Indiana Jones
+- **Halloween** — orange / green / purple
 
 Switch from the AGS CORE page, the `SUPER+W` carousel, or the shell:
 

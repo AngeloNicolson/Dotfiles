@@ -1,36 +1,36 @@
 -- Halo colorscheme for Neovim (hand-made; palette = ~/.config/themes/halo.json)
--- Xbox green keywords, Xbox-One lime functions, Cortana blue types, visor gold
+-- OG Green translucent Xbox shell (olive to lime); lime keywords, Cortana blue types, visor gold
 -- strings, UNSC red errors. Same group coverage as colors/mech.lua plus the
 -- treesitter/LSP-semantic/plugin groups this config uses.
 
 local c = {
-	bg = "#060906",
-	bg_dark = "#030503",
-	bg_light = "#0F1A0F",
-	bg_lighter = "#19291A",
-	fg = "#E4ECE0",
-	fg_dim = "#93AB90",
-	fg_bright = "#F3F7F0",
-	accent = "#6FBE44",
-	red = "#CF3A2B",
-	red_bright = "#EE6A5C",
-	green = "#3E9A2E",
-	green_bright = "#A4E868",
-	yellow = "#E9C23A",
-	yellow_bright = "#F5D86B",
-	blue = "#3F86D6",
-	blue_bright = "#74ABEB",
-	magenta = "#A57BD1",
-	magenta_bright = "#C19FE4",
-	cyan = "#5CC9AE",
-	cyan_bright = "#8EDFCB",
-	gray = "#4C5E4A",
+	bg = "#2B5810",
+	bg_dark = "#1E4209",
+	bg_light = "#367016",
+	bg_lighter = "#468C1C",
+	fg = "#F3FAE4",
+	fg_dim = "#C8E6A0",
+	fg_bright = "#FFFFFF",
+	accent = "#C6F53A",
+	red = "#FF8A78",
+	red_bright = "#FFB0A2",
+	green = "#A8E850",
+	green_bright = "#D2FF78",
+	yellow = "#FFE05A",
+	yellow_bright = "#FFF0A0",
+	blue = "#96CCFF",
+	blue_bright = "#BFE0FF",
+	magenta = "#DCB8FF",
+	magenta_bright = "#EBD4FF",
+	cyan = "#96F0DC",
+	cyan_bright = "#C2FAEE",
+	gray = "#78A850",
 	-- scheme-only shades: keyword = a slightly deeper jewel green than the accent;
-	-- comment = lighter gray so it clears 4.5:1 on the near-black bg.
-	keyword = "#5AAE36",
-	comment = "#6A7F67",
-	selection = "#163019",
-	search = "#2E4A12",
+	-- comment = pale olive, dimmer than fg, on the lime plastic bg.
+	keyword = "#E2FF5A",
+	comment = "#B4D48C",
+	selection = "#4A8C20",
+	search = "#6AA828",
 }
 
 vim.cmd("highlight clear")
@@ -149,9 +149,9 @@ hi("Removed", { fg = c.red })
 
 -- Diff ---------------------------------------------------------------------------
 hi("DiffAdd", { fg = c.green_bright, bg = "#122612" })
-hi("DiffChange", { fg = c.yellow, bg = "#20200C" })
-hi("DiffDelete", { fg = c.red, bg = "#26100C" })
-hi("DiffText", { fg = c.yellow_bright, bg = "#3A3410", bold = true })
+hi("DiffChange", { fg = c.yellow, bg = "#4A6E18" })
+hi("DiffDelete", { fg = c.red, bg = "#5A4018" })
+hi("DiffText", { fg = c.yellow_bright, bg = "#5A6A18", bold = true })
 hi("diffAdded", { fg = c.green_bright })
 hi("diffRemoved", { fg = c.red })
 hi("diffChanged", { fg = c.yellow })
@@ -290,10 +290,10 @@ hi("DiagnosticWarn", { fg = c.yellow_bright })
 hi("DiagnosticInfo", { fg = c.blue_bright })
 hi("DiagnosticHint", { fg = c.cyan })
 hi("DiagnosticOk", { fg = c.green_bright })
-hi("DiagnosticVirtualTextError", { fg = c.red_bright, bg = "#1C100E" })
-hi("DiagnosticVirtualTextWarn", { fg = c.yellow_bright, bg = "#1E1A0C" })
-hi("DiagnosticVirtualTextInfo", { fg = c.blue_bright, bg = "#0E1A22" })
-hi("DiagnosticVirtualTextHint", { fg = c.cyan, bg = "#0E1E1C" })
+hi("DiagnosticVirtualTextError", { fg = c.red_bright, bg = "#4A3A18" })
+hi("DiagnosticVirtualTextWarn", { fg = c.yellow_bright, bg = "#4A5018" })
+hi("DiagnosticVirtualTextInfo", { fg = c.blue_bright, bg = "#2E5A3A" })
+hi("DiagnosticVirtualTextHint", { fg = c.cyan, bg = "#2E6040" })
 hi("DiagnosticUnderlineError", { sp = c.red_bright, undercurl = true })
 hi("DiagnosticUnderlineWarn", { sp = c.yellow_bright, undercurl = true })
 hi("DiagnosticUnderlineInfo", { sp = c.blue_bright, undercurl = true })
@@ -426,7 +426,7 @@ hi("DapBreakpoint", { fg = c.red_bright })
 hi("DapBreakpointCondition", { fg = c.yellow_bright })
 hi("DapLogPoint", { fg = c.blue_bright })
 hi("DapStopped", { fg = c.green_bright })
-hi("DapStoppedLine", { bg = "#14301A" })
+hi("DapStoppedLine", { bg = "#3E7A1C" })
 hi("DapUIScope", { fg = c.accent, bold = true })
 hi("DapUIType", { fg = c.blue })
 hi("DapUIValue", { fg = c.fg })
@@ -470,9 +470,9 @@ hi("CodeCompanionChatTool", { fg = c.cyan })
 hi("CodeCompanionChatVariable", { fg = c.blue_bright })
 hi("CodeCompanionVirtualText", { fg = c.comment, italic = true })
 hi("MinuetVirtualText", { fg = c.comment, italic = true })
-hi("RenderMarkdownH1Bg", { bg = "#14301A" })
-hi("RenderMarkdownH2Bg", { bg = "#0E1E2A" })
-hi("RenderMarkdownH3Bg", { bg = "#20200C" })
+hi("RenderMarkdownH1Bg", { bg = "#3E7A1C" })
+hi("RenderMarkdownH2Bg", { bg = "#2E6A40" })
+hi("RenderMarkdownH3Bg", { bg = "#4A6E18" })
 hi("RenderMarkdownCode", { bg = c.bg_dark })
 hi("RenderMarkdownCodeInline", { fg = c.yellow, bg = c.bg_dark })
 hi("RenderMarkdownBullet", { fg = c.accent })

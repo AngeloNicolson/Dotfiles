@@ -1,0 +1,11 @@
+[Unit]
+Description=Omen Max 16: switch the keyboard backlight on (the EC boots with it off)
+Documentation=file:///home/Angel/projects/personal/dotfiles/system/README.md
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/omen-kbd-backlight on
+
+[Install]
+WantedBy=multi-user.target

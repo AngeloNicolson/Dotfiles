@@ -7,8 +7,8 @@ Unified theme management for consistent colors across all applications.
 Apply a theme:
 ```bash
 ./apply-theme.sh mech
-./apply-theme.sh famicom
-./apply-theme.sh e-ink
+./apply-theme.sh halo
+./apply-theme.sh halloween
 ```
 
 The current theme is stored in `.current` and automatically applied to:
@@ -47,20 +47,19 @@ Each theme is defined in a JSON file with:
 
 ## Available Themes
 
-### Mech (Dark)
-- Gruvbox-inspired warm dark theme
-- High contrast for readability
-- Best for: General use, coding
+- **Mech** — warm dark theme (gruvbox-inspired); general use, coding
+- **Halo** — Halo / Xbox green; hand-made Neovim scheme; keyboard: translucent
+  olive, visor lock animation
+- **K.I.T** — monochrome (from 43PR); keyboard: Dr Pepper red, Knight Rider
+  scanner lock animation
+- **Indy** — Indiana Jones palette
+- **Halloween** — orange / slime green / purple; keyboard: bruise violet with
+  sickly green highlights, blood-on-black lock animation
 
-### Famicom (Light)
-- Retro gaming aesthetic
-- Cream background with vibrant colors
-- Best for: Daytime use, creative work
-
-### E-Ink (Monochrome)
-- Pure black and white
-- Minimal visual distractions
-- Best for: Focus work, battery saving, e-ink displays
+Keyboard keys live under `look`: keyboardStyle (theme|drpepper|translucent),
+keyboardColor, keyboardHighlight, keyboardBrightness, keyboardSleep,
+keyboardSleepHighlight, keyboardSleepAnimation (kitt|blood|visor) — see
+keyboard-lights.py and keyboard-kitt.py.
 
 ## Creating New Themes
 

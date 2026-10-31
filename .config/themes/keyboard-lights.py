@@ -15,9 +15,9 @@ THEME_DIR = os.path.expanduser("~/.config/themes")
 # Styles. "theme" (default): the palette layout below, dim. "drpepper": everything
 # a deep candy Dr Pepper red with f/j/caps/enter/super in the theme accent. "translucent":
 # the whole board in the accent, evenly (Halo = X25 translucent green). A theme
-# chooses with look.keyboardStyle; 43pr uses drpepper, halo translucent.
+# chooses with look.keyboardStyle; kit uses drpepper, halo translucent.
 # A colour is either a theme palette key or a literal #rrggbb.
-DEFAULT_STYLE = "theme"  # a theme can pick another via look.keyboardStyle (43pr: drpepper)
+DEFAULT_STYLE = "theme"  # a theme can pick another via look.keyboardStyle (kit: drpepper)
 DRPEPPER_RED = "#C01010"  # no blue: a maroon with blue in it reads pink on these LEDs when dimmed
 STYLES = {
     "drpepper": {
@@ -73,6 +73,32 @@ def scale(rgb, f):
     f = max(0.0, min(1.0, f))
     return tuple(int(round(c * f)) for c in rgb)
 
+def mix(a, b, t):
+    t = max(0.0, min(1.0, t))
+    return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
+
+# The lock / sleep look (the K.I.T.T. scanner while locked): a dim base the
+# whole board rests on, and the scanner head colour. Follows the theme's
+# keyboard style so the board never changes hue between locked and unlocked —
+# Dr Pepper themes rest on the same candy red as their layout, translucent ones
+# on the board colour, palette ones on a dim accent. A theme may override with
+# look.keyboardSleep (base) / look.keyboardSleepHighlight (head).
+def sleep_look(theme, brightness=None):
+    """(base_rgb, head_rgb) for a theme dict, already scaled to the theme's level."""
+    look = theme.get("look", {})
+    colors = keyboard_colors(theme) if "colors" in theme else {}
+    level = brightness if brightness is not None else float(look.get("keyboardBrightness", 0.3))
+    style = look.get("keyboardStyle", DEFAULT_STYLE)
+    if style == "drpepper":
+        base_hex, head_hex, rel = DRPEPPER_RED, "#FF0C0C", STYLES["drpepper"]["base"][1]
+    elif style == "translucent":
+        base_hex, head_hex, rel = colors.get("kb", "#FF0C0C"), colors.get("kb_hi", "#FF0C0C"), 1.0
+    else:
+        base_hex = head_hex = colors.get("accent", "#FF0C0C"); rel = STYLES["theme"]["base"][1]
+    base_hex = look.get("keyboardSleep", base_hex)
+    head_hex = look.get("keyboardSleepHighlight", head_hex)
+    return scale(hex_rgb(base_hex), rel * level), hex_rgb(head_hex)
+
 def build_frame(theme_name, style_name=None, brightness=None):
     """Per-key colours for a theme: returns ({key_name: (r,g,b)}, base_rgb, style_name, level)."""
     with open(os.path.join(THEME_DIR, theme_name + ".json")) as f:
@@ -109,21 +135,46 @@ def led_balance(layout):
     return out
 
 class Painter:
-    """Sets colours per LED with the balance applied. Use instead of set_all/set_key_color."""
+    """Sets colours per LED with the balance applied. Use instead of set_all/set_key_color.
+    `blend` = (from_rgb, t) mixes every colour painted after it is set from `from_rgb`
+    (t=0) towards the colour asked for (t=1) — the reactive daemon's wake crossfade."""
     def __init__(self, kb):
         self.kb = kb
         self.bal = led_balance(kb.layout)
         self._leds = {}
+        self.blend = None
+    def _c(self, rgb):
+        return mix(self.blend[0], rgb, self.blend[1]) if self.blend else rgb
     def leds(self, key):
         if key not in self._leds:
             self._leds[key] = list(self.kb.key_leds(key))
         return self._leds[key]
     def key(self, key, rgb):
+        rgb = self._c(rgb)
         for led in self.leds(key):
             self.kb.set_led_color(led, *scale(rgb, self.bal.get(led, 1.0)))
     def all(self, rgb):
+        rgb = self._c(rgb)
         for led, f in self.bal.items():
             self.kb.set_led_color(led, *scale(rgb, f))
+
+KEYBOARD_NAMES = ("HP HP Gaming Keyboard II", "HP HP Gaming Keyboard II Keyboard")
+
+def open_inputs():
+    """The keyboard's evdev devices (needs the input part of the 70-omen-rgb udev rule)."""
+    import evdev
+    devs = []
+    for path in evdev.list_devices():
+        try:
+            d = evdev.InputDevice(path)
+            caps = d.capabilities().get(evdev.ecodes.EV_KEY, [])
+            if d.name in KEYBOARD_NAMES and evdev.ecodes.KEY_A in caps:
+                devs.append(d)
+            else:
+                d.close()
+        except Exception:
+            pass
+    return devs
 
 def apply_frame(kb, frame, base, persist=True):
     """Push a frame (per-key overrides over a base colour) to the keyboard."""

@@ -7,18 +7,6 @@ return {
 		priority = 999,
 	},
 
-	{
-		"kdheepak/monochrome.nvim",
-		lazy = true,
-		priority = 999,
-	},
-
-	{
-		"xero/miasma.nvim",
-		lazy = true,
-		priority = 999,
-	},
-
 	-- System-synced colorscheme loader.
 	-- The active theme is ~/.config/themes/.current (written by AGS when you
 	-- pick a theme). Themes with a hand-made scheme use it; everything else
@@ -50,10 +38,7 @@ return {
 
 			-- Hand-made schemes; anything not listed → palette-driven "system".
 			local colorscheme_map = {
-				famicom = "famicom",
 				halo = "halo",
-				["e-ink"] = "monochrome",
-				miasma = "miasma",
 			}
 
 			-- Clear the background of the main groups, keeping their fg/attrs

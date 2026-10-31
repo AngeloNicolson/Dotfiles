@@ -52,7 +52,9 @@
     },
     "keyboardBrightness": 0.5,
     "keyboardStyle": "translucent",
-    "keyboardColor": "#30D620",
-    "keyboardHighlight": "#FF7A1A"
+    "keyboardSleepAnimation": "blood",
+    "keyboardSleep": "#000000",
+    "keyboardColor": "#6A00B4",
+    "keyboardHighlight": "#9AFF3C"
   }
 }

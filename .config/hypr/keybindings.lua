@@ -162,3 +162,16 @@ bind("", "XF86MonBrightnessDown", dsp.exec_cmd("~/.config/hypr/scripts/brightnes
 
 -- Lid switch: bound in hyprland.lua (scripts/lid-switch.sh)
 bind("", "XF86PowerOff", dsp.exec_cmd("systemctl suspend"))  -- hypridle locks before sleep
+
+-- Lock screen: scripts/lock.sh enters this submap for as long as hyprlock runs
+-- and resets it when the locker exits. Space is swallowed here (locked = true so
+-- it fires under the session lock) — it is the "press Space to start" key for
+-- the keyboard scanner's password-entry mode and must not land in hyprlock's
+-- password field. Every other key passes through to hyprlock as normal. kitt
+-- resets this submap once entry mode starts (so only the first Space is eaten)
+-- and re-enters it when the scanner resumes; see scripts/lock.sh.
+-- (Injecting a stand-in key with send_key_state to wake a fade_on_empty field
+-- was tried 2026-10-31 and garbled the input; the field is simply always shown.)
+hl.define_submap("locked", function()
+  hl.bind("space", function() end, { locked = true })
+end)

@@ -1,0 +1,4 @@
+# Disable USB autosuspend for HP Gaming Keyboard II (Omen Max 16)
+# Fixes intermittent key drops (especially backspace) after long sessions
+# Added 2026-04-09 — safe to remove if causing issues
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0d62", ATTR{idProduct}=="54bf", ATTR{power/autosuspend}="-1", ATTR{power/control}="on"

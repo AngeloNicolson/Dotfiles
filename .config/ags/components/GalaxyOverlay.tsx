@@ -2,6 +2,7 @@ import Gtk from "gi://Gtk?version=3.0"
 import Gdk from "gi://Gdk?version=3.0"
 import GLib from "gi://GLib"
 import cairo from "cairo"
+import { paletteOf, type Palette } from "../colors"
 
 // Planet data - distributed across 3 orbit rings
 interface Planet {
@@ -31,7 +32,7 @@ const CENTER_SIZE_PERCENT = 0.06
 const PLANET_BASE_SIZE_PERCENT = 0.045
 
 // Create custom circular cursor
-function createCircleCursor(display: Gdk.Display): Gdk.Cursor | null {
+function createCircleCursor(display: Gdk.Display, P: Palette): Gdk.Cursor | null {
   const size = 64
   const surface = new cairo.ImageSurface(cairo.Format.ARGB32, size, size)
   const cr = new cairo.Context(surface)
@@ -42,18 +43,18 @@ function createCircleCursor(display: Gdk.Display): Gdk.Cursor | null {
   const innerRadius = 18
 
   // Draw outer ring (lighter gray)
-  cr.setSourceRGBA(0.6, 0.65, 0.7, 0.9)
+  cr.setSourceRGBA(...P.fg_dim, 0.9)
   cr.setLineWidth(6)
   cr.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI)
   cr.stroke()
 
   // Draw inner darker circle
-  cr.setSourceRGBA(0.1, 0.12, 0.15, 0.95)
+  cr.setSourceRGBA(...P.bg_dark, 0.95)
   cr.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI)
   cr.fill()
 
   // Inner highlight ring
-  cr.setSourceRGBA(0.4, 0.45, 0.5, 0.5)
+  cr.setSourceRGBA(...P.gray, 0.5)
   cr.setLineWidth(2)
   cr.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI)
   cr.stroke()
@@ -73,6 +74,8 @@ export default function DestinationOverlay() {
 
   // Main drawing area - fullscreen
   const canvas = new Gtk.DrawingArea()
+  // Theme palette, refreshed every draw so a theme switch repaints in the new colours.
+  let P: Palette = paletteOf(canvas)
   canvas.set_hexpand(true)
   canvas.set_vexpand(true)
   canvas.add_events(
@@ -87,7 +90,8 @@ export default function DestinationOverlay() {
     const gdkWindow = canvas.get_window()
     if (gdkWindow) {
       const display = gdkWindow.get_display()
-      const cursor = createCircleCursor(display)
+      P = paletteOf(canvas)
+      const cursor = createCircleCursor(display, P)
       if (cursor) {
         gdkWindow.set_cursor(cursor)
       }
@@ -111,6 +115,7 @@ export default function DestinationOverlay() {
   })
 
   canvas.connect("draw", (_w, cr) => {
+    P = paletteOf(canvas)
     const allocation = canvas.get_allocation()
     const width = allocation.width
     const height = allocation.height
@@ -125,7 +130,7 @@ export default function DestinationOverlay() {
 
     // Draw orbit rings
     orbitRadii.forEach((r) => {
-      cr.setSourceRGBA(0.4, 0.75, 0.85, 0.25)
+      cr.setSourceRGBA(...P.accent, 0.25)
       cr.setLineWidth(1.5)
       cr.arc(centerX, centerY, r, 0, 2 * Math.PI)
       cr.stroke()
@@ -136,10 +141,10 @@ export default function DestinationOverlay() {
     const hoveringCenter = distToCenter < centerSize / 2
 
     // Draw center node
-    cr.setSourceRGBA(0.35, 0.75, 0.85, hoveringCenter ? 1 : 0.9)
+    cr.setSourceRGBA(...P.accent, hoveringCenter ? 1 : 0.9)
     cr.arc(centerX, centerY, centerSize / 2, 0, 2 * Math.PI)
     cr.fill()
-    cr.setSourceRGBA(0.5, 0.9, 1.0, 1)
+    cr.setSourceRGBA(...P.fg_bright, 1)
     cr.setLineWidth(hoveringCenter ? 3 : 2)
     cr.arc(centerX, centerY, centerSize / 2, 0, 2 * Math.PI)
     cr.stroke()
@@ -167,12 +172,12 @@ export default function DestinationOverlay() {
       }
 
       // Planet fill
-      cr.setSourceRGBA(0.25, 0.55, 0.65, isHovered ? 1 : 0.85)
+      cr.setSourceRGBA(...P.bg_lighter, isHovered ? 1 : 0.85)
       cr.arc(px, py, pSize / 2, 0, 2 * Math.PI)
       cr.fill()
 
       // Planet border
-      cr.setSourceRGBA(0.5, 0.85, 0.95, 1)
+      cr.setSourceRGBA(...P.accent, 1)
       cr.setLineWidth(isHovered ? 3 : 2)
       cr.arc(px, py, pSize / 2, 0, 2 * Math.PI)
       cr.stroke()
@@ -188,7 +193,7 @@ export default function DestinationOverlay() {
 
   // Helper function to draw squares around a point
   function drawHoverSquares(cr: any, cx: number, cy: number, distance: number, squareSize: number) {
-    cr.setSourceRGBA(0.5, 0.9, 1.0, 0.9)
+    cr.setSourceRGBA(...P.fg_bright, 0.9)
 
     // 4 squares at cardinal directions
     const positions = [

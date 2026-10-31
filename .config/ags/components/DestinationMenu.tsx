@@ -5,6 +5,7 @@ import GLib from "gi://GLib"
 import cairo from "cairo"
 import { setDestinationVisible } from "../state"
 import { px } from "../scale"
+import { paletteOf, type Palette } from "../colors"
 
 // Background image path
 const BG_IMAGE_PATH = `${GLib.get_user_config_dir()}/ags/assets/director/nebula2.jpg`
@@ -163,7 +164,7 @@ function generateStars(count: number): Star[] {
   return stars
 }
 
-function createCircleCursor(display: Gdk.Display, hovered: boolean = false): Gdk.Cursor | null {
+function createCircleCursor(display: Gdk.Display, hovered: boolean, P: Palette): Gdk.Cursor | null {
   const size = 64
   const surface = new cairo.ImageSurface(cairo.Format.ARGB32, size, size)
   const cr = new cairo.Context(surface)
@@ -175,38 +176,38 @@ function createCircleCursor(display: Gdk.Display, hovered: boolean = false): Gdk
 
   if (hovered) {
     // Hovered cursor - brighter, filled center
-    cr.setSourceRGBA(0.4, 0.8, 1.0, 0.95)
+    cr.setSourceRGBA(...P.accent, 0.95)
     cr.setLineWidth(4)
     cr.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI)
     cr.stroke()
 
     // Bright filled center
-    cr.setSourceRGBA(0.3, 0.7, 0.9, 0.9)
+    cr.setSourceRGBA(...P.accent, 0.9)
     cr.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI)
     cr.fill()
 
     // Inner glow ring
-    cr.setSourceRGBA(0.5, 0.9, 1.0, 0.8)
+    cr.setSourceRGBA(...P.fg_bright, 0.8)
     cr.setLineWidth(2)
     cr.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI)
     cr.stroke()
 
     // Center dot
-    cr.setSourceRGBA(1.0, 1.0, 1.0, 1.0)
+    cr.setSourceRGBA(...P.fg_bright, 1.0)
     cr.arc(centerX, centerY, 3, 0, 2 * Math.PI)
     cr.fill()
   } else {
     // Normal cursor
-    cr.setSourceRGBA(0.6, 0.65, 0.7, 0.9)
+    cr.setSourceRGBA(...P.fg_dim, 0.9)
     cr.setLineWidth(6)
     cr.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI)
     cr.stroke()
 
-    cr.setSourceRGBA(0.1, 0.12, 0.15, 0.95)
+    cr.setSourceRGBA(...P.bg_dark, 0.95)
     cr.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI)
     cr.fill()
 
-    cr.setSourceRGBA(0.4, 0.45, 0.5, 0.5)
+    cr.setSourceRGBA(...P.gray, 0.5)
     cr.setLineWidth(2)
     cr.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI)
     cr.stroke()
@@ -261,13 +262,16 @@ export default function DestinationMenu() {
     Gdk.EventMask.LEAVE_NOTIFY_MASK |
     Gdk.EventMask.ENTER_NOTIFY_MASK
   )
+  // Theme palette, refreshed every draw so a theme switch repaints in the new colours.
+  let P: Palette = paletteOf(canvas)
 
   canvas.connect("realize", () => {
     const gdkWindow = canvas.get_window()
     if (gdkWindow) {
       const display = gdkWindow.get_display()
-      normalCursor = createCircleCursor(display, false)
-      hoverCursor = createCircleCursor(display, true)
+      P = paletteOf(canvas)
+      normalCursor = createCircleCursor(display, false, P)
+      hoverCursor = createCircleCursor(display, true, P)
       if (normalCursor) {
         gdkWindow.set_cursor(normalCursor)
       }
@@ -323,6 +327,7 @@ export default function DestinationMenu() {
   })
 
   canvas.connect("draw", (_w, cr) => {
+    P = paletteOf(canvas)
     const allocation = canvas.get_allocation()
     const width = allocation.width
     const height = allocation.height
@@ -370,12 +375,12 @@ export default function DestinationMenu() {
       }
     } else {
       // Fallback solid background
-      cr.setSourceRGBA(0.02, 0.025, 0.06, 0.97)
+      cr.setSourceRGBA(...P.bg_dark, 0.97)
       cr.paint()
     }
 
     // Dark overlay for better readability
-    cr.setSourceRGBA(0.0, 0.0, 0.05, 0.4)
+    cr.setSourceRGBA(...P.bg_dark, 0.4)
     cr.paint()
 
     // Stars with parallax (on top of background)
@@ -383,7 +388,7 @@ export default function DestinationMenu() {
       const twinkle = Math.sin(animTime * 0.015 + star.twinklePhase) * 0.3 + 0.7
       const px = (star.x * width) + (parallaxX * 120 * star.z)
       const py = (star.y * height) + (parallaxY * 120 * star.z)
-      cr.setSourceRGBA(0.85, 0.88, 1.0, star.brightness * twinkle * 0.6)
+      cr.setSourceRGBA(...P.fg_bright, star.brightness * twinkle * 0.6)
       cr.arc(px, py, star.size * star.z, 0, 2 * Math.PI)
       cr.fill()
     })
@@ -485,20 +490,20 @@ export default function DestinationMenu() {
       const x = startX + i * (tabWidth + tabGap)
 
       if (tab.active) {
-        cr.setSourceRGBA(0.15, 0.2, 0.3, 0.9)
+        cr.setSourceRGBA(...P.bg_lighter, 0.9)
         roundedRect(cr, x, y, tabWidth, tabHeight, 4)
         cr.fill()
 
-        cr.setSourceRGBA(0.4, 0.6, 0.85, 0.8)
+        cr.setSourceRGBA(...P.accent, 0.8)
         cr.setLineWidth(2)
         roundedRect(cr, x, y, tabWidth, tabHeight, 4)
         cr.stroke()
       } else {
-        cr.setSourceRGBA(0.08, 0.1, 0.15, 0.6)
+        cr.setSourceRGBA(...P.bg_light, 0.6)
         roundedRect(cr, x, y, tabWidth, tabHeight, 4)
         cr.fill()
 
-        cr.setSourceRGBA(0.25, 0.3, 0.4, 0.5)
+        cr.setSourceRGBA(...P.gray, 0.5)
         cr.setLineWidth(1)
         roundedRect(cr, x, y, tabWidth, tabHeight, 4)
         cr.stroke()
@@ -520,7 +525,7 @@ export default function DestinationMenu() {
     cr.newPath()
 
     // Outer decorative ring
-    cr.setSourceRGBA(0.35, 0.5, 0.65, 0.3 * alpha)
+    cr.setSourceRGBA(...P.gray, 0.3 * alpha)
     cr.setLineWidth(1)
     cr.arc(x, y, actualSize + 10, 0, 2 * Math.PI)
     cr.stroke()
@@ -531,7 +536,7 @@ export default function DestinationMenu() {
       const angle = (i / tickCount) * Math.PI * 2
       const innerR = actualSize + 5
       const outerR = actualSize + 14
-      cr.setSourceRGBA(0.45, 0.65, 0.85, 0.4 * alpha)
+      cr.setSourceRGBA(...P.accent, 0.4 * alpha)
       cr.setLineWidth(1)
       cr.moveTo(x + Math.cos(angle) * innerR, y + Math.sin(angle) * innerR)
       cr.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR)
@@ -540,23 +545,23 @@ export default function DestinationMenu() {
 
     // Main circle fill
     if (dest.ringStyle === "central") {
-      cr.setSourceRGBA(0.2, 0.35, 0.5, 0.85 * alpha)
+      cr.setSourceRGBA(...P.bg_lighter, 0.85 * alpha)
     } else if (dest.ringStyle === "planet") {
-      cr.setSourceRGBA(0.18, 0.28, 0.4, 0.8 * alpha)
+      cr.setSourceRGBA(...P.bg_light, 0.8 * alpha)
     } else {
-      cr.setSourceRGBA(0.1, 0.14, 0.22, 0.75 * alpha)
+      cr.setSourceRGBA(...P.bg_dark, 0.75 * alpha)
     }
     cr.arc(x, y, actualSize, 0, 2 * Math.PI)
     cr.fill()
 
     // Main border
-    cr.setSourceRGBA(0.45, 0.7, 0.9, 0.7 * alpha)
+    cr.setSourceRGBA(...P.accent, 0.7 * alpha)
     cr.setLineWidth(2)
     cr.arc(x, y, actualSize, 0, 2 * Math.PI)
     cr.stroke()
 
     // Inner ring
-    cr.setSourceRGBA(0.5, 0.75, 0.95, 0.2 * alpha)
+    cr.setSourceRGBA(...P.accent, 0.2 * alpha)
     cr.setLineWidth(1)
     cr.arc(x, y, actualSize * 0.65, 0, 2 * Math.PI)
     cr.stroke()
@@ -564,7 +569,7 @@ export default function DestinationMenu() {
     // Icon - only show for sidebar items
     const isLeftSidebarIcon = dest.x < 0.1
     if (isLeftSidebarIcon) {
-      cr.setSourceRGBA(0.9, 0.94, 1.0, 0.85 * alpha)
+      cr.setSourceRGBA(...P.fg_bright, 0.85 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.NORMAL)
       const iconSize = actualSize * 0.5
       cr.setFontSize(iconSize)
@@ -577,7 +582,7 @@ export default function DestinationMenu() {
     const isLeftSidebar = dest.x < 0.1
     if (isLeftSidebar) {
       // Smaller labels for sidebar, below the icon
-      cr.setSourceRGBA(0.9, 0.93, 0.98, 0.95 * alpha)
+      cr.setSourceRGBA(...P.fg_bright, 0.95 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
       cr.setFontSize(px(10))
       const labelExtents = cr.textExtents(dest.label)
@@ -585,7 +590,7 @@ export default function DestinationMenu() {
       cr.showText(dest.label)
     } else {
       // Large labels with wide letter spacing, light weight
-      cr.setSourceRGBA(0.78, 0.82, 0.88, 0.75 * alpha)
+      cr.setSourceRGBA(...P.fg, 0.75 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.NORMAL)
       cr.setFontSize(px(32))
 
@@ -634,7 +639,7 @@ export default function DestinationMenu() {
     const centerY = height / 2
 
     // Title at top
-    cr.setSourceRGBA(0.9, 0.94, 1.0, alpha)
+    cr.setSourceRGBA(...P.fg_bright, alpha)
     cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
     cr.setFontSize(px(24))
     const titleExtents = cr.textExtents(dest.label)
@@ -642,7 +647,7 @@ export default function DestinationMenu() {
     cr.showText(dest.label)
 
     // Subtitle
-    cr.setSourceRGBA(0.6, 0.7, 0.8, alpha * 0.7)
+    cr.setSourceRGBA(...P.fg_dim, alpha * 0.7)
     cr.setFontSize(px(12))
     const subtitle = "SELECT DESTINATION"
     const subExtents = cr.textExtents(subtitle)
@@ -662,16 +667,16 @@ export default function DestinationMenu() {
     }
 
     // Draw back button (no hover effect on button itself)
-    cr.setSourceRGBA(0.15, 0.2, 0.3, 0.8 * alpha)
+    cr.setSourceRGBA(...P.bg_lighter, 0.8 * alpha)
     cr.arc(backX, backY, backSize, 0, 2 * Math.PI)
     cr.fill()
 
-    cr.setSourceRGBA(0.45, 0.6, 0.8, 0.6 * alpha)
+    cr.setSourceRGBA(...P.accent, 0.6 * alpha)
     cr.setLineWidth(2)
     cr.arc(backX, backY, backSize, 0, 2 * Math.PI)
     cr.stroke()
 
-    cr.setSourceRGBA(0.9, 0.94, 1.0, 0.85 * alpha)
+    cr.setSourceRGBA(...P.fg_bright, 0.85 * alpha)
     cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.NORMAL)
     cr.setFontSize(backSize * 0.6)
     const backIcon = "󰁍"
@@ -679,7 +684,7 @@ export default function DestinationMenu() {
     cr.moveTo(backX - backIconExt.width / 2, backY + backIconExt.height / 3)
     cr.showText(backIcon)
 
-    cr.setSourceRGBA(0.7, 0.75, 0.85, alpha * 0.8)
+    cr.setSourceRGBA(...P.fg, alpha * 0.8)
     cr.setFontSize(px(10))
     const backLabel = "BACK"
     const backLabelExt = cr.textExtents(backLabel)
@@ -706,7 +711,7 @@ export default function DestinationMenu() {
       }
 
       // Outer ring
-      cr.setSourceRGBA(0.35, 0.5, 0.65, 0.35 * alpha)
+      cr.setSourceRGBA(...P.gray, 0.35 * alpha)
       cr.setLineWidth(1)
       cr.arc(ix, iy, iSize + 8, 0, 2 * Math.PI)
       cr.stroke()
@@ -714,7 +719,7 @@ export default function DestinationMenu() {
       // Ticks
       for (let t = 0; t < 8; t++) {
         const ta = (t / 8) * Math.PI * 2
-        cr.setSourceRGBA(0.45, 0.65, 0.85, 0.4 * alpha)
+        cr.setSourceRGBA(...P.accent, 0.4 * alpha)
         cr.setLineWidth(1)
         cr.moveTo(ix + Math.cos(ta) * (iSize + 4), iy + Math.sin(ta) * (iSize + 4))
         cr.lineTo(ix + Math.cos(ta) * (iSize + 12), iy + Math.sin(ta) * (iSize + 12))
@@ -722,18 +727,18 @@ export default function DestinationMenu() {
       }
 
       // Fill
-      cr.setSourceRGBA(0.12, 0.18, 0.28, 0.8 * alpha)
+      cr.setSourceRGBA(...P.bg_light, 0.8 * alpha)
       cr.arc(ix, iy, iSize, 0, 2 * Math.PI)
       cr.fill()
 
       // Border
-      cr.setSourceRGBA(0.5, 0.75, 0.95, 0.7 * alpha)
+      cr.setSourceRGBA(...P.accent, 0.7 * alpha)
       cr.setLineWidth(2)
       cr.arc(ix, iy, iSize, 0, 2 * Math.PI)
       cr.stroke()
 
       // Icon
-      cr.setSourceRGBA(0.9, 0.94, 1.0, 0.85 * alpha)
+      cr.setSourceRGBA(...P.fg_bright, 0.85 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.NORMAL)
       cr.setFontSize(iSize * 0.5)
       const iExt = cr.textExtents(item.icon)
@@ -741,7 +746,7 @@ export default function DestinationMenu() {
       cr.showText(item.icon)
 
       // Label
-      cr.setSourceRGBA(0.8, 0.87, 0.94, 0.75 * alpha)
+      cr.setSourceRGBA(...P.fg, 0.75 * alpha)
       cr.selectFontFace("JetBrainsMono Nerd Font", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
       cr.setFontSize(px(10))
       const lExt = cr.textExtents(item.label)
@@ -752,7 +757,7 @@ export default function DestinationMenu() {
 
   function drawHoverBrackets(cr: any, cx: number, cy: number, dist: number, alpha: number) {
     const sz = 8
-    cr.setSourceRGBA(0.55, 0.8, 1.0, 0.9 * alpha)
+    cr.setSourceRGBA(...P.accent, 0.9 * alpha)
     cr.setLineWidth(2)
 
     cr.moveTo(cx - dist, cy - dist + sz)
@@ -777,7 +782,7 @@ export default function DestinationMenu() {
   }
 
   function drawCornerDecor(cr: any, width: number, height: number, parallaxX: number, parallaxY: number) {
-    cr.setSourceRGBA(0.35, 0.45, 0.55, 0.3)
+    cr.setSourceRGBA(...P.gray, 0.3)
     cr.setLineWidth(1)
 
     const m = 30

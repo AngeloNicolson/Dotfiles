@@ -40,7 +40,7 @@ function StyleDiagram(id: BarStyle) {
     } else {
       const sw = W * 0.5, sx = (W - sw) / 2, sh = 9
       cr.moveTo(sx, 3); cr.lineTo(sx + sw, 3); cr.lineTo(sx + sw - sh, 3 + sh); cr.lineTo(sx + sh, 3 + sh); cr.closePath()
-      cr.setSourceRGBA(0.36, 0.78, 1.0, 0.85); cr.fill()
+      cr.setSourceRGBA(...colorOf(da, "accent", 0.85)); cr.fill()
       win(4, 18, W - 8, H - 22)
     }
     cr.rectangle(0.5, 0.5, W - 1, H - 1)

@@ -1,3 +1,0 @@
-# Omen Max 16 keyboard RGB (component keyboard-rgb). omen-rgb itself is installed
-# from source by install.sh's keyboard-rgb module with uv; the udev rule is in system/.
-uv

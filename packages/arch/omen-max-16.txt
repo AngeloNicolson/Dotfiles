@@ -1,0 +1,6 @@
+# HP Omen Max 16 machine profile (install.sh asks "Is this an HP Omen Max 16?";
+# required when yes). omen-rgb itself is installed from source by the omen
+# module with uv; acpi_call is the prebuilt module for the stock kernel that the
+# EC keyboard-backlight switch (system/usr/local/bin/omen-kbd-backlight) needs.
+uv
+acpi_call

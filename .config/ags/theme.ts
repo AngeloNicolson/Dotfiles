@@ -47,7 +47,7 @@ export interface Theme {
     gapsOut: number
     borderSize: number
   }
-  // Optional compositor "feel" (43pr theme uses it). Themes without it get
+  // Optional compositor "feel" (kit theme uses it). Themes without it get
   // DEFAULT_LOOK, which matches hypr/theme.lua + foot.ini's stock values.
   look?: ThemeLook
 }
@@ -58,6 +58,7 @@ export interface ThemeLook {
   dimInactive?: number      // 0 = off
   blur?: { size: number, passes: number, vibrancy: number }
   shadow?: { range: number, renderPower: number }
+  panelAlpha?: number       // edge sidebar panel + handle background alpha (1 = opaque)
 }
 
 const DEFAULT_LOOK: Required<ThemeLook> = {
@@ -66,6 +67,7 @@ const DEFAULT_LOOK: Required<ThemeLook> = {
   dimInactive: 0.15,
   blur: { size: 6, passes: 3, vibrancy: 0.15 },
   shadow: { range: 4, renderPower: 3 },
+  panelAlpha: 1,
 }
 
 // Hyprland Lua for a theme's layout + look. Applied live via `hyprctl eval`
@@ -168,7 +170,7 @@ const STATIC_CSS = `
       border-radius: 0;
       padding: 0;
       border: 1px solid @bg_light;
-      border-left: 2px solid #3a6080;
+      border-left: 2px solid @bg_lighter;
     }
 
     #edge-strip {
@@ -254,7 +256,7 @@ const STATIC_CSS = `
       font-weight: 600;
       letter-spacing: 2px;
       margin-left: 2px;
-      color: #4a6478;
+      color: @fg_dim;
     }
     #tab-focus-btn:hover label {
       color: @fg;
@@ -265,19 +267,19 @@ const STATIC_CSS = `
 
     /* Typography - terminal style */
     #title {
-      color: #50d0d0;
+      color: @cyan;
       font-size: 16px;
       font-weight: 700;
       letter-spacing: 2px;
     }
     #subtitle {
-      color: #2a4a4a;
+      color: @gray;
       font-size: 11px;
       font-weight: 400;
       letter-spacing: 1px;
     }
     #title-blue {
-      color: #50d0d0;
+      color: @cyan;
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 3px;
@@ -1255,14 +1257,14 @@ const STATIC_CSS = `
       letter-spacing: 4px;
     }
     #clock-date {
-      color: #506070;
+      color: @fg_dim;
       font-size: 10px;
       font-weight: 600;
       letter-spacing: 2px;
       margin-bottom: 8px;
     }
     #clock-secondary {
-      background: alpha(#0a1015, 0.5);
+      background: alpha(@bg_dark, 0.5);
       border-top: 1px solid @bg_lighter;
       padding: 8px 0 0 0;
       margin-top: 6px;
@@ -1350,19 +1352,19 @@ const STATIC_CSS = `
     }
     #status-icon {
       font-size: 14px;
-      color: #90c0d0;
+      color: @cyan;
       margin-right: 8px;
     }
     #status-label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #80a0b0;
+      color: @fg_dim;
     }
     #status-value {
       font-size: 12px;
       font-weight: 700;
-      color: #a0e0f0;
+      color: @cyan_bright;
       letter-spacing: 1px;
       margin-right: 8px;
     }
@@ -1370,8 +1372,8 @@ const STATIC_CSS = `
       font-size: 8px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #c0f0ff;
-      background: alpha(#2a4050, 0.6);
+      color: @cyan_bright;
+      background: alpha(@bg_lighter, 0.6);
       padding: 2px 6px;
       border-radius: 2px;
     }
@@ -1459,7 +1461,7 @@ const STATIC_CSS = `
       border-color: @gray;
     }
     #wallpaper-sub-tab-btn.active {
-      background: alpha(#1a3040, 0.6);
+      background: alpha(@bg_lighter, 0.6);
       border: 1px solid @accent;
     }
     #wallpaper-sub-tab-btn #tab-icon {
@@ -1594,7 +1596,7 @@ const STATIC_CSS = `
     #folder-name {
       font-size: 11px;
       font-weight: 700;
-      color: #7ab0c0;
+      color: @cyan;
       letter-spacing: 0.5px;
     }
     #folder-count {
@@ -1608,7 +1610,7 @@ const STATIC_CSS = `
 
     /* Destination Overlay - Solar System UI */
     #destination-window {
-      background: radial-gradient(ellipse at center, rgba(5, 10, 15, 0.95) 0%, rgba(0, 5, 10, 0.98) 100%);
+      background: radial-gradient(ellipse at center, alpha(@bg_dark, 0.95) 0%, alpha(@bg_dark, 0.98) 100%);
     }
     #destination-overlay {
       background: transparent;
@@ -1616,53 +1618,53 @@ const STATIC_CSS = `
       padding: 40px;
     }
     #destination-center {
-      background: radial-gradient(circle at 30% 30%, @accent, #1a4050);
+      background: radial-gradient(circle at 30% 30%, @accent, @bg_lighter);
       border: 2px solid @fg_bright;
       border-radius: 50%;
-      box-shadow: 0 0 30px rgba(96, 192, 208, 0.5),
-                  0 0 60px rgba(96, 192, 208, 0.2),
-                  inset 0 0 20px rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 30px alpha(@accent, 0.5),
+                  0 0 60px alpha(@accent, 0.2),
+                  inset 0 0 20px alpha(@fg_bright, 0.1);
       transition: all 200ms ease;
     }
     #destination-center:hover {
-      border-color: #a0f0ff;
-      box-shadow: 0 0 40px rgba(96, 192, 208, 0.7),
-                  0 0 80px rgba(96, 192, 208, 0.3),
-                  inset 0 0 20px rgba(255, 255, 255, 0.2);
+      border-color: @fg_bright;
+      box-shadow: 0 0 40px alpha(@accent, 0.7),
+                  0 0 80px alpha(@accent, 0.3),
+                  inset 0 0 20px alpha(@fg_bright, 0.2);
     }
     #destination-center.selected {
       border-color: @fg_bright;
-      box-shadow: 0 0 50px rgba(160, 240, 255, 0.8),
-                  0 0 100px rgba(96, 192, 208, 0.4);
+      box-shadow: 0 0 50px alpha(@fg_bright, 0.8),
+                  0 0 100px alpha(@accent, 0.4);
     }
     #destination-center #destination-icon {
       font-size: 32px;
       color: @fg_bright;
     }
     #destination-node {
-      background: radial-gradient(circle at 30% 30%, #4a8090, #1a3040);
+      background: radial-gradient(circle at 30% 30%, @gray, @bg_lighter);
       border: 2px solid @cyan;
       border-radius: 50%;
-      box-shadow: 0 0 15px rgba(80, 144, 160, 0.4),
-                  0 0 30px rgba(80, 144, 160, 0.1),
-                  inset 0 0 10px rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 15px alpha(@gray, 0.4),
+                  0 0 30px alpha(@gray, 0.1),
+                  inset 0 0 10px alpha(@fg_bright, 0.05);
       transition: all 200ms ease;
     }
     #destination-node:hover {
       border-color: @fg_bright;
-      box-shadow: 0 0 25px rgba(96, 192, 208, 0.6),
-                  0 0 50px rgba(96, 192, 208, 0.2),
-                  inset 0 0 15px rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 25px alpha(@accent, 0.6),
+                  0 0 50px alpha(@accent, 0.2),
+                  inset 0 0 15px alpha(@fg_bright, 0.1);
     }
     #destination-node.selected {
-      background: radial-gradient(circle at 30% 30%, @accent, #2a5060);
-      border-color: #a0f0ff;
-      box-shadow: 0 0 30px rgba(160, 240, 255, 0.7),
-                  0 0 60px rgba(96, 192, 208, 0.3);
+      background: radial-gradient(circle at 30% 30%, @accent, @bg_lighter);
+      border-color: @fg_bright;
+      box-shadow: 0 0 30px alpha(@fg_bright, 0.7),
+                  0 0 60px alpha(@accent, 0.3);
     }
     #destination-node #destination-icon {
       font-size: 20px;
-      color: #a0d0e0;
+      color: @cyan_bright;
     }
     #destination-node:hover #destination-icon {
       color: @fg_bright;
@@ -1676,31 +1678,31 @@ const STATIC_CSS = `
       margin: 4px 6px;
     }
     #quick-toggle {
-      background: #0a1214;
+      background: @bg_dark;
       border-radius: 4px;
       padding: 0;
       margin: 0 0 4px 0;
       min-width: 44px;
       min-height: 44px;
-      border: 1px solid #331111;
+      border: 1px solid alpha(@red, 0.3);
     }
     #quick-toggle:hover {
-      background: #110808;
-      border-color: #551122;
+      background: @bg_light;
+      border-color: alpha(@red, 0.55);
     }
     #quick-toggle.active {
-      background: #110808;
+      background: @bg_light;
       border: 1px solid @red;
     }
     #quick-toggle.active:hover {
-      background: #1a0a0a;
+      background: @bg_light;
     }
     #toggle-icon {
       font-size: 18px;
-      color: #441515;
+      color: alpha(@red, 0.45);
     }
     #quick-toggle:hover #toggle-icon {
-      color: #662222;
+      color: alpha(@red, 0.65);
     }
     #quick-toggle.active #toggle-icon {
       color: @red;
@@ -1717,7 +1719,7 @@ const STATIC_CSS = `
     }
     #toggle-label {
       font-size: 8px;
-      color: #441515;
+      color: alpha(@red, 0.45);
       font-weight: 700;
       letter-spacing: 1px;
     }
@@ -1738,7 +1740,7 @@ const STATIC_CSS = `
       margin: 0 1px;
     }
     #led-segment.unlit {
-      background: #1a0a0a;
+      background: @bg_light;
     }
     #led-segment.lit,
     #led-segment.lit.green,
@@ -1747,20 +1749,20 @@ const STATIC_CSS = `
       background: @red;
     }
     #led-segment:hover {
-      background: #2a1010;
+      background: @bg_lighter;
     }
     #led-segment.lit:hover,
     #led-segment.lit.green:hover,
     #led-segment.lit.yellow:hover,
     #led-segment.lit.red:hover {
-      background: #cc2244;
+      background: @red_bright;
     }
 
     /* Brightness Card - Red terminal panel */
     #brightness-card {
       background: transparent;
       border-radius: 0;
-      border: 1px solid #331111;
+      border: 1px solid alpha(@red, 0.3);
       border-left: 2px solid @red;
       padding: 10px 12px;
       margin-top: 10px;
@@ -1777,7 +1779,7 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 3px;
-      color: #551122;
+      color: alpha(@red, 0.55);
     }
     #brightness-percent {
       font-size: 11px;
@@ -1790,7 +1792,7 @@ const STATIC_CSS = `
     #volume-card {
       background: transparent;
       border-radius: 0;
-      border: 1px solid #331111;
+      border: 1px solid alpha(@red, 0.3);
       border-left: 2px solid @red;
       padding: 10px 12px;
       margin-top: 8px;
@@ -1806,7 +1808,7 @@ const STATIC_CSS = `
       margin-right: 8px;
     }
     #volume-icon-btn:hover #volume-icon {
-      color: #cc2244;
+      color: @red_bright;
     }
     #volume-icon {
       font-size: 14px;
@@ -1816,7 +1818,7 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 3px;
-      color: #551122;
+      color: alpha(@red, 0.55);
     }
     #volume-percent {
       font-size: 11px;
@@ -1829,7 +1831,7 @@ const STATIC_CSS = `
     #battery-card {
       background: transparent;
       border-radius: 0;
-      border: 1px solid #331111;
+      border: 1px solid alpha(@red, 0.3);
       border-left: 2px solid @red;
       padding: 10px 12px;
       margin-top: 10px;
@@ -1847,7 +1849,7 @@ const STATIC_CSS = `
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 3px;
-      color: #551122;
+      color: alpha(@red, 0.55);
     }
     #battery-percent {
       font-size: 11px;
@@ -1863,8 +1865,8 @@ const STATIC_CSS = `
       min-height: 8px;
     }
     #battery-level-bar trough {
-      background: #0a0505;
-      border: 1px solid #331111;
+      background: @bg_dark;
+      border: 1px solid alpha(@red, 0.3);
       border-radius: 0;
       min-height: 8px;
     }
@@ -2467,7 +2469,7 @@ const STATIC_CSS = `
       padding: 0;
       margin: 0;
       border-radius: 1px;
-      border: 1px solid rgba(4, 6, 8, 0.85);
+      border: 1px solid alpha(@bg_dark, 0.85);
     }
     /* Unlit */
     #eq-seg.unlit {
@@ -2480,80 +2482,80 @@ const STATIC_CSS = `
     }
     /* Visualizer tiers — famicom red, fades up */
     #eq-seg.lit-hi {
-      background: #c02030;
-      box-shadow: inset 0 0 2px alpha(#e03040, 0.3);
+      background: @red;
+      box-shadow: inset 0 0 2px alpha(@red_bright, 0.3);
     }
     #eq-seg.lit-mid {
-      background: alpha(#b01828, 0.7);
+      background: alpha(@red, 0.7);
     }
     #eq-seg.lit-lo {
-      background: alpha(#a01020, 0.45);
+      background: alpha(@red, 0.45);
     }
     #eq-seg.lit-dim {
-      background: alpha(#901020, 0.3);
+      background: alpha(@red, 0.3);
     }
     /* Peak head — bright red */
     #eq-seg.peak {
-      background: #e83030;
-      box-shadow: inset 0 0 3px alpha(#ff5050, 0.5), 0 0 4px alpha(#e83030, 0.5);
+      background: @red_bright;
+      box-shadow: inset 0 0 3px alpha(@red_bright, 0.5), 0 0 4px alpha(@red_bright, 0.5);
     }
     /* Gain setting — faded white marker */
     #eq-seg.gain-mark {
-      background: alpha(#d0d0d0, 0.5);
+      background: alpha(@fg, 0.5);
     }
     /* Warm (temperature) */
     #eq-seg.lit.eq-warm {
-      background: #d0a060;
-      box-shadow: inset 0 0 2px alpha(#e0b870, 0.3);
+      background: @yellow;
+      box-shadow: inset 0 0 2px alpha(@yellow_bright, 0.3);
     }
     #eq-seg.peak.eq-warm {
-      background: #ffe0a0;
-      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#d0a060, 0.4);
+      background: @yellow_bright;
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(@yellow, 0.4);
     }
     /* Gamma (purple) */
     #eq-seg.lit.eq-gamma {
-      background: #a080d0;
-      box-shadow: inset 0 0 2px alpha(#b090e0, 0.3);
+      background: @magenta;
+      box-shadow: inset 0 0 2px alpha(@magenta_bright, 0.3);
     }
     #eq-seg.peak.eq-gamma {
-      background: #d0b0ff;
-      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#a080d0, 0.4);
+      background: @magenta_bright;
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(@magenta, 0.4);
     }
     /* Red */
     #eq-seg.lit.eq-red {
-      background: #d06060;
-      box-shadow: inset 0 0 2px alpha(#e08080, 0.3);
+      background: @red;
+      box-shadow: inset 0 0 2px alpha(@red_bright, 0.3);
     }
     #eq-seg.peak.eq-red {
-      background: #ff9090;
-      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#d06060, 0.4);
+      background: @red_bright;
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(@red, 0.4);
     }
     /* Green */
     #eq-seg.lit.eq-green {
-      background: #60d070;
-      box-shadow: inset 0 0 2px alpha(#80e090, 0.3);
+      background: @green;
+      box-shadow: inset 0 0 2px alpha(@green_bright, 0.3);
     }
     #eq-seg.peak.eq-green {
-      background: #a0ffa0;
-      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#60d070, 0.4);
+      background: @green_bright;
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(@green, 0.4);
     }
     /* Blue */
     #eq-seg.lit.eq-blue {
-      background: #6080d0;
-      box-shadow: inset 0 0 2px alpha(#80a0e0, 0.3);
+      background: @blue;
+      box-shadow: inset 0 0 2px alpha(@blue_bright, 0.3);
     }
     #eq-seg.peak.eq-blue {
-      background: #a0c0ff;
-      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#6080d0, 0.4);
+      background: @blue_bright;
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(@blue, 0.4);
     }
     /* White cap */
     #eq-seg.lit.eq-cap {
-      background: #909898;
-      box-shadow: inset 0 0 2px alpha(#b0b8b8, 0.3);
+      background: @gray;
+      box-shadow: inset 0 0 2px alpha(@fg_dim, 0.3);
     }
     #eq-seg.peak.eq-cap {
-      background: #c0c8c8;
-      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(#909898, 0.4);
+      background: @fg_dim;
+      box-shadow: inset 0 0 3px alpha(@fg_bright, 0.4), 0 0 4px alpha(@gray, 0.4);
     }
     #eq-label {
       font-size: 9px;
@@ -2628,10 +2630,10 @@ const STATIC_CSS = `
       opacity: 0.7;
     }
     #eq-panel #control-header.muted #control-icon {
-      color: #c04040;
+      color: @red;
     }
     #eq-panel #control-header.muted #control-label {
-      color: #6a3030;
+      color: alpha(@red, 0.5);
     }
     #eq-panel #control-header.muted #control-value {
       opacity: 0;
@@ -2640,7 +2642,7 @@ const STATIC_CSS = `
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #c04040;
+      color: @red;
     }
 
     /* Noise cancellation toggle */
@@ -2655,14 +2657,14 @@ const STATIC_CSS = `
       border-color: @gray;
     }
     #voice-nc-toggle.active {
-      background: alpha(#40c060, 0.15);
-      border-color: #40c060;
+      background: alpha(@green, 0.15);
+      border-color: @green;
     }
     #voice-nc-toggle #control-label {
       color: @fg_dim;
     }
     #voice-nc-toggle.active #control-label {
-      color: #40c060;
+      color: @green;
     }
     #eq-hbar-inline.disabled {
       opacity: 0.3;
@@ -2703,7 +2705,7 @@ const STATIC_CSS = `
     /* Output device overlay dropdown */
     #eq-output-scroll {
       background: @bg;
-      border: 1px solid #2a4a5a;
+      border: 1px solid @bg_lighter;
       border-radius: 4px;
       min-width: 216px;
       min-height: 200px;
@@ -2713,7 +2715,7 @@ const STATIC_CSS = `
       padding: 3px;
     }
     #eq-output-btn {
-      background: #10202e;
+      background: @bg_light;
       border: 1px solid @bg_lighter;
       border-radius: 3px;
       padding: 8px 12px;
@@ -2722,18 +2724,18 @@ const STATIC_CSS = `
       transition: none;
     }
     #eq-output-btn:hover {
-      background: #1a3040;
+      background: @bg_lighter;
       border-color: @gray;
     }
     #eq-output-btn.active {
-      background: #1a3040;
+      background: @bg_lighter;
       border-color: @accent;
     }
     #eq-output-btn label {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
-      color: #70b0c0;
+      color: @cyan;
       transition: none;
     }
     #eq-output-btn:hover label {
@@ -3957,8 +3959,20 @@ function defineColors(c: ThemeColors): string {
 
 // Base stylesheet (scaled for the smallest monitor) + per-monitor-size copies
 // scoped to window classes — see scale.ts.
-function buildCss(c: ThemeColors): string {
-  return [scaleCss(generateCSS(c)), ...extraFactors().map((u) => scopedCss(STATIC_CSS, u))].join("\n")
+function buildCss(t: Theme): string {
+  return [scaleCss(generateCSS(t.colors) + lookCss(t)), ...extraFactors().map((u) => scopedCss(STATIC_CSS, u))].join("\n")
+}
+
+// Per-theme look overrides on top of STATIC_CSS (what a palette alone can't say).
+function lookCss(t: Theme): string {
+  const a = t.look?.panelAlpha ?? DEFAULT_LOOK.panelAlpha
+  if (a >= 1) return ""
+  return `\n#sidebar-bg.edge-panel, #sidebar-bg.edge-panel #page-box, #sidebar-bg.edge-panel #tab-bar, #edge-handle { background: alpha(@bg_dark, ${a}); }\n`
+}
+
+// Current theme's panel alpha, for cairo-drawn parts of the edge panel (EdgeTab fillets).
+export function panelAlpha(): number {
+  return loadTheme(getCurrentThemeName())?.look?.panelAlpha ?? DEFAULT_LOOK.panelAlpha
 }
 
 function generateCSS(c: ThemeColors): string {
@@ -3980,16 +3994,23 @@ export function initTheme() {
   const themeName = getCurrentThemeName()
   const theme = loadTheme(themeName)
   if (theme) {
-    app.apply_css(buildCss(theme.colors), true)
+    app.apply_css(buildCss(theme), true)
     print(`Loaded theme: ${themeName}`)
   }
+}
+
+// Cairo-drawn widgets (frame band, shield HUD, edge fillets, overlays) read
+// theme colours inside their draw callbacks; a CSS swap alone does not make GTK
+// redraw them, so ask every window to repaint after the stylesheet changes.
+function redrawAll() {
+  for (const w of app.get_windows()) w.queue_draw()
 }
 
 // Re-apply the current theme's CSS without changing the theme. Used when the
 // display scale (U) changes so the regenerated, rescaled stylesheet takes effect.
 export function reapplyCss() {
   const theme = loadTheme(getCurrentThemeName())
-  if (theme) app.apply_css(buildCss(theme.colors), true)
+  if (theme) { app.apply_css(buildCss(theme), true); redrawAll() }
 }
 
 // Firefox: write chrome/theme.css (imported by userChrome.css/userContent.css)
@@ -4066,7 +4087,8 @@ export async function applyTheme(themeName: string) {
   const c = theme.colors
 
   // Update AGS CSS (this will smoothly transition)
-  app.apply_css(buildCss(c), true)
+  app.apply_css(buildCss(theme), true)
+  redrawAll()
 
   // Apply to foot terminal
   const footConfig = GLib.get_home_dir() + "/.config/foot/foot.ini"

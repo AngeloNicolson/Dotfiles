@@ -56,6 +56,9 @@ hl.layer_rule({ match = { namespace = "rofi" }, blur = true, ignore_alpha = 0.15
 -- AGS Settings window: frost the whole screen behind its dimmed backdrop.
 hl.layer_rule({ match = { namespace = "settings" }, blur = true, ignore_alpha = 0.2 })
 
+-- AGS edge sidebar: blur behind the panel when the theme makes it translucent (look.panelAlpha).
+hl.layer_rule({ match = { namespace = "edge-tab" }, blur = true, ignore_alpha = 0.2 })
+
 -- AGS wallpaper carousel (SUPER+W): the strips appear instantly (no_anim) over
 -- a separate frosted backdrop layer that fades in — blur included — over 1.7s.
 -- The carousel stretches fadeLayersIn for that one map (WallpaperCarousel.tsx).

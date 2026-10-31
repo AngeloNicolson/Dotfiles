@@ -1,29 +1,29 @@
 {
   "name": "halo",
   "displayName": "Halo",
-  "_source": "Original 2001 Xbox: matte black console, translucent jewel green (the 2026 Series X25 'OG Green' revisits it), Duke controller ABXY for red/blue/yellow.",
+  "_source": "Xbox Series X 'OG Green' translucent shell: the surfaces ARE the lime-green plastic, pale text on top, desktop showing through.",
   "colors": {
-    "bg": "#060906",
-    "bg_dark": "#030503",
-    "bg_light": "#0F1A0F",
-    "bg_lighter": "#19291A",
-    "fg": "#E4ECE0",
-    "fg_dim": "#93AB90",
-    "fg_bright": "#F3F7F0",
-    "accent": "#6FBE44",
-    "red": "#CF3A2B",
-    "red_bright": "#EE6A5C",
-    "green": "#3E9A2E",
-    "green_bright": "#A4E868",
-    "yellow": "#E9C23A",
-    "yellow_bright": "#F5D86B",
-    "blue": "#3F86D6",
-    "blue_bright": "#74ABEB",
-    "magenta": "#A57BD1",
-    "magenta_bright": "#C19FE4",
-    "cyan": "#5CC9AE",
-    "cyan_bright": "#8EDFCB",
-    "gray": "#4C5E4A"
+    "bg": "#2B5810",
+    "bg_dark": "#1E4209",
+    "bg_light": "#367016",
+    "bg_lighter": "#468C1C",
+    "fg": "#F3FAE4",
+    "fg_dim": "#C8E6A0",
+    "fg_bright": "#FFFFFF",
+    "accent": "#C6F53A",
+    "red": "#FF8A78",
+    "red_bright": "#FFB0A2",
+    "green": "#A8E850",
+    "green_bright": "#D2FF78",
+    "yellow": "#FFE05A",
+    "yellow_bright": "#FFF0A0",
+    "blue": "#96CCFF",
+    "blue_bright": "#BFE0FF",
+    "magenta": "#DCB8FF",
+    "magenta_bright": "#EBD4FF",
+    "cyan": "#96F0DC",
+    "cyan_bright": "#C2FAEE",
+    "gray": "#78A850"
   },
   "gtk": {
     "theme": "Adwaita",
@@ -32,19 +32,19 @@
     "colorScheme": "prefer-dark"
   },
   "hyprland": {
-    "borderRadius": 6,
+    "borderRadius": 10,
     "gapsIn": 4,
     "gapsOut": 8,
     "borderSize": 2
   },
   "look": {
     "opacity": 0.9,
-    "terminalAlpha": 0.95,
+    "terminalAlpha": 0.7,
     "dimInactive": 0,
     "blur": {
-      "size": 6,
-      "passes": 2,
-      "vibrancy": 0.2
+      "size": 10,
+      "passes": 4,
+      "vibrancy": 0.5
     },
     "shadow": {
       "range": 8,
@@ -52,7 +52,9 @@
     },
     "keyboardBrightness": 0.25,
     "keyboardStyle": "translucent",
-    "keyboardColor": "#328208",
-    "keyboardHighlight": "#FF8C14"
+    "keyboardSleepAnimation": "visor",
+    "keyboardColor": "#6CB81E",
+    "keyboardHighlight": "#FF8C14",
+    "panelAlpha": 0.7
   }
 }

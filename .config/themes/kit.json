@@ -1,6 +1,6 @@
 {
-  "name": "43pr",
-  "displayName": "43PR",
+  "name": "kit",
+  "displayName": "K.I.T",
   "_source": "Monochrome look from github.com/43PR/dotfiles (MIT): kitty #000/#fff, quickshell Theme.qml greys, look.lua gaps/rounding/blur/shadow, rules.lua 90% opacity.",
   "colors": {
     "bg": "#000000",
@@ -39,7 +39,7 @@
   },
   "look": {
     "opacity": 0.72,
-    "terminalAlpha": 1.0,
+    "terminalAlpha": 0.98,
     "dimInactive": 0,
     "blur": {
       "size": 6,
@@ -50,6 +50,7 @@
       "range": 8,
       "renderPower": 3
     },
-    "keyboardStyle": "drpepper"
+    "keyboardStyle": "drpepper",
+    "keyboardSleepAnimation": "kitt"
   }
 }

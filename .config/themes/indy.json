@@ -35,5 +35,8 @@
     "gapsIn": 8,
     "gapsOut": 15,
     "borderSize": 1
+  },
+  "look": {
+    "terminalAlpha": 0.98
   }
 }

@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Omen Max 16 (HP Gaming Keyboard II): the keyboard backlight's power switch lives
+# in the embedded controller (EC) — it is what Fn+F4 toggles. It comes up OFF after
+# a cold boot and after s2idle suspend, and nothing on the USB RGB interface can
+# flip it (the per-key controller keeps reporting "lit" and acks every command
+# while the board stays dark). Omen Gaming Hub turns it on through HP's WMI BIOS
+# interface; hp-wmi exposes that only for 1/4-zone boards, so for the per-key
+# board we call the same method ourselves through acpi_call.
+#
+#   omen-kbd-backlight on | off | status | wait-on
+#
+# Needs root and the acpi_call module (/proc/acpi/call; `sudo pacman -S acpi_call`).
+# Wire format = hp-wmi's hp_wmi_perform_query(): WMAA(0, mid, buffer) with
+#   buffer = "SECU" | command u32 | commandtype u32 | datasize u32 | data[datasize]
+#   command 0x20009 (HPWMI_BACKLIGHT); commandtype 0x05 = brightness/state SET,
+#   0x04 = GET; state byte 0xE4 = on, 0x64 = off. mid 2 = 1..4 byte reply.
+set -u
+CALL=/proc/acpi/call
+METHOD='\_SB.WMID.WMAA'
+ON=e4; OFF=64
+
+need_root() { [ "$(id -u)" = 0 ] || { echo "omen-kbd-backlight: run as root" >&2; exit 2; }; }
+need_call() {
+    [ -e "$CALL" ] || modprobe acpi_call 2>/dev/null
+    [ -e "$CALL" ] || { echo "omen-kbd-backlight: $CALL missing (install acpi_call)" >&2; exit 3; }
+}
+
+# query <commandtype> <databyte> -> prints the reply data bytes (hex, space separated)
+query() {
+    local ctype=$1 data=$2 mid buf out
+    buf="53454355""09000200""$(printf '%02x000000' "$ctype")""01000000""$data"
+    for mid in 2 3; do
+        printf '%s 0 %d b%s' "$METHOD" "$mid" "$buf" > "$CALL" || return 1
+        out=$(tr -d '{} \n\000' < "$CALL")
+        # {0x50,0x41,0x53,0x53,<rc u32>,<data...>} -> PASS, return code 0
+        case "$out" in
+            0x50,0x41,0x53,0x53,0x0,0x0,0x0,0x0,*|0x50,0x41,0x53,0x53,0x00,0x00,0x00,0x00,*)
+                echo "$out" | cut -d, -f9- | tr ',' ' '; return 0 ;;
+        esac
+    done
+    echo "omen-kbd-backlight: WMI call failed: $out" >&2
+    return 1
+}
+
+state() {   # prints on|off|unknown
+    local d; d=$(query 4 00) || { echo unknown; return 1; }
+    case "${d%% *}" in 0xe4|0xE4) echo on ;; 0x64) echo off ;; *) echo "unknown($d)" ;; esac
+}
+
+need_root; need_call
+case "${1:-}" in
+    on)      query 5 "$ON" >/dev/null ;;
+    off)     query 5 "$OFF" >/dev/null ;;
+    status)  state ;;
+    wait-on) # resume hook: the EC can lag a moment after s2idle exit
+        for _ in 1 2 3 4 5 6 7 8; do
+            query 5 "$ON" >/dev/null && [ "$(state)" = on ] && exit 0
+            sleep 0.5
+        done
+        echo "omen-kbd-backlight: backlight did not report on" >&2; exit 1 ;;
+    *) echo "usage: omen-kbd-backlight on|off|status|wait-on" >&2; exit 64 ;;
+esac

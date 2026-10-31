@@ -6,8 +6,8 @@
 #   --yes / -y   = non-interactive (optional components default to "no" unless
 #                  OPT_NVIDIA=y etc. are set in the environment)
 #   doctor       = check this machine against what the config expects
-# Modules: packages symlinks scripts templates dirs services ags theme nvim tmux
-#          shell wallpapers hostconfig firefox ollama doctor lock
+# Modules: packages symlinks scripts templates dirs services omen ags theme nvim
+#          tmux shell wallpapers hostconfig firefox ollama doctor lock
 
 set +e
 
@@ -50,7 +50,6 @@ COMPONENTS=(
     "clojure|n|Clojure toolchain: JDK, clojure, babashka, clojure-lsp"
     "gpu-debug|n|GPU & JVM debugging: Nsight Compute/Systems, perf+hotspot, heaptrack, async-profiler, tracy, visualvm"
     "tablet|n|OpenTabletDriver: Wacom tablet support"
-    "keyboard-rgb|n|Omen Max 16 keyboard RGB: omen-rgb tool (uv), udev rule, reactive lighting + lock-screen scanner"
     "nvidia|n|NVIDIA: VA-API driver (libva-nvidia-driver)"
     "firefox|n|Firefox: browser + custom CSS / Sidebery theme"
     "zen|y|Zen Browser: Firefox-based browser with vertical tabs + workspaces (AUR)"
@@ -58,6 +57,33 @@ COMPONENTS=(
     "ollama|n|Ollama: enable the service + pull the model (ollama itself is a manual install, see packages/arch/ollama.txt)"
 )
 REQUIRED_SUMMARY="Hyprland, AGS shell, foot + fish, fonts, PipeWire, wallpaper daemon, notifications, launcher/power menu, screenshot/clipboard/brightness tools"
+
+# Machine profiles: hardware-specific pieces that are REQUIRED on that machine
+# and meaningless anywhere else. Asked first on the setup screen (the default
+# comes from auto-detection), saved to install.conf next to the components,
+# OPT_<ID>=y|n overrides like a component.
+#   id | question shown in the prompt
+MACHINES=(
+    "omen-max-16|Is this an HP Omen Max 16? Adds (required): per-key keyboard RGB stack, the EC keyboard-backlight switch (board is dark after boot/lid-open without it), keyboard USB autosuspend fix"
+)
+machine_ids()  { local m; for m in "${MACHINES[@]}"; do echo "${m%%|*}"; done; }
+machine_desc() { local m; for m in "${MACHINES[@]}"; do [[ "${m%%|*}" == "$1" ]] && { echo "${m#*|}"; return; }; done; }
+# Auto-detection (true = this machine). Omen Max 16: DMI board 8D41 / "OMEN MAX"
+# product name, or its HP Gaming Keyboard II (USB 0d62:54bf) present.
+detect_machine() {
+    case "$1" in
+        omen-max-16)
+            grep -qs '^8D41$' /sys/class/dmi/id/board_name && return 0
+            grep -qsi 'OMEN MAX' /sys/class/dmi/id/product_name && return 0
+            local d
+            for d in /sys/bus/usb/devices/*/; do
+                [[ "$(cat "$d/idVendor" 2>/dev/null)" == "0d62" && "$(cat "$d/idProduct" 2>/dev/null)" == "54bf" ]] && return 0
+            done
+            return 1 ;;
+    esac
+    return 1
+}
+is_omen() { [[ "${CHOICE[omen-max-16]:-n}" == "y" ]]; }
 CHOICES_FILE="$DOTFILES_DIR/install.conf"   # gitignored, per machine
 declare -A CHOICE
 
@@ -70,13 +96,14 @@ chosen()       { [[ "${CHOICE[$1]:-n}" == "y" ]]; }
 load_choices() {
     local id val
     for id in $(comp_ids); do CHOICE[$id]="$(comp_default "$id")"; done
+    for id in $(machine_ids); do detect_machine "$id" && CHOICE[$id]=y || CHOICE[$id]=n; done
     if [[ -f "$CHOICES_FILE" ]]; then
         while IFS='=' read -r id val; do
             [[ -z "$id" || "$id" == \#* ]] && continue
             [[ -n "${CHOICE[$id]+x}" ]] && CHOICE[$id]="$val"
         done < "$CHOICES_FILE"
     fi
-    for id in $(comp_ids); do
+    for id in $(machine_ids) $(comp_ids); do
         local envvar="OPT_${id^^}"; envvar="${envvar//-/_}"   # gpu-debug -> OPT_GPU_DEBUG
         [[ -n "${!envvar:-}" ]] && CHOICE[$id]="${!envvar}"
     done
@@ -87,7 +114,10 @@ save_choices() {
     {
         echo "# Component choices for this machine — written by ./install.sh, read by"
         echo "# every later run (packages, doctor, wallpapers...). Edit or delete to re-ask."
-        local id; for id in $(comp_ids); do echo "$id=${CHOICE[$id]}"; done
+        echo "# machine profiles (hardware-specific, required when y):"
+        local id; for id in $(machine_ids); do echo "$id=${CHOICE[$id]}"; done
+        echo "# optional components:"
+        for id in $(comp_ids); do echo "$id=${CHOICE[$id]}"; done
     } > "$CHOICES_FILE"
 }
 
@@ -330,6 +360,11 @@ mod_packages() {
     pkgs="$(parse_packages "$PKG_DIR/core.txt")"
 
     local groups="core" id
+    for id in $(machine_ids); do
+        [[ "${CHOICE[$id]:-n}" == "y" && -f "$PKG_DIR/$id.txt" ]] || continue
+        pkgs="$pkgs $(parse_packages "$PKG_DIR/$id.txt")"
+        groups="$groups, $id"
+    done
     for id in $(comp_ids); do
         chosen "$id" || continue
         [[ -f "$PKG_DIR/$id.txt" ]] || continue   # component with no packages (e.g. wallpapers)
@@ -496,6 +531,14 @@ mod_templates() {
     header "Templates"
 
     # Hyprland ≥ 0.55 reads hyprland.lua; per-machine files are custom/*.lua.
+    # A hyprland.conf next to it is a leftover (pre-Lua install, or autogenerated by
+    # an old Hyprland that found no .conf). 0.55/0.56 warn about it, 0.57 ignores
+    # it; either way it is not ours — move it aside so the Lua config is the only one.
+    local hypr_dir="$DOTFILES_DIR/.config/hypr"
+    if [[ -f "$hypr_dir/hyprland.lua" && -f "$hypr_dir/hyprland.conf" ]]; then
+        run mv "$hypr_dir/hyprland.conf" "$hypr_dir/hyprland.conf.old"
+        warn "Stale hyprland.conf found beside hyprland.lua — moved to hyprland.conf.old (the Lua config is the only one read from Hyprland 0.57)"
+    fi
     local custom_dir="$DOTFILES_DIR/.config/hypr/custom"
     for example in "$custom_dir"/*.lua.example; do
         [[ -f "$example" ]] || continue
@@ -556,7 +599,9 @@ mod_services() {
     # shipped but left out here stays opt-in (enable it by hand).
     #   bluetooth-autoconnect.service  reconnect trusted BT devices at login
     #   monolith-reindex.timer         nightly retrieval-index rebuild (needs monolith-tui)
-    local -a units=(bluetooth-autoconnect.service monolith-reindex.timer keyboard-reactive.service)
+    #   keyboard-reactive.service      Omen Max 16 only (machine profile)
+    local -a units=(bluetooth-autoconnect.service monolith-reindex.timer)
+    is_omen && units+=(keyboard-reactive.service)
     local svc
     for svc in "${units[@]}"; do
         if [[ ! -f "$DOTFILES_DIR/.config/systemd/user/$svc" ]]; then
@@ -654,40 +699,65 @@ mod_ollama() {
     success "Model installed"
 }
 
-mod_keyboard_rgb() {
-    header "Keyboard RGB (Omen Max 16)"
+mod_omen() {
+    header "HP Omen Max 16"
 
-    # Only the HP Gaming Keyboard II (USB 0d62:54bf) is supported; skip elsewhere.
-    if ! grep -qs "0d62" /sys/bus/usb/devices/*/idVendor 2>/dev/null; then
-        skip "No HP Gaming Keyboard II (0d62:54bf) on this machine"
-        return 0
-    fi
+    # Machine profile (setup screen / auto-detected): everything here is
+    # REQUIRED on this laptop. Without it the keyboard is dark after every boot
+    # and lid-open, drops keys after long sessions, and has no RGB control.
     if ! command -v uv &>/dev/null; then
-        warn "uv not installed — run packages module first"
-        return 0
+        error "uv not installed — run the packages module first, then: ./install.sh omen"
+        return 1
     fi
 
+    # User side: omen-rgb (per-key RGB over USB HID) + evdev for the reactive daemon.
     local src="$HOME/projects/personal/omen-rgb-linux-src"
     if [[ ! -d "$src/.git" ]]; then
         info "Cloning arfelious/omen-rgb-linux..."
-        run git clone -q --depth 1 https://github.com/arfelious/omen-rgb-linux "$src" || { warn "clone failed"; return 0; }
+        run git clone -q --depth 1 https://github.com/arfelious/omen-rgb-linux "$src" || { error "clone failed"; return 1; }
     fi
     info "Installing omen-rgb (uv tool) + evdev for the reactive daemon..."
-    run uv tool install --quiet "$src"
+    run uv tool install --quiet "$src" || { error "uv tool install failed"; return 1; }
     run uv pip install --quiet --python "$HOME/.local/share/uv/tools/omen-rgb/bin/python" evdev
     success "omen-rgb installed"
 
-    # Root side: USB + hidraw + input access for the login session.
-    local rule="$DOTFILES_DIR/system/etc/udev/rules.d/70-omen-rgb.rules"
-    if ! cmp -s "$rule" /etc/udev/rules.d/70-omen-rgb.rules; then
-        info "Installing udev rule (sudo)..."
-        run sudo install -m644 "$rule" /etc/udev/rules.d/70-omen-rgb.rules
+    # Root side (system/, see system/README.md):
+    #   70-omen-rgb.rules               USB + hidraw + input access for the login session
+    #   50-hp-keyboard-nosuspend.rules  keyboard USB autosuspend off (key drops)
+    #   omen-kbd-backlight + sleep hook + service + acpi_call autoload
+    #                                   EC backlight switch: on at boot and after resume
+    local f mode udev_changed=0
+    for f in etc/udev/rules.d/70-omen-rgb.rules etc/udev/rules.d/50-hp-keyboard-nosuspend.rules \
+             usr/local/bin/omen-kbd-backlight etc/systemd/system-sleep/omen-kbd-backlight \
+             etc/systemd/system/omen-kbd-backlight.service etc/modules-load.d/acpi_call.conf; do
+        case "$f" in usr/local/bin/*|etc/systemd/system-sleep/*) mode=755 ;; *) mode=644 ;; esac
+        if cmp -s "$DOTFILES_DIR/system/$f" "/$f"; then
+            skip "/$f"
+        else
+            info "Installing /$f (sudo)..."
+            run sudo install -Dm"$mode" "$DOTFILES_DIR/system/$f" "/$f" || { error "could not install /$f"; return 1; }
+            [[ "$f" == etc/udev/* ]] && udev_changed=1
+        fi
+    done
+    if [[ $udev_changed -eq 1 ]]; then
         run sudo udevadm control --reload
         run sudo udevadm trigger --subsystem-match=usb --subsystem-match=hidraw --subsystem-match=input
     fi
-    success "udev rule in place"
-    # keyboard-reactive.service is enabled by the services module; the first
-    # theme application (theme module) lights the board.
+    success "udev rules in place"
+
+    run sudo systemctl daemon-reload
+    run sudo systemctl enable omen-kbd-backlight.service
+    if [[ "$DRY_RUN" == "1" ]]; then
+        info "(dry-run) would start omen-kbd-backlight.service"
+    elif [[ -e /proc/acpi/call ]] || sudo modprobe acpi_call 2>/dev/null; then
+        run sudo systemctl start omen-kbd-backlight.service \
+            && success "EC backlight switch: on now, at boot and after resume" \
+            || error "omen-kbd-backlight.service failed — see: systemctl status omen-kbd-backlight.service"
+    else
+        warn "acpi_call cannot load into the running kernel (kernel upgraded, reboot pending) — the backlight switch works from the next boot"
+    fi
+    # keyboard-reactive.service is enabled by the services module (gated on this
+    # machine); the theme module's first apply paints the layout.
 }
 
 mod_nvim() {
@@ -838,6 +908,10 @@ mod_doctor() {
     DOCTOR_FAILS=0
 
     local on="" off="" id
+    for id in $(machine_ids); do [[ "${CHOICE[$id]}" == y ]] && on="$on $id" || off="$off $id"; done
+    info "Machine profiles on:${on:- (none)}"
+    echo -e "     ${DIM}off:${off:- (none)}${NC}"
+    on=""; off=""
     for id in $(comp_ids); do chosen "$id" && on="$on $id" || off="$off $id"; done
     info "Components on:${on:- (none)}"
     echo -e "     ${DIM}off:${off:- (none)}  — change with ./install.sh (setup screen) or edit install.conf${NC}"
@@ -847,11 +921,16 @@ mod_doctor() {
     for bin in Hyprland hyprctl foot fish ags gjs jq brightnessctl grim slurp wl-copy awww ffmpeg fc-list gsettings dunst rofi wlogout socat bluetoothctl; do
         if command -v "$bin" &>/dev/null; then d_ok "$bin"; else d_bad "$bin missing"; fi
     done
-    if chosen keyboard-rgb; then
-        info "Keyboard RGB"
-        command -v omen-rgb &>/dev/null && d_ok "omen-rgb" || d_bad "omen-rgb missing (keyboard-rgb module)"
-        grep -qs 'SUBSYSTEM=="input"' /etc/udev/rules.d/70-omen-rgb.rules && d_ok "udev rule (usb+hidraw+input)" || d_bad "udev rule missing or old: /etc/udev/rules.d/70-omen-rgb.rules"
-        [[ "$(systemctl --user is-active keyboard-reactive.service 2>/dev/null)" == active ]] && d_ok "keyboard-reactive.service active" || d_warn "keyboard-reactive.service not active"
+    if is_omen; then
+        info "HP Omen Max 16 (machine profile — all required)"
+        command -v omen-rgb &>/dev/null && d_ok "omen-rgb" || d_bad "omen-rgb missing — run: ./install.sh omen"
+        grep -qs 'SUBSYSTEM=="input"' /etc/udev/rules.d/70-omen-rgb.rules && d_ok "udev rule 70-omen-rgb (usb+hidraw+input)" || d_bad "udev rule missing or old: /etc/udev/rules.d/70-omen-rgb.rules — run: ./install.sh omen"
+        cmp -s "$DOTFILES_DIR/system/etc/udev/rules.d/50-hp-keyboard-nosuspend.rules" /etc/udev/rules.d/50-hp-keyboard-nosuspend.rules && d_ok "udev rule 50-hp-keyboard-nosuspend" || d_bad "keyboard autosuspend rule missing (key drops) — run: ./install.sh omen"
+        [[ -x /usr/local/bin/omen-kbd-backlight && -x /etc/systemd/system-sleep/omen-kbd-backlight ]] && d_ok "EC backlight switch script + resume hook" || d_bad "EC backlight switch not installed (keyboard dark after boot/suspend) — run: ./install.sh omen"
+        [[ "$(systemctl is-enabled omen-kbd-backlight.service 2>/dev/null)" == enabled ]] && d_ok "omen-kbd-backlight.service enabled" || d_bad "omen-kbd-backlight.service not enabled — run: ./install.sh omen"
+        [[ -e /proc/acpi/call ]] && d_ok "acpi_call loaded" || d_bad "acpi_call not loaded (package missing, or reboot pending after a kernel upgrade)"
+        [[ "$(systemctl --user is-enabled keyboard-reactive.service 2>/dev/null)" == enabled ]] && d_ok "keyboard-reactive.service enabled" || d_bad "keyboard-reactive.service not enabled — run: ./install.sh services"
+        [[ "$(systemctl --user is-active keyboard-reactive.service 2>/dev/null)" == active ]] && d_ok "keyboard-reactive.service active" || d_warn "keyboard-reactive.service not active (starts with the graphical session)"
     fi
     for bin in npm git; do
         command -v "$bin" &>/dev/null && d_ok "$bin" || d_warn "$bin missing (optional but used)"
@@ -871,8 +950,10 @@ mod_doctor() {
     local have
     if command -v Hyprland &>/dev/null; then
         have="$(Hyprland --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)"
-        if [[ -n "$have" ]] && version_ge "$have" "${MIN_VERSIONS[hyprland]}"; then d_ok "hyprland $have (>= ${MIN_VERSIONS[hyprland]})"
-        else d_bad "hyprland ${have:-?} < ${MIN_VERSIONS[hyprland]} (windowrule match: syntax, blur protocol)"; fi
+        if [[ -n "$have" ]] && version_ge "$have" "${MIN_VERSIONS[hyprland]}"; then
+            d_ok "hyprland $have (>= ${MIN_VERSIONS[hyprland]})"
+            version_ge "$have" "0.57.0" || d_warn "hyprland $have still reads hyprland.conf if one exists and nags about it; 0.57+ is Lua-only (this config is maintained on 0.57)"
+        else d_bad "hyprland ${have:-?} < ${MIN_VERSIONS[hyprland]} (Lua config, windowrule match: syntax, blur protocol) — update Hyprland"; fi
     fi
     if command -v foot &>/dev/null; then
         have="$(foot --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)"
@@ -917,6 +998,11 @@ mod_doctor() {
 
     info "Config parses"
     [[ -f "$DOTFILES_DIR/.config/hypr/hyprland.lua" ]] && d_ok "hyprland.lua present (Lua config; .conf is dropped in Hyprland 0.57)" || d_warn "hyprland.lua missing — Hyprland will fall back to hyprland.conf (removed in 0.57)"
+    if [[ -f "$DOTFILES_DIR/.config/hypr/hyprland.conf" ]]; then
+        d_bad "stale hyprland.conf beside hyprland.lua (not part of these dotfiles; old Hyprland warns about it) — run: ./install.sh templates"
+    else
+        d_ok "no stray hyprland.conf"
+    fi
     if command -v Hyprland &>/dev/null; then
         # Hyprland aborts before parsing without XDG_RUNTIME_DIR (TTY/CI) — give it one.
         local xdg="${XDG_RUNTIME_DIR:-}"
@@ -1007,19 +1093,31 @@ interactive_prompts() {
     echo -e "  ${BOLD}Always installed (required by the config):${NC}"
     echo -e "    ${DIM}$REQUIRED_SUMMARY${NC}"
     echo ""
+    local id def
     if [[ "$ASSUME_YES" == "1" ]]; then
-        info "Non-interactive: components from OPT_<NAME>=y|n env, else install.conf, else defaults"
+        info "Non-interactive: machine profiles + components from OPT_<NAME>=y|n env, else install.conf, else auto-detect / defaults"
     else
+        echo -e "  ${BOLD}Machine${NC} ${DIM}(hardware-specific pieces; required on a match, skipped otherwise)${NC}"
+        echo ""
+        for id in $(machine_ids); do
+            if detect_machine "$id"; then
+                echo -e "    ${DIM}detected: $(tr -d '\n' < /sys/class/dmi/id/product_name 2>/dev/null || echo "matching hardware")${NC}"
+            fi
+            CHOICE[$id]="$(ask_yn "$(machine_desc "$id")" "${CHOICE[$id]}")"
+        done
+        echo ""
         echo -e "  ${BOLD}Optional components${NC} ${DIM}(Enter keeps the default shown; saved to install.conf)${NC}"
         echo ""
-        local id def
         for id in $(comp_ids); do
             def="${CHOICE[$id]}"
             CHOICE[$id]="$(ask_yn "$(comp_desc "$id")" "$def")"
         done
     fi
     echo ""
-    local on="" id
+    local on=""
+    for id in $(machine_ids); do [[ "${CHOICE[$id]}" == y ]] && on="$on $id"; done
+    info "Machine:${on:- generic}"
+    on=""
     for id in $(comp_ids); do chosen "$id" && on="$on $id"; done
     info "Components:${on:- (none beyond required)}"
     save_choices
@@ -1040,7 +1138,7 @@ run_module() {
         theme)     mod_theme ;;
         firefox)   mod_firefox ;;
         ollama)    mod_ollama ;;
-        keyboard-rgb) mod_keyboard_rgb ;;
+        omen|keyboard-rgb) mod_omen ;;
         tablet)    header "Tablet"; skip "Handled by symlinked configs (OpenTabletDriver)" ;;
         nvim)      mod_nvim ;;
         tmux)      mod_tmux ;;
@@ -1075,6 +1173,9 @@ print_summary() {
     echo -e "     ${DIM}~/.config/hypr/custom/*.lua  ·  ~/.config/foot/host.ini  ·  ~/.config/fish/system-local.fish${NC}"
     echo -e "  ${DIM}4.${NC} Check everything: ${CYAN}./install.sh doctor${NC}"
     chosen firefox && echo -e "  ${DIM}5.${NC} Restart Firefox to apply custom CSS"
+    if is_omen && [[ ! -e /proc/acpi/call ]]; then
+        echo -e "  ${YELLOW}!${NC} Omen Max 16: reboot once so acpi_call loads — until then the keyboard backlight needs Fn+F4 after boot/lid-open"
+    fi
     echo ""
 }
 
@@ -1103,7 +1204,10 @@ if [[ $# -eq 0 ]]; then
     echo ""
     interactive_prompts
 
-    CORE_MODULES=(packages symlinks scripts templates dirs wallpapers services ags theme shell hostconfig)
+    # omen (machine profile) runs before theme: the theme's first apply paints the keyboard.
+    CORE_MODULES=(packages symlinks scripts templates dirs wallpapers services)
+    is_omen && CORE_MODULES+=(omen)
+    CORE_MODULES+=(ags theme shell hostconfig)
     OPTIONAL_MODULES=()
 
     chosen neovim  && OPTIONAL_MODULES+=(nvim)
@@ -1111,7 +1215,6 @@ if [[ $# -eq 0 ]]; then
     chosen firefox && OPTIONAL_MODULES+=(firefox)
     chosen ollama  && OPTIONAL_MODULES+=(ollama)
     chosen tablet  && OPTIONAL_MODULES+=(tablet)
-    chosen keyboard-rgb && OPTIONAL_MODULES+=(keyboard-rgb)
 
     ALL_MODULES=("${CORE_MODULES[@]}" "${OPTIONAL_MODULES[@]}" doctor)
     TOTAL_MODULES=${#ALL_MODULES[@]}

@@ -23,6 +23,7 @@ import { getEdgePageState } from "../state"
 import { PAGES } from "../pages"
 import { px, U, withU } from "../scale"
 import { buildPage } from "./Sidebar"
+import { panelAlpha } from "../theme"
 
 // Pages the tab offers, in handle order, and the one it opens on.
 export const EDGE_PAGES = ["pomodoro", "planner", "power"]
@@ -51,7 +52,7 @@ function Fillet(where: "top" | "bottom") {
     else { cr.moveTo(0, r); cr.arc(0, r, r, -Math.PI / 2, 0) }
     cr.closePath()
     cr.setFillRule(1) // EVEN_ODD
-    cr.setSourceRGBA(...colorOf(da, "bg_dark"))
+    cr.setSourceRGBA(...colorOf(da, "bg_dark", panelAlpha()))
     cr.fill()
     return false
   })

@@ -1,0 +1,7 @@
+#!/bin/sh
+# systemd-sleep hook: s2idle suspend leaves the Omen Max 16 keyboard backlight
+# switched off in the EC; turn it back on as we come out. Runs before logind
+# announces the wake, so hypridle's after_sleep_cmd (keyboard fade-in) lands on
+# a lit board.
+[ "$1" = post ] && exec /usr/local/bin/omen-kbd-backlight wait-on
+exit 0
