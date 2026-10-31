@@ -66,7 +66,12 @@ done
 # --- Keyboard backlight follows the accent (omen-rgb; see system/README.md) ---
 # Skipped when the tool is not installed; a failure (udev rule missing,
 # keyboard busy) is reported and never blocks the theme switch.
-if command -v omen-rgb >/dev/null 2>&1; then
+OMEN_PY="$HOME/.local/share/uv/tools/omen-rgb/bin/python"
+if [[ -x "$OMEN_PY" ]]; then
+  # Themed per-key layout at low brightness (keyboard-lights.py, next to this script)
+  timeout 15 "$OMEN_PY" "$THEME_DIR/keyboard-lights.py" "$THEME_NAME" 2>&1 | sed 's/^/  /' \
+    || echo "    keyboard-lights failed (udev rule not installed, or keyboard busy)"
+elif command -v omen-rgb >/dev/null 2>&1; then
   echo "  Keyboard backlight -> $ACCENT"
   timeout 10 omen-rgb static "$ACCENT" >/dev/null 2>&1 \
     || echo "    omen-rgb failed (udev rule not installed, or keyboard busy)"
