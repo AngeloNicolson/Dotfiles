@@ -51,7 +51,9 @@ def main():
     if style == "drpepper":
         head_hex = "#FF0C0C"; base_hex = "#C01010"; base_rel = 0.8
     elif style == "translucent":
-        head_hex = colors.get("green_bright", colors.get("accent", "#FF0C0C")); base_hex = colors.get("accent", head_hex); base_rel = 0.6
+        look = tj.get("look", {})
+        base_hex = look.get("keyboardColor") or colors.get("accent", "#FF0C0C")
+        head_hex = look.get("keyboardHighlight") or colors.get("green_bright", base_hex); base_rel = 0.6
     else:
         head_hex = colors.get("accent", "#FF0C0C"); base_hex = head_hex; base_rel = 0.35
     base = tuple(int(c * base_rel * args.brightness) for c in hex_rgb(base_hex))

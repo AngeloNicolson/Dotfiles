@@ -33,9 +33,9 @@ STYLES = {
     # The X25 console look: every key the translucent OG green, lit evenly, with
     # the home-row bumps and caps lock in the lighter jewel highlight.
     "translucent": {
-        "base": ("accent", 1.0),
+        "base": ("kb", 1.0),
         "groups": [
-            (["f", "j", "caps_lock"], "green_bright", 1.0),
+            (["f", "j", "caps_lock"], "kb_hi", 1.0),
         ],
     },
 }
@@ -53,6 +53,17 @@ STYLES["theme"]["groups"] = GROUPS
 
 def resolve(colors, name):
     return hex_rgb(name) if name.startswith("#") else hex_rgb(colors[name])
+
+# A theme may give the keyboard its own colours (UI accents are tuned for text
+# on dark backgrounds and wash out on diodes): look.keyboardColor is the board
+# colour for the translucent style, look.keyboardHighlight the f/j/caps colour.
+def keyboard_colors(theme):
+    look = theme.get("look", {})
+    c = dict(theme["colors"])
+    if look.get("keyboardColor"): c["kb"] = look["keyboardColor"]
+    if look.get("keyboardHighlight"): c["kb_hi"] = look["keyboardHighlight"]
+    c.setdefault("kb", c["accent"]); c.setdefault("kb_hi", c.get("green_bright", c["fg_bright"]))
+    return c
 
 def hex_rgb(h):
     h = h.lstrip("#")
@@ -83,7 +94,7 @@ def main():
             ap.error("theme name required")
         with open(os.path.join(THEME_DIR, args.theme + ".json")) as f:
             theme = json.load(f)
-        colors = theme["colors"]
+        colors = keyboard_colors(theme)
         level = args.brightness if args.brightness is not None else float(theme.get("look", {}).get("keyboardBrightness", 0.3))
 
         style_name = args.style or theme.get("look", {}).get("keyboardStyle", DEFAULT_STYLE)
