@@ -16,7 +16,7 @@ THEME_DIR = os.path.expanduser("~/.config/themes")
 # the theme accent so the vim nav keys stand out. "theme": the palette layout.
 # A colour is either a theme palette key or a literal #rrggbb.
 DEFAULT_STYLE = "drpepper"
-DRPEPPER_RED = "#A0162F"
+DRPEPPER_RED = "#C01010"  # no blue: a maroon with blue in it reads pink on these LEDs when dimmed
 STYLES = {
     "drpepper": {
         "base": (DRPEPPER_RED, 0.8),
