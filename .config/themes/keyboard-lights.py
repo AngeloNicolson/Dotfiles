@@ -12,8 +12,8 @@ import argparse, json, os, sys
 
 THEME_DIR = os.path.expanduser("~/.config/themes")
 
-# Styles. "drpepper" (default): everything a deep candy Dr Pepper red, j/k in
-# the theme accent so the vim nav keys stand out. "theme": the palette layout.
+# Styles. "drpepper" (default): everything a deep candy Dr Pepper red, f/j in
+# the theme accent so the home-row bumps stand out. "theme": the palette layout.
 # A colour is either a theme palette key or a literal #rrggbb.
 DEFAULT_STYLE = "drpepper"
 DRPEPPER_RED = "#C01010"  # no blue: a maroon with blue in it reads pink on these LEDs when dimmed
@@ -21,7 +21,7 @@ STYLES = {
     "drpepper": {
         "base": (DRPEPPER_RED, 0.8),
         "groups": [
-            (["j", "k"], "accent", 1.0),
+            (["f", "j"], "accent", 1.0),
         ],
     },
     "theme": {
