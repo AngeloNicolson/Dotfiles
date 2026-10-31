@@ -555,7 +555,7 @@ mod_services() {
     # shipped but left out here stays opt-in (enable it by hand).
     #   bluetooth-autoconnect.service  reconnect trusted BT devices at login
     #   monolith-reindex.timer         nightly retrieval-index rebuild (needs monolith-tui)
-    local -a units=(bluetooth-autoconnect.service monolith-reindex.timer)
+    local -a units=(bluetooth-autoconnect.service monolith-reindex.timer keyboard-reactive.service)
     local svc
     for svc in "${units[@]}"; do
         if [[ ! -f "$DOTFILES_DIR/.config/systemd/user/$svc" ]]; then

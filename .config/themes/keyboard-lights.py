@@ -73,6 +73,37 @@ def scale(rgb, f):
     f = max(0.0, min(1.0, f))
     return tuple(int(round(c * f)) for c in rgb)
 
+def build_frame(theme_name, style_name=None, brightness=None):
+    """Per-key colours for a theme: returns ({key_name: (r,g,b)}, base_rgb, style_name, level)."""
+    with open(os.path.join(THEME_DIR, theme_name + ".json")) as f:
+        theme = json.load(f)
+    colors = keyboard_colors(theme)
+    look = theme.get("look", {})
+    level = brightness if brightness is not None else float(look.get("keyboardBrightness", 0.3))
+    style_name = style_name or look.get("keyboardStyle", DEFAULT_STYLE)
+    if style_name not in STYLES:
+        style_name = DEFAULT_STYLE
+    style = STYLES[style_name]
+    base = scale(resolve(colors, style["base"][0]), style["base"][1] * level)
+    frame = {}
+    for keys, name, rel in style["groups"]:
+        rgb = scale(resolve(colors, name), rel * level)
+        for k in keys:
+            frame[k] = rgb
+    return frame, base, style_name, level
+
+def apply_frame(kb, frame, base, persist=True):
+    """Push a frame (per-key overrides over a base colour) to the keyboard."""
+    kb.set_all(*base)
+    missing = []
+    for k, rgb in frame.items():
+        try:
+            kb.set_key_color(k, *rgb)
+        except Exception:
+            missing.append(k)
+    kb.apply(persist=persist)
+    return missing
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("theme", nargs="?")
@@ -92,26 +123,8 @@ def main():
             kb.set_all(0, 0, 0); kb.apply(); return
         if not args.theme:
             ap.error("theme name required")
-        with open(os.path.join(THEME_DIR, args.theme + ".json")) as f:
-            theme = json.load(f)
-        colors = keyboard_colors(theme)
-        level = args.brightness if args.brightness is not None else float(theme.get("look", {}).get("keyboardBrightness", 0.3))
-
-        style_name = args.style or theme.get("look", {}).get("keyboardStyle", DEFAULT_STYLE)
-        if style_name not in STYLES:
-            print(f"unknown keyboardStyle {style_name!r}, using {DEFAULT_STYLE}"); style_name = DEFAULT_STYLE
-        style = STYLES[style_name]
-        base = scale(resolve(colors, style["base"][0]), style["base"][1] * level)
-        kb.set_all(*base)
-        missing = []
-        for keys, name, rel in style["groups"]:
-            rgb = scale(resolve(colors, name), rel * level)
-            for k in keys:
-                try:
-                    kb.set_key_color(k, *rgb)
-                except Exception:
-                    missing.append(k)
-        kb.apply()
+        frame, base, style_name, level = build_frame(args.theme, args.style, args.brightness)
+        missing = apply_frame(kb, frame, base)
         print(f"keyboard: {style_name} style, {args.theme} palette at {level:.2f} (base {base})")
         if missing:
             print("  unknown keys skipped: " + " ".join(missing))

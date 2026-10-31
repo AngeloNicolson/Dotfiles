@@ -3,3 +3,6 @@
 # build, so it opens the USB device node, not hidraw; both are covered.
 SUBSYSTEM=="usb", ATTR{idVendor}=="0d62", ATTR{idProduct}=="54bf", MODE="0660", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="0d62", ATTRS{idProduct}=="54bf", MODE="0660", TAG+="uaccess"
+# ...and its input event nodes, so the reactive-lighting daemon can watch key
+# presses (keyboard-reactive.py) without being in the input group.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="0d62", ATTRS{idProduct}=="54bf", TAG+="uaccess"
