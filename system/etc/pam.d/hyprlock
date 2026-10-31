@@ -1,0 +1,14 @@
+# PAM for hyprlock. Same auth chain as /etc/pam.d/login (faillock + pam_unix),
+# minus the FAIL_DELAY sleep (3 s from /etc/login.defs) on a wrong password:
+# the person typing is at the keyboard and faillock already locks the account
+# after 3 misses, so the delay only punishes typos. sudo/login keep theirs.
+auth       required                    pam_faillock.so      preauth
+-auth      [success=2 default=ignore]  pam_systemd_home.so
+auth       [success=1 default=bad]     pam_unix.so          try_first_pass nullok nodelay
+auth       [default=die]               pam_faillock.so      authfail
+auth       optional                    pam_permit.so
+auth       required                    pam_env.so
+auth       required                    pam_faillock.so      authsucc
+account    include                     login
+password   include                     login
+session    include                     login

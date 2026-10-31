@@ -24,3 +24,16 @@ Check: `sysctl kernel.perf_event_paranoid kernel.kptr_restrict` -> `-1` and `0`.
 
 Both settings loosen security slightly (any local user can profile the GPU and
 sample the kernel). Fine for a single-user dev laptop; don't stage on shared boxes.
+
+## hyprlock without the 3-second wrong-password pause
+
+`etc/pam.d/hyprlock` replaces the stock one-liner (`auth include login`) with the
+same chain but `pam_unix.so nodelay`, so the lock screen reports a wrong
+password immediately. faillock still applies (3 misses in 15 min = 10 min lock).
+
+```sh
+sudo install -m644 system/etc/pam.d/hyprlock /etc/pam.d/hyprlock
+```
+
+No reload needed; the next unlock uses it. Revert with `sudo pacman -S hyprlock`
+(it owns the original file) or restore the one-liner by hand.
