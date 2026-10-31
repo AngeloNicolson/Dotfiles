@@ -34,6 +34,10 @@ def main():
     if kb is None:
         sys.exit("kitt: keyboard busy (reactive daemon did not release it)")
     lay = kb.layout
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("keyboard_lights", os.path.join(HERE, "keyboard-lights.py"))
+    KL = importlib.util.module_from_spec(spec); spec.loader.exec_module(KL)
+    bal = KL.led_balance(lay)   # per-LED density balance, same as the static layout
     x0, y0, w, h = lay.bounds
     # x position (0..1) of every LED, from its key's rectangle centre
     led_x = {}
@@ -88,9 +92,10 @@ def main():
                       f = 1.0
                   else:
                       f = 0.0
-                  r = int(base[0] + (head[0] - base[0]) * f)
-                  g = int(base[1] + (head[1] - base[1]) * f)
-                  b = int(base[2] + (head[2] - base[2]) * f)
+                  bf = bal.get(led, 1.0)
+                  r = int((base[0] + (head[0] - base[0]) * f) * bf)
+                  g = int((base[1] + (head[1] - base[1]) * f) * bf)
+                  b = int((base[2] + (head[2] - base[2]) * f) * bf)
                   kb.set_led_color(led, r, g, b)
               kb.apply(persist=False)
               failures = 0

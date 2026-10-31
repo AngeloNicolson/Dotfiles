@@ -92,13 +92,47 @@ def build_frame(theme_name, style_name=None, brightness=None):
             frame[k] = rgb
     return frame, base, style_name, level
 
+def led_balance(layout):
+    """Per-LED brightness factor so every key reads the same: F-keys, numbers and
+    punctuation carry two diodes in a letter-sized cap (twice the light), the big
+    keys up to seven. Scale by LED density relative to a one-diode letter key."""
+    areas = sorted(k.rect[2] * k.rect[3] for k in layout.keys if k.rect and len(k.leds) == 1)
+    ref_area = areas[len(areas) // 2] if areas else 1
+    out = {}
+    for k in layout.keys:
+        area = (k.rect[2] * k.rect[3]) if k.rect else ref_area
+        density = len(k.leds) / area
+        f = ((1 / ref_area) / density) ** 0.75
+        f = max(0.4, min(1.0, f))
+        for led in k.leds:
+            out[led] = f
+    return out
+
+class Painter:
+    """Sets colours per LED with the balance applied. Use instead of set_all/set_key_color."""
+    def __init__(self, kb):
+        self.kb = kb
+        self.bal = led_balance(kb.layout)
+        self._leds = {}
+    def leds(self, key):
+        if key not in self._leds:
+            self._leds[key] = list(self.kb.key_leds(key))
+        return self._leds[key]
+    def key(self, key, rgb):
+        for led in self.leds(key):
+            self.kb.set_led_color(led, *scale(rgb, self.bal.get(led, 1.0)))
+    def all(self, rgb):
+        for led, f in self.bal.items():
+            self.kb.set_led_color(led, *scale(rgb, f))
+
 def apply_frame(kb, frame, base, persist=True):
     """Push a frame (per-key overrides over a base colour) to the keyboard."""
-    kb.set_all(*base)
+    pt = Painter(kb)
+    pt.all(base)
     missing = []
     for k, rgb in frame.items():
         try:
-            kb.set_key_color(k, *rgb)
+            pt.key(k, rgb)
         except Exception:
             missing.append(k)
     kb.apply(persist=persist)

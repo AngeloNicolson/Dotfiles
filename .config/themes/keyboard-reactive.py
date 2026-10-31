@@ -93,6 +93,7 @@ class Lights:
     def __init__(self, demo=False):
         from omen_rgb import OmenKeyboard
         self.kb = OmenKeyboard()
+        self.pt = KL.Painter(self.kb)
         self.demo = demo
         self.theme = None; self.theme_mtime = 0
         self.frame = {}; self.base = (0, 0, 0); self.hi = (255, 255, 255)
@@ -140,7 +141,7 @@ class Lights:
         if self.kb is None:
             try:
                 from omen_rgb import OmenKeyboard
-                self.kb = OmenKeyboard()
+                self.kb = OmenKeyboard(); self.pt = KL.Painter(self.kb)
                 self.fades.clear(); self.render(force=True)
             except Exception:
                 return True   # scanner still releasing; try again next loop
@@ -151,25 +152,26 @@ class Lights:
         if self.kitt_running() and not force: return
         now = time.monotonic()
         hint = self.mods if (self.mods & HINT_MODS) else None
-        self.kb.set_all(*(mix((0, 0, 0), self.base, HINT_DIM) if hint is not None else self.base))
+        self.pt.all(mix((0, 0, 0), self.base, HINT_DIM) if hint is not None else self.base)
         for key, rgb in self.frame.items():
-            self.kb.set_key_color(key, *(mix((0, 0, 0), rgb, HINT_DIM) if hint is not None else rgb))
+            try: self.pt.key(key, mix((0, 0, 0), rgb, HINT_DIM) if hint is not None else rgb)
+            except Exception: pass
         if hint is not None:
             # bound keys turn the theme's highlight colour (gold on Halo)
             hint_rgb = self.hi
             for key in self.binds.get(hint, ()):
-                try: self.kb.set_key_color(key, *hint_rgb)
+                try: self.pt.key(key, hint_rgb)
                 except Exception: pass
             for code, bit in MOD_OF.items():
                 if hint & bit and EV2KEY.get(code):
-                    try: self.kb.set_key_color(EV2KEY[code], *hint_rgb)
+                    try: self.pt.key(EV2KEY[code], hint_rgb)
                     except Exception: pass
         done = []
         for key, t0 in self.fades.items():
             t = (now - t0) / FADE_S
             if t >= 1: done.append(key); continue
             target = self.color_of(key) if hint is None else mix((0, 0, 0), self.color_of(key), HINT_DIM)
-            try: self.kb.set_key_color(key, *mix(flash_of(self.color_of(key)), target, t * t))
+            try: self.pt.key(key, mix(flash_of(self.color_of(key)), target, t * t))
             except Exception: pass
         for key in done: self.fades.pop(key, None)
         self.kb.apply(persist=False)
