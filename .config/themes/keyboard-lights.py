@@ -12,10 +12,11 @@ import argparse, json, os, sys
 
 THEME_DIR = os.path.expanduser("~/.config/themes")
 
-# Styles. "drpepper" (default): everything a deep candy Dr Pepper red, f/j and caps lock in
-# the theme accent so the home-row bumps stand out. "theme": the palette layout.
+# Styles. "theme" (default): the palette layout below, dim. "drpepper": everything
+# a deep candy Dr Pepper red with f/j/caps in the theme accent. A theme chooses
+# with look.keyboardStyle; 43pr uses drpepper.
 # A colour is either a theme palette key or a literal #rrggbb.
-DEFAULT_STYLE = "drpepper"
+DEFAULT_STYLE = "theme"  # a theme can pick another via look.keyboardStyle (43pr: drpepper)
 DRPEPPER_RED = "#C01010"  # no blue: a maroon with blue in it reads pink on these LEDs when dimmed
 STYLES = {
     "drpepper": {
@@ -30,7 +31,7 @@ STYLES = {
     },
 }
 GROUPS = [
-    (["w", "a", "s", "d", "left", "up", "down", "right"], "accent", 1.0),
+    (["w", "a", "s", "d", "left", "up", "down", "right", "f", "j", "caps_lock"], "accent", 1.0),
     (["enter", "space", "backspace", "tab", "num_enter"], "accent", 0.65),
     (["esc", "power"], "red", 0.8),
     (["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "delete"], "fg_dim", 0.35),
@@ -56,7 +57,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("theme", nargs="?")
     ap.add_argument("--brightness", type=float, default=None, help="0..1 overall level (default: theme's look.keyboardBrightness or 0.3)")
-    ap.add_argument("--style", choices=sorted(STYLES), default=DEFAULT_STYLE)
+    ap.add_argument("--style", choices=sorted(STYLES), default=None, help="default: theme's look.keyboardStyle, else " + DEFAULT_STYLE)
     ap.add_argument("--off", action="store_true")
     args = ap.parse_args()
 
@@ -76,7 +77,10 @@ def main():
         colors = theme["colors"]
         level = args.brightness if args.brightness is not None else float(theme.get("look", {}).get("keyboardBrightness", 0.3))
 
-        style = STYLES[args.style]
+        style_name = args.style or theme.get("look", {}).get("keyboardStyle", DEFAULT_STYLE)
+        if style_name not in STYLES:
+            print(f"unknown keyboardStyle {style_name!r}, using {DEFAULT_STYLE}"); style_name = DEFAULT_STYLE
+        style = STYLES[style_name]
         base = scale(resolve(colors, style["base"][0]), style["base"][1] * level)
         kb.set_all(*base)
         missing = []
@@ -88,7 +92,7 @@ def main():
                 except Exception:
                     missing.append(k)
         kb.apply()
-        print(f"keyboard: {args.style} style, {args.theme} palette at {level:.2f} (base {base})")
+        print(f"keyboard: {style_name} style, {args.theme} palette at {level:.2f} (base {base})")
         if missing:
             print("  unknown keys skipped: " + " ".join(missing))
     finally:

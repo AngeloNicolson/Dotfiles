@@ -41,7 +41,15 @@
     "opacity": 0.72,
     "terminalAlpha": 1.0,
     "dimInactive": 0,
-    "blur": { "size": 6, "passes": 2, "vibrancy": 0.2 },
-    "shadow": { "range": 8, "renderPower": 3 }
+    "blur": {
+      "size": 6,
+      "passes": 2,
+      "vibrancy": 0.2
+    },
+    "shadow": {
+      "range": 8,
+      "renderPower": 3
+    },
+    "keyboardStyle": "drpepper"
   }
 }
