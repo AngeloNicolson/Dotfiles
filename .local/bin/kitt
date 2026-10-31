@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Toggle the K.I.T.T. keyboard scanner. Running -> stop it (the static layout
+# comes back); not running -> start it detached. Extra args go to the script.
+PY="$HOME/.local/share/uv/tools/omen-rgb/bin/python"
+SCRIPT="$HOME/.config/themes/keyboard-kitt.py"
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/kitt.pid"
+if [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+  kill "$(cat "$PIDFILE")" && rm -f "$PIDFILE" && echo "kitt: stopped"
+else
+  rm -f "$PIDFILE"
+  setsid "$PY" "$SCRIPT" "$@" >/tmp/kitt.log 2>&1 < /dev/null &
+  echo $! > "$PIDFILE"
+  echo "kitt: started (pid $(cat "$PIDFILE"), log /tmp/kitt.log)"
+fi
