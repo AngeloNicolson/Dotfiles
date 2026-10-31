@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reactive keyboard lighting for the Omen Max 16, on top of the theme layout.
 
-  * a pressed key goes dark and fades back to its colour over ~0.6 s
+  * a pressed key flashes to full intensity of its own hue and fades back over ~0.6 s
   * holding Super (or AltGr) shows only the keys with a Hyprland binding for
     the modifiers currently held, in the theme's highlight colour; the rest dim
   * follows theme switches (~/.config/themes/.current), stays out of the way
@@ -21,7 +21,7 @@ KITT_PID = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "kitt.pid")
 KEYBOARD_NAMES = ("HP HP Gaming Keyboard II", "HP HP Gaming Keyboard II Keyboard")
 
 FADE_S = 0.6          # press -> back to base
-PRESS_DIM = 0.15      # pressed key brightness relative to its colour
+PRESS_LEVEL = 1.0     # pressed key: its own hue pushed to this fraction of full intensity
 HINT_DIM = 0.12       # everything-else brightness while a hint is showing
 FPS = 60
 
@@ -82,6 +82,12 @@ def load_binds():
 def mix(a, b, t):
     return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
 
+def flash_of(rgb):
+    """The same hue at full intensity (max channel -> 255 * PRESS_LEVEL)."""
+    m = max(rgb)
+    if m == 0: return tuple(int(255 * PRESS_LEVEL) for _ in rgb)
+    return tuple(min(255, int(c * 255 * PRESS_LEVEL / m)) for c in rgb)
+
 class Lights:
     def __init__(self, demo=False):
         from omen_rgb import OmenKeyboard
@@ -140,7 +146,7 @@ class Lights:
             t = (now - t0) / FADE_S
             if t >= 1: done.append(key); continue
             target = self.color_of(key) if hint is None else mix((0, 0, 0), self.color_of(key), HINT_DIM)
-            try: self.kb.set_key_color(key, *mix(mix((0, 0, 0), target, PRESS_DIM), target, t * t))
+            try: self.kb.set_key_color(key, *mix(flash_of(self.color_of(key)), target, t * t))
             except Exception: pass
         for key in done: self.fades.pop(key, None)
         self.kb.apply(persist=False)
