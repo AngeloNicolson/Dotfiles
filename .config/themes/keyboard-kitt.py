@@ -35,18 +35,23 @@ def main():
         cx = (k.rect[0] + k.rect[2] / 2 - x0) / w
         for led in k.leds: led_x[led] = cx
 
-    base_hex = "#C01010"
-    try:  # keep the same red as the static layout
-        for line in open(os.path.join(HERE, "keyboard-lights.py")):
-            if line.startswith("DRPEPPER_RED"): base_hex = line.split('"')[1]
-    except OSError: pass
-    base = tuple(int(c * 0.8 * args.brightness) for c in hex_rgb(base_hex))
-    head = (255, 12, 12)
-
     theme = args.theme
     if not theme:
         try: theme = open(os.path.expanduser("~/.config/themes/.current")).read().strip()
         except OSError: theme = "mech"
+
+    # Colours follow the theme's keyboard style: Dr Pepper themes scan red,
+    # palette themes scan in their accent (head full, base a dim shade of it).
+    try:
+        tj = json.load(open(os.path.expanduser(f"~/.config/themes/{theme}.json")))
+    except Exception:
+        tj = {}
+    if tj.get("look", {}).get("keyboardStyle") == "drpepper":
+        head_hex = "#FF0C0C"; base_hex = "#C01010"; base_rel = 0.8
+    else:
+        head_hex = tj.get("colors", {}).get("accent", "#FF0C0C"); base_hex = head_hex; base_rel = 0.35
+    base = tuple(int(c * base_rel * args.brightness) for c in hex_rgb(base_hex))
+    head = hex_rgb(head_hex)
 
     stop = {"now": False}
     def on_sig(*_): stop["now"] = True
