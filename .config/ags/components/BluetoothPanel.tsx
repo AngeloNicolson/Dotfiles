@@ -73,14 +73,16 @@ export function toggleDevice(
       onInfo(`PAIRING ${name}… HOLD AN EARBUD 3S UNTIL "READY TO PAIR"`)
       const addr = dev.address
       try {
+        // bluetoothctl reports failures on stdout; execAsync only rejects with
+        // stderr, so send everything there or the notice reads "PAIR FAILED: ".
         await execAsync(["bash", "-c",
-          `bluetoothctl pair ${addr} && bluetoothctl trust ${addr}; bluetoothctl connect ${addr}`,
+          `exec 1>&2; bluetoothctl pair ${addr} && bluetoothctl trust ${addr}; bluetoothctl connect ${addr}`,
         ])
         onInfo(`${name} READY`, 4000)
       } catch (e) {
         console.error("BT pair/connect failed:", e)
         const msg = bluezError(e)
-        onError(/Authentication|not available/i.test(msg)
+        onError(/Authentication|not available|ConnectionAttemptFailed|Page Timeout/i.test(msg)
           ? "PAIR REFUSED — PUT HEADSET IN PAIRING MODE, THEN SCAN"
           : `PAIR FAILED: ${msg}`)
       }
