@@ -19,6 +19,6 @@
   ls                       eza --icons
   la                       eza --icons -a
   ll                       eza --icons -la
-  lt                       eza --icons --tree
+  lt                       eza --icons --tree --level=2
   cat                      bat
   lg                       lazygit

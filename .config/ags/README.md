@@ -102,7 +102,16 @@ ags run ~/.config/ags/app.tsx
 
 ## Keybinds (in ~/.config/hypr/keybindings.lua)
 - `Super+Q` - Toggle bar visibility
-- `Super+Tab` - Cycle sidebar pages
+- `Super+Tab` / `Super+Shift+Tab` - Cycle sidebar pages forward / back
+- `Super+A` / `Super+Shift+A` - Destination menu / Galaxy overlay
+- `Super+P` - Planner / pomodoro edge panel on the focused screen
+- `Super+W` - Wallpaper carousel + themes
+- `Super+,` - Settings window
+- `Super+Shift+P` - Display arranger
+- `Super+T` - Periodic table
+
+Every one of these is an `ags request <command>` (`ags request help` lists them
+all); `Super+/` shows the live list.
 
 ## Known Issues
 - Gtk.Stack `slide_left_right` transition not animating smoothly
@@ -269,8 +278,8 @@ The CAL and BOARD tabs are independent views. They share the header and reload m
 A Destiny 2-inspired fullscreen app launcher with a space/sci-fi aesthetic.
 
 ### Keybinds
-- `Super+D` - Toggle Destination Menu
-- `Super+G` - Toggle Galaxy Overlay
+- `Super+A` - Toggle Destination Menu
+- `Super+Shift+A` - Toggle Galaxy Overlay
 - `Escape` - Close either overlay
 
 ### Features
@@ -386,5 +395,5 @@ An alternative overlay with orbiting planets animation.
 - Same auto-close behavior as Director
 
 ### Keybind
-- `Super+G` - Toggle Galaxy Overlay
+- `Super+Shift+A` - Toggle Galaxy Overlay
 - Can also be accessed from Director via GALAXY destination

@@ -1,5 +1,25 @@
 # Hyprland Scripts
 
+## keybinds.py / keybinds-menu.sh
+
+The keybind cheat sheets are generated, not written: `keybinds.py` reads
+`keybindings.lua` (plus the volume/lid binds in `hyprland.lua` and your
+`custom/keybinds.lua`), `foot.ini`, `~/.tmux.conf` and the Neovim config on
+every run. Only the friendly names (`KEY_NAMES`, `AGS_REQUESTS`, `APP_NAMES`,
+`SCRIPT_NAMES`) are hand-kept; a bind with no name falls back to its trailing
+`-- comment`, so comment new binds.
+
+| Front end | What it shows |
+|-----------|---------------|
+| `SUPER + /` (`keybinds-menu.sh`) | rofi menu of the desktop keys; Enter runs the selected bind, Esc closes |
+| `keys hypr [word]` (fish) | the same table in a terminal |
+| `keys [word]` | foot, tmux, fish and Neovim keys |
+| `keybinds <tool>` | the above by tool name, plus hand-written sheets for bat / lazygit / yazi |
+
+Section headings come from the `-- ── Name ──` comment rulers in
+`keybindings.lua`; the `for` loops (workspaces, resize) and the Right-Alt+W
+browser chord are understood as a whole.
+
 ## lid-switch.sh
 
 Handles laptop lid open/close events. Monitor names are auto-detected

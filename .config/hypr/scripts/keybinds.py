@@ -7,8 +7,9 @@
   keybinds.py run <index>           run the action of desktop row <index>
 
 Nothing is hardcoded except friendly names: the lists are read from
-hypr/keybindings.lua (+ custom/keybinds.lua), foot.ini, ~/.tmux.conf and the
-nvim lua config every time, so they never go stale.
+hypr/keybindings.lua (+ the media/lid binds in hyprland.lua and your
+custom/keybinds.lua), foot.ini, ~/.tmux.conf and the nvim lua config every
+time, so they never go stale. `keys` (fish) and SUPER + / are the front ends.
 """
 import os
 import re
@@ -29,6 +30,7 @@ KEY_NAMES = {
     "XF86Calculator": "Calculator key", "XF86Assistant": "Assistant key",
     "XF86MonBrightnessUp": "Brightness ↑", "XF86MonBrightnessDown": "Brightness ↓",
     "XF86PowerOff": "Power button", "code:201": "Copilot key",
+    "XF86AudioMute": "Mute key", "XF86AudioLowerVolume": "Volume ↓", "XF86AudioRaiseVolume": "Volume ↑",
     "switch:on:Lid Switch": "Lid closed", "switch:off:Lid Switch": "Lid opened",
 }
 
@@ -43,6 +45,8 @@ AGS_REQUESTS = {
     "toggle-destination": "Destination menu",
     "toggle-galaxy": "Galaxy overlay",
     "toggle-bluetooth": "Bluetooth manager",
+    "edge-toggle": "Planner / pomodoro edge panel",
+    "edge-page": "Edge panel page",
 }
 
 APP_NAMES = {
@@ -57,6 +61,10 @@ SCRIPT_NAMES = [
     ("systemctl suspend", "Suspend"), ("armorpaint", "ArmorPaint"),
     ("yt-x.sh", "yt-x (YouTube in the terminal)"), ("wlogout.sh", "Power menu (logout / reboot / shutdown)"),
     ("launcher.sh", "App launcher (rofi)"), ("keybinds-menu.sh", "This keybind menu"),
+    ("zen-overlay", "Zen browser (browser overlay)"),
+    ("lid-switch.sh close", "Lid closed: workspaces to the external, panel off"),
+    ("lid-switch.sh open", "Lid opened: panel back on, workspaces restored"),
+    ("set-mute", "Mute / unmute"), ("5%-", "Volume down"), ("5%+", "Volume up"),
 ]
 
 DIRS = {"l": "left", "r": "right", "u": "up", "d": "down"}
@@ -163,9 +171,30 @@ def sh_quote(s: str) -> str:
     return "'" + s.replace("'", "'\\''") + "'"
 
 
+def plain_binds(path, section):
+    """`hl.bind("KEY", hl.dsp....)` lines outside keybindings.lua (hyprland.lua)."""
+    rows = []
+    try:
+        lines = open(path).read().split("\n")
+    except OSError:
+        return rows
+    for line in lines:
+        m = re.match(r'hl\.bind\("([^"]+)",\s*(hl\.dsp\..*)$', line.strip())
+        if not m:
+            continue
+        parts = [x.strip() for x in m.group(1).split("+")]
+        key, mods = parts[-1], " + ".join(parts[:-1])
+        action = m.group(2).split("--", 1)[0]
+        keys = f"{pretty_mods(repr(mods))} + {pretty_key(key)}" if mods else pretty_key(key)
+        rows.append((section, keys, describe(action, None), runnable(action)))
+    return rows
+
+
 def hypr_binds():
     rows = []  # (section, keys, description, command)
     for path in (os.path.join(HYPR, "keybindings.lua"), os.path.join(HYPR, "custom/keybinds.lua")):
+        if "custom" in path:
+            rows += plain_binds(os.path.join(HYPR, "hyprland.lua"), "Hardware & System")
         try:
             lines = open(path).read().split("\n")
         except OSError:
@@ -329,7 +358,11 @@ def nvim_binds():
                     if m and ("<" in m.group(1) or len(m.group(1)) <= 4):
                         lhs, desc = m.group(1), m.group(2)
                 if lhs:
-                    k = lhs.replace("<leader>", f"{leader} ").replace("<C-", "Ctrl+").replace("<A-", "Alt+").replace("<S-", "Shift+").replace(">", "")
+                    k = re.sub(r"<[Ll]eader>", f"{leader} ", lhs)
+                    k = re.sub(r"<[Cc]-", "Ctrl+", k)
+                    k = re.sub(r"<[AaMm]-", "Alt+", k)
+                    k = re.sub(r"<[Ss]-", "Shift+", k)
+                    k = re.sub(r"<(F\d+)>", r"\1", k).replace(">", "")
                     rows.append(("neovim", k.strip(), desc))
     seen, out = set(), []
     for r in rows:

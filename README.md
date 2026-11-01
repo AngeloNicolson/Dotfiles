@@ -6,7 +6,7 @@ Personal configuration files for a Wayland desktop built on Hyprland, AGS, Neovi
 
 - **Hyprland** - Compositor with custom keybindings, window rules, and a layout manager
 - **AGS** - Desktop UI (bar, app launcher, widgets, pomodoro, planner)
-- **Neovim** - Editor with LSP, Treesitter, and AI coding assistants (CodeCompanion, Avante)
+- **Neovim** - Editor with LSP, Treesitter, nvim-dap and local AI (CodeCompanion chat + Minuet ghost text over Ollama)
 - **Fish + Starship** - Shell and prompt
 - **Foot** - Terminal emulator
 - **Tmux** - Terminal multiplexer with powerline
@@ -273,25 +273,105 @@ running apps (foot `SIGUSR1`, nvim `:ReloadSystemTheme` over its server socket,
 
 Local AI integration via Ollama with GPU acceleration:
 
-- **CodeCompanion** (Neovim) — `Space cc` chat, `Space ci` inline, `Space ca` actions
-- **Avante** (Neovim) — `Space aa` sidebar, `Space ae` edit selection
-- **Monolith** (CLI) — `monolith start`, `monolith status`
+- **CodeCompanion** (Neovim) — `Space ac` chat, `Space ai` inline, `Space ax`
+  actions, `Space ae` explain, `Space ag` debug a GPU error, `Space am` pick the
+  model; `/expert <engine|study|setup|code>` in the chat pulls from Monolith's indexes
+- **Minuet** (Neovim) — FIM ghost text; `Space aV` toggle, `Alt+a` accept
+- **Monolith** (CLI) — `monolith start`, `monolith status`, `monolith select`
+
+Full key tables in `.config/nvim/README.md`.
 
 Requires a GPU with enough VRAM for the configured model. Model and VRAM requirements depend on your `ollama` setup.
 
 ## Keybindings
 
+Four modifier layers, defined in `hypr/keybindings.lua`:
+
+| Layer | Meaning |
+|-------|---------|
+| `Super` | focus & navigate (windows, workspaces, desktop UI) |
+| `Super+Shift` | move & send (push windows around) |
+| `Super+Ctrl` | window properties (resize, float, pin, fullscreen, close) |
+| `Right Alt` | launch apps (`lv3:ralt_switch` makes it a plain modifier, `MOD5`) |
+
+`Caps Lock` is `Escape`. Local additions go in the gitignored
+`hypr/custom/keybinds.lua` (template in `.example`).
+
+The lists below are generated from the config, so the live versions are the
+ones to trust: `Super + /` opens a searchable menu that also *runs* the
+selected bind, `keys hypr` prints the same table in a terminal, `keys` prints
+the terminal-side keys (foot, tmux, fish, Neovim) and `keys <word>` filters.
+`keybinds <tool>` adds short hand-written sheets for bat, lazygit and yazi.
+
+### Windows & workspaces
+
+| Key | Action |
+|-----|--------|
+| `Super + H/J/K/L` | Focus window left / down / up / right |
+| `Super + 1–7` | Go to workspace |
+| `Super + Scroll` | Next / previous workspace |
+| `Super + B / D / M / S` | Toggle the browser / document / media / plain scratchpad |
+| `Super + N` | Neovim workspace (`open_nvim_workspace.sh`) |
+| `Super + G` | Toggle the Kondor scratchpad |
+| `Super + Shift + H/J/K/L` | Move window |
+| `Super + Shift + 1–7` | Send window to workspace (stay) |
+| `Super + Shift + B / D / M / N / S` | Send window to that scratchpad |
+| `Super + Ctrl + H/J/K/L` or arrows | Resize (repeats while held) |
+| `Super + Ctrl + W` | Toggle floating, centred (sized per app) |
+| `Super + Ctrl + P` | Pin to all workspaces |
+| `Super + Ctrl + Enter` | Fullscreen |
+| `Super + Ctrl + T` | Toggle split direction (dwindle) |
+| `Super + Ctrl + X` | Close window |
+| `Super + left / right drag` | Move / resize with the mouse |
+
+### Desktop UI (AGS)
+
+| Key | Action |
+|-----|--------|
+| `Super + Q` | Show / hide the sidebar |
+| `Super + Tab` / `Super + Shift + Tab` | Next / previous sidebar page |
+| `Super + Space` | App launcher (rofi) |
+| `Super + A` | Destination menu (fullscreen launcher) |
+| `Super + Shift + A` | Galaxy overlay |
+| `Super + P` | Planner / pomodoro edge panel on the focused screen |
+| `Super + W` | Wallpaper carousel + theme picker |
+| `Super + ,` | Settings window |
+| `Super + Shift + P` | Display arranger: drag monitors, pin workspaces |
+| `Super + T` | Periodic table |
+| ``Super + ` `` | Power menu (wlogout) |
+| `Super + /` | Keybind menu |
+| `Super + I` | Screenshot: snip a region or click a window |
+| `Super + Ctrl + I` | Screenshot: frozen-screen snip |
+| `Super + Shift + I` | Screenshot: focused monitor |
+| `Print` | Screenshot: all monitors |
+
+### Apps (Right Alt)
+
 | Key | Action |
 |-----|--------|
 | `Right Alt + Enter` | Terminal (foot) |
-| `Super + Space` | App launcher (rofi) |
-| `Super + Ctrl + X` | Close window |
 | `Right Alt + F` | Firefox |
-| `Super + /` | Keybind cheat sheet |
+| `Right Alt + B` | Zen on the browser overlay (`Super + B` just shows / hides it) |
+| `Right Alt + W`, then `W` / `P` / `D` | qutebrowser work / personal / dev profile (`Esc` cancels) |
+| `Right Alt + E` | File manager (nemo) |
+| `Right Alt + N` | Blender |
+| `Right Alt + A` | ArmorPaint |
+| `Right Alt + Y` | ttyper |
+| `Right Alt + V` | yt-x (YouTube in the terminal) |
+| `Right Alt + C` | Cycle windows |
+| `Right Alt + X` | Close window |
+| `Right Alt + F4` | Kill a window (click it) |
 
-`SUPER` = focus & navigate, `SUPER+SHIFT` = move, `SUPER+CTRL` = window
-properties, `Right Alt` = app launching. See `~/.config/hypr/keybindings.lua`
-for the full list.
+### Hardware
+
+| Key | Action |
+|-----|--------|
+| Brightness keys | Backlight up / down with OSD |
+| Volume keys | PipeWire default sink ±5 %, mute |
+| Calculator key | Cycle blur light / default / heavy ("transparency button") |
+| Power button | Suspend (hypridle locks first) |
+| `Super + Shift + Assistant` / Copilot key | Rotate the external monitor |
+| Lid close / open | `lid-switch.sh` (see `hypr/scripts/README.md`) |
 
 ## Firefox
 
