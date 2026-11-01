@@ -134,17 +134,23 @@ return { -- Autocompletion
 				-- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
 				--    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
 				-- Select next/previous item with Tab / Shift + Tab
-				-- Tab belongs to the AI ghost text only (accept it); the completion
-				-- menu is driven by Up/Down + Enter so the two never compete.
+				-- Tab / Shift+Tab walk the completion menu, Enter picks the item.
+				-- The AI ghost text is never touched by Tab (Alt+A whole /
+				-- Alt+L one line / Alt+E dismiss).
 				["<Tab>"] = cmp.mapping(function(fallback)
-					local okm, mvt = pcall(require, "minuet.virtualtext")
-					if okm and mvt.action.is_visible() then
-						mvt.action.accept()
+					if cmp.visible() then
+						cmp.select_next_item()
 					else
 						fallback()
 					end
 				end, { "i", "s" }),
-				["<S-Tab>"] = cmp.mapping(function(fallback) fallback() end, { "i", "s" }),
+				["<S-Tab>"] = cmp.mapping(function(fallback)
+					if cmp.visible() then
+						cmp.select_prev_item()
+					else
+						fallback()
+					end
+				end, { "i", "s" }),
 			}),
 			sources = {
 				{ name = "nvim_lsp" },
