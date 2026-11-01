@@ -1,0 +1,2 @@
+# yt-x runtime state (history, saved videos, playlists) lives here, not config
+*.json
