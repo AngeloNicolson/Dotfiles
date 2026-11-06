@@ -47,6 +47,7 @@ AGS_REQUESTS = {
     "toggle-bluetooth": "Bluetooth manager",
     "edge-toggle": "Planner / pomodoro edge panel",
     "edge-page": "Edge panel page",
+    "audio-mute": "Mute / unmute", "audio-up": "Volume up", "audio-down": "Volume down",
 }
 
 APP_NAMES = {

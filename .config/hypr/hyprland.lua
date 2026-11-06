@@ -153,9 +153,11 @@ lib.optional_require("custom/layout")
 -- layout and workspace pins win over general.lua / rules.lua.
 lib.optional_require("custom/displays")
 
--- Volume keys
-hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"))
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"))
+-- Volume keys: via AGS so they act on the selected hardware sink, not on
+-- @DEFAULT_AUDIO_SINK@ (the EQ filter node while the EQ is on). wpctl fallback
+-- for when AGS isn't running.
+hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("ags request audio-mute || wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("ags request audio-down || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"))
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("ags request audio-up || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"))
 
 -- Brightness keys: keybindings.lua (scripts/brightnesscontrol.sh, with OSD).

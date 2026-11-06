@@ -185,8 +185,13 @@ function setEqAsDefault() {
     .then((id) => {
       print("EQ: set as configured default sink")
       setEqAvailable(true)
-      // Ensure EQ sink volume stays at 100% so it doesn't attenuate audio
+      // The EQ sink must be transparent: 100% and unmuted. WirePlumber's
+      // restore-stream persists this node's volume/mute by media.name
+      // ("Equalizer Sink") and re-applies it to every freshly started chain —
+      // one stray mute of the default sink and every later restart came back
+      // silent. Level control belongs to the hardware sink (setHwVolume).
       execAsync(["wpctl", "set-volume", id, "1.0"]).catch(() => {})
+      execAsync(["wpctl", "set-mute", id, "0"]).catch(() => {})
     })
     .catch((e) => print(`EQ: set-default failed: ${e}`))
 }
@@ -558,7 +563,7 @@ wpAudio.connect("speaker-removed", (_audio: any, speaker: any) => {
   }
 })
 
-function setHwVolume(vol: number) {
+export function setHwVolume(vol: number) {
   if (!selectedSinkId) return
   const clamped = Math.max(0, Math.min(1, vol))
   setLocalVol(clamped)
@@ -570,7 +575,11 @@ export function toggleHwMute() {
   execAsync(["wpctl", "set-mute", String(selectedSinkId), "toggle"]).catch(() => {})
 }
 
-export { localMuted }
+export function stepHwVolume(delta: number) {
+  setHwVolume(localVol.get() + delta)
+}
+
+export { localMuted, localVol }
 
 export default function AudioEQ() {
   const dd: OutputDropdown = { list: (<box name="eq-output-list" vertical />) as Gtk.Box, revealer: null, arrow: null, open: false }

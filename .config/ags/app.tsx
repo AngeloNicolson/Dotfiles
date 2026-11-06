@@ -24,6 +24,7 @@ import DisplayLayoutWindow from "./components/DisplayLayout"
 import BluetoothWindow from "./components/BluetoothWindow"
 import WallpaperCarouselWindow from "./components/WallpaperCarousel"
 import SettingsWindow from "./components/SettingsWindow"
+import { toggleHwMute, stepHwVolume } from "./components/AudioEQ"
 
 // `ags request <cmd> [args...]` handlers. Adding a command = adding an entry;
 // `ags request help` lists them all.
@@ -113,6 +114,12 @@ const commands: Record<string, (args: string[]) => string> = {
       .catch((e) => console.error(`theme ${themeName}: ${e}`))
     return `theme set to ${themeName}`
   },
+  // Volume keys (hyprland.lua) come through here so they act on the selected
+  // hardware sink, not on @DEFAULT_AUDIO_SINK@ (the EQ filter node while the
+  // EQ is on — muting that silenced playback and WirePlumber persisted it).
+  "audio-mute": () => { toggleHwMute(); return "audio: mute toggled" },
+  "audio-up": () => { stepHwVolume(0.05); return "audio: +5%" },
+  "audio-down": () => { stepHwVolume(-0.05); return "audio: -5%" },
   "help": () => `commands: ${Object.keys(commands).sort().join(", ")}`,
 }
 

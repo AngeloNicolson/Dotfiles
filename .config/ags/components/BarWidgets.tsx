@@ -13,6 +13,7 @@ import Bluetooth from "gi://AstalBluetooth"
 import Battery from "gi://AstalBattery"
 import * as compositor from "../compositor"
 import { toggleBluetoothWindow, toggleSettings } from "../state"
+import { localVol, localMuted, stepHwVolume, toggleHwMute } from "./AudioEQ"
 
 export function Workspaces({ vertical = false }: { vertical?: boolean }) {
   const box = (<box name="bw-workspaces" vertical={vertical} />) as Gtk.Box
@@ -77,12 +78,12 @@ function Glyph({ icon, tip, onClick, cls }: {
   )
 }
 
+// Volume/mute act on the hardware sink the EQ sidebar selected — not on
+// AstalWp's default_speaker, which is the EQ filter node while the EQ is on.
+// Muting that node silenced playback until unmuted from the same place, and
+// WirePlumber then persisted the mute across chain restarts.
 function VolumeGlyph() {
-  const speaker = Wp.get_default()?.audio?.default_speaker
-  if (!speaker) return <box />
-  const vol = createBinding(speaker, "volume")
-  const mute = createBinding(speaker, "mute")
-  const icon = mute.as((m) => m ? "\u{f075f}" : "\u{f057e}")
+  const icon = localMuted.as((m) => m ? "\u{f075f}" : "\u{f057e}")
   return (
     <eventbox onScrollEvent={(_s, e) => {
       // Wheel clicks report a direction; smooth scrolling (touchpad, hi-res
@@ -97,12 +98,12 @@ function VolumeGlyph() {
         if (dy === 0) return true
         up = dy < 0
       }
-      speaker.volume = Math.max(0, Math.min(1.5, speaker.volume + (up ? 0.05 : -0.05)))
+      stepHwVolume(up ? 0.05 : -0.05)
       return true
     }}>
-      <Glyph icon={icon} cls={mute.as((m) => m ? "dim" : "")}
-        tip={vol.as((v) => `Volume ${Math.round(v * 100)}% (scroll to change, click to mute)`)}
-        onClick={() => { speaker.mute = !speaker.mute }} />
+      <Glyph icon={icon} cls={localMuted.as((m) => m ? "dim" : "")}
+        tip={localVol.as((v) => `Volume ${Math.round(v * 100)}% (scroll to change, click to mute)`)}
+        onClick={() => toggleHwMute()} />
     </eventbox>
   )
 }

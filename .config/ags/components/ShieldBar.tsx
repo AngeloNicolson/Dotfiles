@@ -18,6 +18,7 @@ import Mpris from "gi://AstalMpris"
 import { shieldConfig, shieldPanel, setShieldPanel, toggleSettings, type ShieldPanel } from "../state"
 import { px } from "../scale"
 import { Clock, StatusGlyphs } from "./BarWidgets"
+import { localVol, setHwVolume } from "./AudioEQ"
 import * as compositor from "../compositor"
 
 type RGB = [number, number, number]
@@ -250,11 +251,34 @@ function volumeRow(label: string, ep: any) {
   )
 }
 
+// OUT follows the hardware sink the EQ sidebar selected — see BarWidgets'
+// VolumeGlyph for why not default_speaker.
+function hwVolumeRow(label: string) {
+  const s = new Gtk.Scale({
+    orientation: Gtk.Orientation.HORIZONTAL,
+    adjustment: new Gtk.Adjustment({ lower: 0, upper: 1, step_increment: 0.01, page_increment: 0.05 }),
+    draw_value: false,
+    hexpand: true,
+  })
+  s.set_name("shield-slider")
+  s.set_value(localVol.get())
+  s.show()
+  s.connect("value-changed", () => { if (Math.abs(s.get_value() - localVol.get()) > 0.005) setHwVolume(s.get_value()) })
+  const unsub = localVol.subscribe(() => { if (Math.abs(s.get_value() - localVol.get()) > 0.005) s.set_value(localVol.get()) })
+  s.connect("destroy", () => unsub())
+  return (
+    <box name="shield-row">
+      <label name="shield-row-label" label={label} xalign={0} widthChars={6} />
+      {s}
+    </box>
+  )
+}
+
 function ControlsSurface() {
   const audio = Wp.get_default()?.audio
   return (
     <box name="shield-controls" vertical>
-      {volumeRow("OUT", audio?.default_speaker)}
+      {hwVolumeRow("OUT")}
       {volumeRow("MIC", audio?.default_microphone)}
       <box halign={Gtk.Align.END}>
         <button name="shield-btn" tooltipText="Settings" onClicked={() => { setShieldPanel(null); toggleSettings() }}>
