@@ -133,18 +133,27 @@ ${allLinks.join("\n")}
 `
 }
 
+// Same rule as AudioEQ: go through `wpctl set-default` (the configured
+// default) and never write/clear default.audio.source directly — WirePlumber
+// overwrites a direct write on its next rescan, and leaves a cleared key
+// empty (streams drifting to the highest-priority source) until one.
 function setVoiceAsDefault() {
-  execAsync(["pw-metadata", "0", "default.audio.source", '{ "name": "effect_input.voice" }', "Spa:String:JSON"])
+  execAsync(["bash", "-c", "wpctl status | grep -oP '\\d+(?=\\. effect_input\\.voice)' | head -1"])
+    .then((id) => {
+      const trimmed = id.trim()
+      if (!trimmed) throw new Error("effect_input.voice not found")
+      return execAsync(["wpctl", "set-default", trimmed])
+    })
     .then(() => {
-      print("VOICE: set as default source via pw-metadata")
+      print("VOICE: set as configured default source")
       setVoiceAvailable(true)
     })
-    .catch((e) => print(`VOICE: pw-metadata failed: ${e}`))
+    .catch((e) => print(`VOICE: set-default failed: ${e}`))
 }
 
 function clearVoiceDefault() {
-  execAsync(["pw-metadata", "0", "default.audio.source", "", ""])
-    .catch(() => {})
+  if (!selectedMicId) return
+  execAsync(["wpctl", "set-default", String(selectedMicId)]).catch(() => {})
 }
 
 function updateGainsRuntime(g: number[]) {

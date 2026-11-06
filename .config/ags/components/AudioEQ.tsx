@@ -102,10 +102,14 @@ try {
   cavaLevels = null
 }
 
-// Load saved gains
+// Load saved gains (and the hw sink the saved chain targets, so the initial
+// sync can pick the device that's actually playing while the EQ is default)
+let savedTargetNodeName = ""
 try {
   const saved = readFile(CONF_PATH)
   if (saved) {
+    const target = saved.match(/target\.object = "([^"]+)"/)
+    if (target) savedTargetNodeName = target[1]
     const match = saved.match(/# gains: (.+)/)
     if (match) {
       const parsed = JSON.parse(match[1])
@@ -157,22 +161,42 @@ ${selectedSinkNodeName ? `                target.object = "${selectedSinkNodeNam
 `
 }
 
-function setEqAsDefault() {
-  execAsync(["pw-metadata", "0", "default.audio.sink", '{ "name": "effect_input.eq6" }', "Spa:String:JSON"])
-    .then(() => {
-      print("EQ: set as default sink via pw-metadata")
-      setEqAvailable(true)
-      // Ensure EQ sink volume stays at 100% so it doesn't attenuate audio
-      execAsync(["bash", "-c", "wpctl status | grep -oP '\\d+(?=\\. effect_input\\.eq6)' | head -1"])
-        .then((id) => { if (id.trim()) execAsync(["wpctl", "set-volume", id.trim(), "1.0"]).catch(() => {}) })
-        .catch(() => {})
+// Default-sink handling goes through `wpctl set-default` (WirePlumber's
+// *configured* default) and never writes default.audio.sink directly.
+// WirePlumber owns that key: it rewrites it from the configured default on
+// every rescan (any Audio node added/removed, Route change), so a direct
+// write naming effect_input.eq6 was lost whenever a rescan landed after it
+// (EQ silently bypassed). Clearing the key was worse: WirePlumber doesn't
+// refill it until the next rescan, and meanwhile streams drift to the
+// highest-priority sink — hence "audio only switches device after I hit
+// mute" (mute = Route change = rescan).
+function findEqSinkId(): Promise<string> {
+  return execAsync(["bash", "-c", "wpctl status | grep -oP '\\d+(?=\\. effect_input\\.eq6)' | head -1"])
+    .then((id) => {
+      const trimmed = id.trim()
+      if (!trimmed) throw new Error("effect_input.eq6 not found")
+      return trimmed
     })
-    .catch((e) => print(`EQ: pw-metadata failed: ${e}`))
 }
 
+function setEqAsDefault() {
+  findEqSinkId()
+    .then((id) => execAsync(["wpctl", "set-default", id]).then(() => id))
+    .then((id) => {
+      print("EQ: set as configured default sink")
+      setEqAvailable(true)
+      // Ensure EQ sink volume stays at 100% so it doesn't attenuate audio
+      execAsync(["wpctl", "set-volume", id, "1.0"]).catch(() => {})
+    })
+    .catch((e) => print(`EQ: set-default failed: ${e}`))
+}
+
+// Hand the configured default back to the selected hardware sink, so while
+// the chain is down WirePlumber routes streams there — not to whichever sink
+// has the highest priority.
 function clearEqDefault() {
-  execAsync(["pw-metadata", "0", "default.audio.sink", "", ""])
-    .catch(() => {})
+  if (!selectedSinkId) return
+  execAsync(["wpctl", "set-default", String(selectedSinkId)]).catch(() => {})
 }
 
 function updateGainsRuntime(g: number[]) {
@@ -506,7 +530,8 @@ GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
   const speakers = getHwSpeakers()
   knownSinkIds = new Set(speakers.map((s: any) => s.id))
   const def = wpAudio.get_default_speaker()
-  const initial = (def && def.id && !isEqSink(def)) ? def : speakers.find((s: any) => s.id)
+  const initial = (def && def.id && !isEqSink(def)) ? def
+    : speakers.find((s: any) => s.name === savedTargetNodeName) ?? speakers.find((s: any) => s.id)
   if (initial && initial.id) {
     syncFromSink(initial)
   }
