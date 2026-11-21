@@ -4,22 +4,19 @@ import { periodicTableVisible, setPeriodicTableVisible } from "../state"
 import PeriodicTable from "./PeriodicTable"
 import Gdk from "gi://Gdk?version=3.0"
 import Gtk from "gi://Gtk?version=3.0"
-import { px } from "../scale"
 
 // gdkMonitor may be a literal index or a reactive accessor so the window can
-// follow the focused monitor.
+// follow the focused monitor. No anchor → the layer surface is centred.
 export default function PeriodicTableWindow(gdkMonitor: number | any) {
   return (
     <window
+      name="periodic"
       visible={periodicTableVisible}
       monitor={gdkMonitor}
       exclusivity={Astal.Exclusivity.IGNORE}
       keymode={Astal.Keymode.ON_DEMAND}
       application={app}
       layer={Astal.Layer.TOP}
-      anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.LEFT}
-      marginLeft={px(100)}
-      marginTop={px(100)}
       onKeyPressEvent={(_, event) => {
         const keyval = event.get_keyval()[1]
         if (keyval === Gdk.KEY_Escape) {
@@ -29,19 +26,14 @@ export default function PeriodicTableWindow(gdkMonitor: number | any) {
         return false
       }}
     >
-      <box name="periodic-table-window" vertical>
-        {/* Header with close button */}
-        <box name="periodic-header">
-          <label name="periodic-title" label="Periodic Table" hexpand halign={Gtk.Align.START} />
-          <button
-            name="close-button"
-            onClicked={() => setPeriodicTableVisible(false)}
-          >
-            <label label="" />
+      <box name="pt-window" vertical>
+        <box name="pt-header">
+          <label name="pt-title" label="//PERIODIC TABLE" />
+          <label name="pt-subtitle" label="118 ELEMENTS · IUPAC STANDARD ATOMIC WEIGHTS" hexpand xalign={0} />
+          <button name="pt-close" valign={Gtk.Align.CENTER} onClicked={() => setPeriodicTableVisible(false)}>
+            <label label={"\u{f0156}"} />
           </button>
         </box>
-
-        {/* Periodic table content */}
         <PeriodicTable />
       </box>
     </window>

@@ -118,6 +118,19 @@ export function loadTheme(themeName: string): Theme | null {
   }
 }
 
+// Periodic table category colours (PeriodicTable.tsx) — one palette colour per
+// category, so the table follows the theme.
+const PT_CATEGORIES: Record<string, string> = {
+  alkali: "red", alkaline: "yellow", transition: "blue", post: "cyan",
+  metalloid: "green_bright", nonmetal: "fg_bright", halogen: "yellow_bright",
+  noble: "magenta", lanthanide: "cyan_bright", actinide: "red_bright", unknown: "gray",
+}
+const PT_CATEGORY_CSS = Object.entries(PT_CATEGORIES).map(([k, c]) => `
+    #pt-cell.${k}, #pt-tile.${k}, #pt-fslot.${k} { background: alpha(@${c}, 0.12); border-color: alpha(@${c}, 0.55); }
+    #pt-cell.${k} #pt-sym, #pt-tile.${k} #pt-tile-sym, #pt-fslot.${k} label, #pt-detail-cat.${k} { color: @${c}; }
+    #pt-cell.${k}:hover, #pt-cell.${k}.active { background: @${c}; border-color: @${c}; }
+    #pt-swatch.${k} { background: @${c}; }`).join("")
+
 // The structural stylesheet is static — every color is a GTK named color
 // (@bg, @accent, ...) resolved by the @define-color header that generateCSS()
 // prepends from the active theme. Swapping themes only swaps that header.
@@ -3948,6 +3961,169 @@ const STATIC_CSS = `
     }
     #bs-reset {
       margin: 8px 0 0 0;
+    }
+
+    /* ============ PERIODIC TABLE (PeriodicTable.tsx) ============ */
+    #pt-window {
+      background: alpha(@bg, 0.97);
+      border: 1px solid @accent;
+      border-radius: 4px;
+      padding: 16px 20px 18px 14px;
+    }
+    #pt-header {
+      margin: 0 0 10px 6px;
+    }
+    #pt-title {
+      color: @accent;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-right: 14px;
+    }
+    #pt-subtitle {
+      color: @fg_dim;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+    #pt-close {
+      border: 1px solid alpha(@fg_dim, 0.4);
+      border-radius: 2px;
+      min-width: 40px;
+      min-height: 40px;
+      padding: 0;
+    }
+    #pt-close label {
+      color: @fg;
+      font-size: 14px;
+    }
+    #pt-close:hover {
+      background: @accent;
+      border-color: @accent;
+    }
+    #pt-close:hover label {
+      color: @bg_dark;
+    }
+    #pt-axis {
+      color: @fg_dim;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 16px;
+      min-height: 16px;
+    }
+    #pt-cell, #pt-fslot {
+      border: 1px solid alpha(@fg_dim, 0.3);
+      border-radius: 2px;
+      min-width: 56px;
+      min-height: 56px;
+      padding: 0;
+      margin: 2px;
+    }
+    #pt-num {
+      color: @fg_dim;
+      font-size: 9px;
+      margin: 3px 0 0 5px;
+    }
+    #pt-sym {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: -2px;
+    }
+    #pt-mass {
+      color: @fg_dim;
+      font-size: 8px;
+      margin-bottom: 3px;
+    }${PT_CATEGORY_CSS}
+    #pt-cell:hover label, #pt-cell.active label,
+    #pt-cell:hover #pt-sym, #pt-cell.active #pt-sym {
+      color: @bg_dark;
+    }
+    #pt-cell.dim {
+      opacity: 0.2;
+    }
+    #pt-fslot {
+      border-style: dashed;
+    }
+    #pt-fslot-range {
+      font-size: 10px;
+      font-weight: 700;
+    }
+    #pt-fslot-mark {
+      font-size: 8px;
+    }
+    #pt-gap {
+      min-height: 12px;
+    }
+    #pt-series {
+      color: @fg_dim;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-right: 8px;
+    }
+    #pt-tile {
+      border: 2px solid @fg_dim;
+      border-radius: 2px;
+      min-width: 120px;
+      min-height: 120px;
+      margin-right: 22px;
+    }
+    #pt-tile-num {
+      color: @fg;
+      font-size: 13px;
+      margin: 6px 0 0 9px;
+    }
+    #pt-tile-sym {
+      font-size: 46px;
+      font-weight: 700;
+      margin-top: -6px;
+    }
+    #pt-tile-mass {
+      color: @fg;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    #pt-detail-name {
+      color: @fg_bright;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    #pt-detail-cat {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    #pt-detail-row {
+      margin-bottom: 4px;
+    }
+    #pt-detail-key {
+      color: @fg_dim;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      min-width: 78px;
+    }
+    #pt-detail-value {
+      color: @fg;
+      font-size: 12px;
+    }
+    #pt-legend {
+      margin-top: 14px;
+    }
+    #pt-legend-item {
+      margin: 0 9px;
+      min-height: 24px;
+    }
+    #pt-swatch {
+      min-width: 10px;
+      min-height: 10px;
+      margin-right: 6px;
+    }
+    #pt-legend-label {
+      color: @fg_dim;
+      font-size: 9px;
+      letter-spacing: 1px;
     }
   `
 
